@@ -56,76 +56,53 @@ export async function fetchEntity(entityId: string) {
   });
 }
 
-export async function addEntity(data: {
-  legal_name: string;
-  trading_name?: string;
-  registration_number?: string;
-  lcs_certificate_id?: string;
-  lcs_certificate_expiry?: string;
-  petroleum_agreement_ref?: string;
-  company_type: string;
-  guyanese_ownership_pct?: number;
-  registered_address?: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
-}) {
+function mapEntityData(data: Record<string, unknown>) {
+  return {
+    legalName: data.legal_name as string,
+    tradingName: (data.trading_name as string) || null,
+    registrationNumber: (data.registration_number as string) || null,
+    lcsCertificateId: (data.lcs_certificate_id as string) || null,
+    lcsCertificateExpiry: (data.lcs_certificate_expiry as string) || null,
+    petroleumAgreementRef: (data.petroleum_agreement_ref as string) || null,
+    companyType: (data.company_type as string) || null,
+    guyanaeseOwnershipPct: data.guyanese_ownership_pct ? String(data.guyanese_ownership_pct) : null,
+    registeredAddress: (data.registered_address as string) || null,
+    tinNumber: (data.tin_number as string) || null,
+    dateOfIncorporation: (data.date_of_incorporation as string) || null,
+    industrySector: (data.industry_sector as string) || null,
+    numberOfEmployees: data.number_of_employees ? Number(data.number_of_employees) : null,
+    annualRevenueRange: (data.annual_revenue_range as string) || null,
+    operationalAddress: (data.operational_address as string) || null,
+    parentCompanyName: (data.parent_company_name as string) || null,
+    countryOfIncorporation: (data.country_of_incorporation as string) || null,
+    website: (data.website as string) || null,
+    contactName: (data.contact_name as string) || null,
+    contactEmail: (data.contact_email as string) || null,
+    contactPhone: (data.contact_phone as string) || null,
+    authorizedRepName: (data.authorized_rep_name as string) || null,
+    authorizedRepDesignation: (data.authorized_rep_designation as string) || null,
+  };
+}
+
+export async function addEntity(data: Record<string, unknown>) {
   const { tenantId, tenant } = await getSessionTenant();
   const [entity] = await db
     .insert(entities)
     .values({
       tenantId,
       jurisdictionId: tenant.jurisdictionId,
-      legalName: data.legal_name,
-      tradingName: data.trading_name || null,
-      registrationNumber: data.registration_number || null,
-      lcsCertificateId: data.lcs_certificate_id || null,
-      lcsCertificateExpiry: data.lcs_certificate_expiry || null,
-      petroleumAgreementRef: data.petroleum_agreement_ref || null,
-      companyType: data.company_type,
-      guyanaeseOwnershipPct: data.guyanese_ownership_pct?.toString() || null,
-      registeredAddress: data.registered_address || null,
-      contactName: data.contact_name || null,
-      contactEmail: data.contact_email || null,
-      contactPhone: data.contact_phone || null,
+      ...mapEntityData(data),
     })
     .returning();
   return entity;
 }
 
-export async function updateEntity(
-  entityId: string,
-  data: {
-    legal_name: string;
-    trading_name?: string;
-    registration_number?: string;
-    lcs_certificate_id?: string;
-    lcs_certificate_expiry?: string;
-    petroleum_agreement_ref?: string;
-    company_type: string;
-    guyanese_ownership_pct?: number;
-    registered_address?: string;
-    contact_name?: string;
-    contact_email?: string;
-    contact_phone?: string;
-  }
-) {
+export async function updateEntity(entityId: string, data: Record<string, unknown>) {
   const { tenantId } = await getSessionTenant();
   const [updated] = await db
     .update(entities)
     .set({
-      legalName: data.legal_name,
-      tradingName: data.trading_name || null,
-      registrationNumber: data.registration_number || null,
-      lcsCertificateId: data.lcs_certificate_id || null,
-      lcsCertificateExpiry: data.lcs_certificate_expiry || null,
-      petroleumAgreementRef: data.petroleum_agreement_ref || null,
-      companyType: data.company_type,
-      guyanaeseOwnershipPct: data.guyanese_ownership_pct?.toString() || null,
-      registeredAddress: data.registered_address || null,
-      contactName: data.contact_name || null,
-      contactEmail: data.contact_email || null,
-      contactPhone: data.contact_phone || null,
+      ...mapEntityData(data),
       updatedAt: new Date(),
     })
     .where(and(eq(entities.id, entityId), eq(entities.tenantId, tenantId)))

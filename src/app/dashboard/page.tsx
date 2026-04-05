@@ -15,6 +15,7 @@ import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
 import { fetchEntities } from "@/server/actions";
+import { mapDrizzleEntity } from "@/lib/mappers";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
 import type { Entity } from "@/types/database.types";
 
@@ -32,32 +33,7 @@ export default function DashboardPage() {
         setLoading(false);
         return;
       }
-      setEntities(
-        data.map((e) => ({
-          id: e.id,
-          tenant_id: e.tenantId,
-          jurisdiction_id: e.jurisdictionId || "",
-          legal_name: e.legalName,
-          trading_name: e.tradingName,
-          registration_number: e.registrationNumber,
-          lcs_certificate_id: e.lcsCertificateId,
-          lcs_certificate_expiry: e.lcsCertificateExpiry,
-          petroleum_agreement_ref: e.petroleumAgreementRef,
-          company_type: e.companyType as Entity["company_type"],
-          guyanese_ownership_pct: e.guyanaeseOwnershipPct
-            ? Number(e.guyanaeseOwnershipPct)
-            : null,
-          registered_address: e.registeredAddress,
-          contact_name: e.contactName,
-          contact_email: e.contactEmail,
-          contact_phone: e.contactPhone,
-          authorized_rep_name: e.authorizedRepName,
-          authorized_rep_designation: e.authorizedRepDesignation,
-          active: e.active ?? true,
-          created_at: e.createdAt?.toISOString() || "",
-          updated_at: e.updatedAt?.toISOString() || "",
-        }))
-      );
+      setEntities(data.map(mapDrizzleEntity));
       setLoading(false);
     };
     load();

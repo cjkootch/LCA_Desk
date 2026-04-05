@@ -68,6 +68,15 @@ export interface Entity {
   company_type: "contractor" | "subcontractor" | "licensee" | null;
   guyanese_ownership_pct: number | null;
   registered_address: string | null;
+  tin_number: string | null;
+  date_of_incorporation: string | null;
+  industry_sector: string | null;
+  number_of_employees: number | null;
+  annual_revenue_range: string | null;
+  operational_address: string | null;
+  parent_company_name: string | null;
+  country_of_incorporation: string | null;
+  website: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
