@@ -18,6 +18,7 @@ import {
   sectorCategories,
   suppliers,
   employees,
+  notifications,
   users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -1052,4 +1053,169 @@ export async function duplicatePeriod(sourcePeriodId: string, newReportType: str
   }
 
   return newPeriod;
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────
+export async function fetchNotifications(limit: number = 20) {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, session.user.id))
+    .orderBy(notifications.createdAt)
+    .limit(limit);
+}
+
+export async function fetchUnreadCount() {
+  const session = await auth();
+  if (!session?.user?.id) return 0;
+
+  const result = await db
+    .select()
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, session.user.id),
+        eq(notifications.read, false)
+      )
+    );
+
+  return result.length;
+}
+
+export async function markNotificationRead(notificationId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(
+      and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, session.user.id)
+      )
+    );
+}
+
+export async function markAllNotificationsRead() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(
+      and(
+        eq(notifications.userId, session.user.id),
+        eq(notifications.read, false)
+      )
+    );
+}
+
+export async function generateDeadlineNotifications() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  const membership = await db.query.tenantMembers.findFirst({
+    where: eq(tenantMembers.userId, session.user.id),
+  });
+  if (!membership) return;
+
+  const tenantId = membership.tenantId;
+
+  // Get all entities for this tenant
+  const entityList = await db
+    .select()
+    .from(entities)
+    .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
+
+  const now = new Date();
+  const { calculateDeadlines } = await import("@/lib/compliance/deadlines");
+  const currentYear = now.getFullYear();
+
+  for (const entity of entityList) {
+    const deadlines = calculateDeadlines("GY", currentYear);
+
+    for (const deadline of deadlines) {
+      const daysRemaining = Math.floor(
+        (deadline.due_date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Check if we already sent this notification (by type + title match)
+      let notifType = "";
+      let title = "";
+      let message = "";
+
+      if (daysRemaining < 0 && daysRemaining > -60) {
+        notifType = "deadline_overdue";
+        title = `${deadline.label} is overdue`;
+        message = `${entity.legalName}: ${deadline.label} was due ${Math.abs(daysRemaining)} days ago on ${deadline.due_date.toLocaleDateString()}.`;
+      } else if (daysRemaining >= 0 && daysRemaining <= 14) {
+        notifType = "deadline_warning";
+        title = `${deadline.label} due in ${daysRemaining} days`;
+        message = `${entity.legalName}: ${deadline.label} is due on ${deadline.due_date.toLocaleDateString()}. Start filing now.`;
+      } else {
+        continue;
+      }
+
+      // Check for existing notification with same title to avoid duplicates
+      const existing = await db
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, session.user.id),
+            eq(notifications.title, title)
+          )
+        )
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(notifications).values({
+          userId: session.user.id,
+          tenantId,
+          type: notifType,
+          title,
+          message,
+          link: `/dashboard/entities/${entity.id}`,
+        });
+      }
+    }
+
+    // Check LCS certificate expiry
+    if (entity.lcsCertificateExpiry) {
+      const expiry = new Date(entity.lcsCertificateExpiry);
+      const daysToExpiry = Math.floor(
+        (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysToExpiry >= 0 && daysToExpiry <= 30) {
+        const title = `LCS Certificate expiring in ${daysToExpiry} days`;
+        const existing = await db
+          .select()
+          .from(notifications)
+          .where(
+            and(
+              eq(notifications.userId, session.user.id),
+              eq(notifications.title, title)
+            )
+          )
+          .limit(1);
+
+        if (existing.length === 0) {
+          await db.insert(notifications).values({
+            userId: session.user.id,
+            tenantId,
+            type: "cert_expiring",
+            title,
+            message: `${entity.legalName}: LCS Certificate ${entity.lcsCertificateId || ""} expires on ${expiry.toLocaleDateString()}.`,
+            link: `/dashboard/entities/${entity.id}`,
+          });
+        }
+      }
+    }
+  }
 }

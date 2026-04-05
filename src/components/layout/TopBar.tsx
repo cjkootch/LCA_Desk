@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -49,9 +50,7 @@ export function TopBar({ title, description, action }: TopBarProps) {
             </Button>
           </Link>
         )}
-        <Link href="/dashboard/settings" className="relative p-2 text-text-muted hover:text-text-primary transition-colors">
-          <Bell className="h-5 w-5" />
-        </Link>
+        <NotificationBell />
         {action && (
           <Button onClick={action.onClick} size="sm">
             {action.label}
