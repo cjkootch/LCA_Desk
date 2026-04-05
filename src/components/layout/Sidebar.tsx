@@ -32,7 +32,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center h-16 px-5 border-b border-white/10">
         <Link href="/dashboard">
-          <Image src="/logo-full.png" alt="LCA Desk" width={140} height={40} priority className="invert brightness-200" />
+          <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={40} priority />
         </Link>
       </div>
 
