@@ -17,6 +17,7 @@ import { Plus, ArrowRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fetchEntity, fetchPeriodsForEntity, addPeriod, updateEntity } from "@/server/actions";
+import { mapDrizzleEntity } from "@/lib/mappers";
 import { EntityForm } from "@/components/entity/EntityForm";
 import { calculateDeadlines } from "@/lib/compliance/deadlines";
 import type { Entity, PeriodStatus } from "@/types/database.types";
@@ -54,28 +55,7 @@ export default function EntityDetailPage() {
         fetchPeriodsForEntity(entityId),
       ]);
       if (entityData) {
-        setEntity({
-          id: entityData.id,
-          tenant_id: entityData.tenantId,
-          jurisdiction_id: entityData.jurisdictionId || "",
-          legal_name: entityData.legalName,
-          trading_name: entityData.tradingName,
-          registration_number: entityData.registrationNumber,
-          lcs_certificate_id: entityData.lcsCertificateId,
-          lcs_certificate_expiry: entityData.lcsCertificateExpiry,
-          petroleum_agreement_ref: entityData.petroleumAgreementRef,
-          company_type: entityData.companyType as Entity["company_type"],
-          guyanese_ownership_pct: entityData.guyanaeseOwnershipPct ? Number(entityData.guyanaeseOwnershipPct) : null,
-          registered_address: entityData.registeredAddress,
-          contact_name: entityData.contactName,
-          contact_email: entityData.contactEmail,
-          contact_phone: entityData.contactPhone,
-          authorized_rep_name: entityData.authorizedRepName,
-          authorized_rep_designation: entityData.authorizedRepDesignation,
-          active: entityData.active ?? true,
-          created_at: entityData.createdAt?.toISOString() || "",
-          updated_at: entityData.updatedAt?.toISOString() || "",
-        });
+        setEntity(mapDrizzleEntity(entityData));
       }
       setPeriods(periodsData);
       setLoading(false);
@@ -116,28 +96,7 @@ export default function EntityDetailPage() {
       // Reload entity data
       const entityData = await fetchEntity(entityId);
       if (entityData) {
-        setEntity({
-          id: entityData.id,
-          tenant_id: entityData.tenantId,
-          jurisdiction_id: entityData.jurisdictionId || "",
-          legal_name: entityData.legalName,
-          trading_name: entityData.tradingName,
-          registration_number: entityData.registrationNumber,
-          lcs_certificate_id: entityData.lcsCertificateId,
-          lcs_certificate_expiry: entityData.lcsCertificateExpiry,
-          petroleum_agreement_ref: entityData.petroleumAgreementRef,
-          company_type: entityData.companyType as Entity["company_type"],
-          guyanese_ownership_pct: entityData.guyanaeseOwnershipPct ? Number(entityData.guyanaeseOwnershipPct) : null,
-          registered_address: entityData.registeredAddress,
-          contact_name: entityData.contactName,
-          contact_email: entityData.contactEmail,
-          contact_phone: entityData.contactPhone,
-          authorized_rep_name: entityData.authorizedRepName,
-          authorized_rep_designation: entityData.authorizedRepDesignation,
-          active: entityData.active ?? true,
-          created_at: entityData.createdAt?.toISOString() || "",
-          updated_at: entityData.updatedAt?.toISOString() || "",
-        });
+        setEntity(mapDrizzleEntity(entityData));
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update entity");
@@ -182,9 +141,20 @@ export default function EntityDetailPage() {
                   company_type: (entity.company_type as "contractor" | "subcontractor" | "licensee") || "contractor",
                   guyanese_ownership_pct: entity.guyanese_ownership_pct || undefined,
                   registered_address: entity.registered_address || undefined,
+                  tin_number: entity.tin_number || undefined,
+                  date_of_incorporation: entity.date_of_incorporation || undefined,
+                  industry_sector: entity.industry_sector || undefined,
+                  number_of_employees: entity.number_of_employees || undefined,
+                  annual_revenue_range: entity.annual_revenue_range || undefined,
+                  operational_address: entity.operational_address || undefined,
+                  parent_company_name: entity.parent_company_name || undefined,
+                  country_of_incorporation: entity.country_of_incorporation || undefined,
+                  website: entity.website || undefined,
                   contact_name: entity.contact_name || undefined,
                   contact_email: entity.contact_email || undefined,
                   contact_phone: entity.contact_phone || undefined,
+                  authorized_rep_name: entity.authorized_rep_name || undefined,
+                  authorized_rep_designation: entity.authorized_rep_designation || undefined,
                 }}
                 onSubmit={handleEditEntity}
                 loading={editSaving}
@@ -239,13 +209,22 @@ export default function EntityDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
           <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Entity Details</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Company Details</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div><p className="text-text-muted">Registration Number</p><p>{entity.registration_number || "—"}</p></div>
+                <div><p className="text-text-muted">TIN</p><p>{entity.tin_number || "—"}</p></div>
                 <div><p className="text-text-muted">Petroleum Agreement</p><p>{entity.petroleum_agreement_ref || "—"}</p></div>
                 <div><p className="text-text-muted">Guyanese Ownership</p><p>{entity.guyanese_ownership_pct !== null ? `${entity.guyanese_ownership_pct}%` : "—"}</p></div>
+                <div><p className="text-text-muted">Country</p><p>{entity.country_of_incorporation || "—"}</p></div>
+                <div><p className="text-text-muted">Industry</p><p>{entity.industry_sector || "—"}</p></div>
+                <div><p className="text-text-muted">Employees</p><p>{entity.number_of_employees || "—"}</p></div>
+                <div><p className="text-text-muted">Revenue Range</p><p>{entity.annual_revenue_range?.replace(/_/g, " ") || "—"}</p></div>
+                <div><p className="text-text-muted">Parent Company</p><p>{entity.parent_company_name || "—"}</p></div>
+                <div><p className="text-text-muted">Incorporated</p><p>{entity.date_of_incorporation || "—"}</p></div>
+                <div><p className="text-text-muted">Website</p><p>{entity.website ? <a href={entity.website} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{entity.website}</a> : "—"}</p></div>
                 <div><p className="text-text-muted">Contact</p><p>{entity.contact_name || "—"}</p><p className="text-xs text-text-muted">{entity.contact_email || ""}</p></div>
+                <div><p className="text-text-muted">Authorized Rep</p><p>{entity.authorized_rep_name || "—"}</p><p className="text-xs text-text-muted">{entity.authorized_rep_designation || ""}</p></div>
               </div>
             </CardContent>
           </Card>

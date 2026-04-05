@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
 import { fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, markPeriodSubmitted, fetchPlanAndUsage } from "@/server/actions";
+import { mapDrizzleEntity } from "@/lib/mappers";
 import type { Entity, ReportingPeriod, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
 
 export default function ExportPage() {
@@ -36,7 +37,7 @@ export default function ExportPage() {
       setEntityName(rawEntity?.legalName || "");
       setPeriod(rawPeriod ?? null);
 
-      const mappedEntity = { id: rawEntity?.id, legal_name: rawEntity?.legalName, trading_name: rawEntity?.tradingName, registration_number: rawEntity?.registrationNumber, lcs_certificate_id: rawEntity?.lcsCertificateId, company_type: rawEntity?.companyType, guyanese_ownership_pct: rawEntity?.guyanaeseOwnershipPct, petroleum_agreement_ref: rawEntity?.petroleumAgreementRef, contact_name: rawEntity?.contactName, contact_email: rawEntity?.contactEmail, contact_phone: rawEntity?.contactPhone, registered_address: rawEntity?.registeredAddress, authorized_rep_name: rawEntity?.authorizedRepName, authorized_rep_designation: rawEntity?.authorizedRepDesignation } as Entity;
+      const mappedEntity = rawEntity ? mapDrizzleEntity(rawEntity) : null;
       setEntity(mappedEntity);
 
       const expenditures = rawExp.map((e) => ({ id: e.id, reporting_period_id: e.reportingPeriodId, entity_id: e.entityId, type_of_item_procured: e.typeOfItemProcured, related_sector: e.relatedSector, description_of_good_service: e.descriptionOfGoodService, supplier_name: e.supplierName, sole_source_code: e.soleSourceCode, supplier_certificate_id: e.supplierCertificateId, actual_payment: Number(e.actualPayment), outstanding_payment: e.outstandingPayment ? Number(e.outstandingPayment) : null, projection_next_period: e.projectionNextPeriod ? Number(e.projectionNextPeriod) : null, payment_method: e.paymentMethod, supplier_bank: e.supplierBank, bank_location_country: e.bankLocationCountry, currency_of_payment: e.currencyOfPayment || "GYD", notes: e.notes, created_at: "", updated_at: "" })) as ExpenditureRecord[];
