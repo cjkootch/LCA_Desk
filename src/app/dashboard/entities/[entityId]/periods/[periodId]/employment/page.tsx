@@ -1,4 +1,5 @@
 "use client";
+import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -41,6 +42,7 @@ export default function EmploymentPage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const completedSteps = useStepCompletion(periodId);
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<EmploymentRecord[]>([]);
   const [formOpen, setFormOpen] = useState(false);
@@ -110,7 +112,7 @@ export default function EmploymentPage() {
             </DialogContent>
           </Dialog>
         </PageHeader>
-        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="employment" completedSteps={["company_info", "expenditure"]} />
+        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="employment" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
             {records.length === 0 ? (

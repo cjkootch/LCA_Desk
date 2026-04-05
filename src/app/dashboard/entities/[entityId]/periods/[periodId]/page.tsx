@@ -1,4 +1,5 @@
 "use client";
+import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -15,6 +16,7 @@ export default function PeriodOverviewPage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const completedSteps = useStepCompletion(periodId);
   const [entityName, setEntityName] = useState("");
   const [period, setPeriod] = useState<Awaited<ReturnType<typeof fetchPeriod>> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function PeriodOverviewPage() {
           { label: entityName, href: `/dashboard/entities/${entityId}` },
           { label: "Filing" },
         ]} />
-        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="company_info" completedSteps={[]} />
+        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="company_info" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader><CardTitle className="text-base">Company Information</CardTitle></CardHeader>

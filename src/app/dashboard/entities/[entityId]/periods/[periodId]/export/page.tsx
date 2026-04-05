@@ -1,4 +1,5 @@
 "use client";
+import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -20,6 +21,7 @@ export default function ExportPage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const completedSteps = useStepCompletion(periodId);
   const [currentPlan, setCurrentPlan] = useState("starter");
   const [entityName, setEntityName] = useState("");
   const [entity, setEntity] = useState<Entity | null>(null);
@@ -90,7 +92,14 @@ export default function ExportPage() {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>;
   }
 
-  const periodLabel = period.reportType === "half_yearly_h1" ? "H1" : "H2";
+  const reportTypeNames: Record<string, string> = {
+    half_yearly_h1: "Half-Yearly",
+    half_yearly_h2: "Half-Yearly",
+    annual_plan: "Annual Local Content Plan",
+    performance_report: "Annual Performance",
+  };
+  const periodLabel = period.reportType === "half_yearly_h1" ? "H1" : period.reportType === "half_yearly_h2" ? "H2" : "";
+  const reportTypeName = reportTypeNames[period.reportType] || "Local Content";
   const subjectLine = formatSubmissionSubject("GY", `${periodLabel} ${period.fiscalYear}`, entityName);
 
   return (
@@ -99,7 +108,7 @@ export default function ExportPage() {
       <div className="p-8">
         <PageHeader title="Export & Submit" description="Generate official reports and submit to the Local Content Secretariat."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Export" }]} />
-        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={["company_info", "expenditure", "employment", "capacity", "narrative", "review"]} />
+        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={completedSteps} />
         <FeatureGate planRequired="pro" featureName="Report Export" currentPlan={currentPlan}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
@@ -126,7 +135,7 @@ export default function ExportPage() {
             <div className="flex gap-3">
               <a
                 href={`mailto:localcontent@nre.gov.gy?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
-                  `Dear Local Content Secretariat,\n\nPlease find attached the Local Content Half-Yearly Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
+                  `Dear Local Content Secretariat,\n\nPlease find attached the Local Content ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
                 )}`}
                 className="flex-1"
               >

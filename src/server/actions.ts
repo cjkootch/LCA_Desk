@@ -1219,3 +1219,25 @@ export async function generateDeadlineNotifications() {
     }
   }
 }
+
+// ─── STEP COMPLETION ─────────────────────────────────────────────
+export async function fetchStepCompletion(periodId: string) {
+  const { tenantId } = await getSessionTenant();
+
+  const [exps, emps, caps, nars] = await Promise.all([
+    db.select().from(expenditureRecords).where(and(eq(expenditureRecords.reportingPeriodId, periodId), eq(expenditureRecords.tenantId, tenantId))).limit(1),
+    db.select().from(employmentRecords).where(and(eq(employmentRecords.reportingPeriodId, periodId), eq(employmentRecords.tenantId, tenantId))).limit(1),
+    db.select().from(capacityDevelopmentRecords).where(and(eq(capacityDevelopmentRecords.reportingPeriodId, periodId), eq(capacityDevelopmentRecords.tenantId, tenantId))).limit(1),
+    db.select().from(narrativeDrafts).where(and(eq(narrativeDrafts.reportingPeriodId, periodId), eq(narrativeDrafts.tenantId, tenantId))).limit(1),
+  ]);
+
+  const completed: string[] = ["company_info"]; // always complete — entity exists
+  if (exps.length > 0) completed.push("expenditure");
+  if (emps.length > 0) completed.push("employment");
+  if (caps.length > 0) completed.push("capacity");
+  if (nars.length > 0) completed.push("narrative");
+  // review is "complete" if all data steps have data
+  if (exps.length > 0 && emps.length > 0) completed.push("review");
+  // export is complete only after submission
+  return completed;
+}

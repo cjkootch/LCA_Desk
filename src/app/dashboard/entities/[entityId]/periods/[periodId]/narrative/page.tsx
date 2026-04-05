@@ -1,4 +1,5 @@
 "use client";
+import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -10,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
-import { fetchEntity, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, saveNarrative } from "@/server/actions";
+import { fetchEntity, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, saveNarrative, fetchPeriod } from "@/server/actions";
 import type { ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
 
 function mapExp(e: Record<string, unknown>): ExpenditureRecord {
@@ -27,7 +28,12 @@ export default function NarrativePage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const completedSteps = useStepCompletion(periodId);
   const [entityName, setEntityName] = useState("");
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
+  const [reportType, setReportType] = useState("");
   const [expenditures, setExpenditures] = useState<ExpenditureRecord[]>([]);
   const [employment, setEmployment] = useState<EmploymentRecord[]>([]);
   const [capacity, setCapacity] = useState<CapacityDevelopmentRecord[]>([]);
@@ -36,10 +42,18 @@ export default function NarrativePage() {
 
   useEffect(() => {
     const load = async () => {
-      const [entity, rawExp, rawEmp, rawCap, rawNar] = await Promise.all([
-        fetchEntity(entityId), fetchExpenditures(periodId), fetchEmployment(periodId), fetchCapacity(periodId), fetchNarratives(periodId),
+      const [entity, period, rawExp, rawEmp, rawCap, rawNar] = await Promise.all([
+        fetchEntity(entityId), fetchPeriod(periodId), fetchExpenditures(periodId), fetchEmployment(periodId), fetchCapacity(periodId), fetchNarratives(periodId),
       ]);
       setEntityName(entity?.legalName || "");
+      if (period) {
+        const rt = period.reportType;
+        const label = rt === "half_yearly_h1" ? "H1" : rt === "half_yearly_h2" ? "H2" : rt.replace(/_/g, " ");
+        setPeriodLabel(`${label} ${period.fiscalYear || ""}`);
+        setPeriodStart(period.periodStart);
+        setPeriodEnd(period.periodEnd);
+        setReportType(rt.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()));
+      }
       setExpenditures(rawExp.map((r) => mapExp(r as unknown as Record<string, unknown>)));
       setEmployment(rawEmp.map((r) => mapEmp(r as unknown as Record<string, unknown>)));
       setCapacity(rawCap.map((r) => mapCap(r as unknown as Record<string, unknown>)));
@@ -65,9 +79,9 @@ export default function NarrativePage() {
   const empMetrics = calculateEmploymentMetrics(employment);
   const capMetrics = calculateCapacityMetrics(capacity);
 
-  const expenditureData = { companyName: entityName, periodLabel: "H1 2026", periodStart: "January 1, 2026", periodEnd: "June 30, 2026", reportType: "Half-Yearly Report", totalExpenditure: lcMetrics.total_expenditure, totalUsd: 0, guyaneseExpenditure: lcMetrics.guyanese_expenditure, nonGuyaneseExpenditure: lcMetrics.non_guyanese_expenditure, localContentRate: lcMetrics.local_content_rate, guyaneseSupplierCount: lcMetrics.supplier_count_guyanese, nonGuyaneseSupplierCount: lcMetrics.supplier_count_non_guyanese, soleSourcingCount: expenditures.filter((e) => !!e.sole_source_code).length, topCategories: [] as Array<{name: string; amount: number; isGuyanese: boolean}>, annualPlanCommitment: null };
-  const employmentData = { companyName: entityName, periodLabel: "H1 2026", periodStart: "January 1, 2026", periodEnd: "June 30, 2026", reportType: "Half-Yearly Report", totalHeadcount: empMetrics.total_headcount, guyaneseHeadcount: empMetrics.guyanese_headcount, nonGuyaneseHeadcount: empMetrics.non_guyanese_headcount, guyanesePercentage: empMetrics.guyanese_percentage, managerialTotal: empMetrics.managerial_total, managerialGuyanese: empMetrics.managerial_guyanese, managerialGuyanesePercent: empMetrics.managerial_guyanese_pct, technicalTotal: empMetrics.technical_total, technicalGuyanese: empMetrics.technical_guyanese, technicalGuyanesePercent: empMetrics.technical_guyanese_pct, nonTechnicalTotal: empMetrics.non_technical_total, nonTechnicalGuyanese: empMetrics.non_technical_guyanese, nonTechnicalGuyanesePercent: empMetrics.non_technical_guyanese_pct, totalRemuneration: 0, topJobTitles: [] as Array<{title: string; headcount: number; isGuyanese: boolean}> };
-  const capacityData = { companyName: entityName, periodLabel: "H1 2026", periodStart: "January 1, 2026", periodEnd: "June 30, 2026", reportType: "Half-Yearly Report", totalActivities: capMetrics.total_activities, totalParticipants: capMetrics.total_participants, guyaneseParticipants: capMetrics.total_guyanese_participants, totalHours: capMetrics.total_hours, totalCost: capMetrics.total_cost_local, activities: capacity.map((c) => ({ name: c.activity, type: c.category || "", participantCount: c.total_participants, hours: (c.duration_days || 0) * 8, providerType: c.participant_type || "unknown" })) };
+  const expenditureData = { companyName: entityName, periodLabel, periodStart, periodEnd, reportType, totalExpenditure: lcMetrics.total_expenditure, totalUsd: 0, guyaneseExpenditure: lcMetrics.guyanese_expenditure, nonGuyaneseExpenditure: lcMetrics.non_guyanese_expenditure, localContentRate: lcMetrics.local_content_rate, guyaneseSupplierCount: lcMetrics.supplier_count_guyanese, nonGuyaneseSupplierCount: lcMetrics.supplier_count_non_guyanese, soleSourcingCount: expenditures.filter((e) => !!e.sole_source_code).length, topCategories: [] as Array<{name: string; amount: number; isGuyanese: boolean}>, annualPlanCommitment: null };
+  const employmentData = { companyName: entityName, periodLabel, periodStart, periodEnd, reportType, totalHeadcount: empMetrics.total_headcount, guyaneseHeadcount: empMetrics.guyanese_headcount, nonGuyaneseHeadcount: empMetrics.non_guyanese_headcount, guyanesePercentage: empMetrics.guyanese_percentage, managerialTotal: empMetrics.managerial_total, managerialGuyanese: empMetrics.managerial_guyanese, managerialGuyanesePercent: empMetrics.managerial_guyanese_pct, technicalTotal: empMetrics.technical_total, technicalGuyanese: empMetrics.technical_guyanese, technicalGuyanesePercent: empMetrics.technical_guyanese_pct, nonTechnicalTotal: empMetrics.non_technical_total, nonTechnicalGuyanese: empMetrics.non_technical_guyanese, nonTechnicalGuyanesePercent: empMetrics.non_technical_guyanese_pct, totalRemuneration: 0, topJobTitles: [] as Array<{title: string; headcount: number; isGuyanese: boolean}> };
+  const capacityData = { companyName: entityName, periodLabel, periodStart, periodEnd, reportType, totalActivities: capMetrics.total_activities, totalParticipants: capMetrics.total_participants, guyaneseParticipants: capMetrics.total_guyanese_participants, totalHours: capMetrics.total_hours, totalCost: capMetrics.total_cost_local, activities: capacity.map((c) => ({ name: c.activity, type: c.category || "", participantCount: c.total_participants, hours: (c.duration_days || 0) * 8, providerType: c.participant_type || "unknown" })) };
 
   return (
     <div>
@@ -75,7 +89,7 @@ export default function NarrativePage() {
       <div className="p-8">
         <PageHeader title="AI Narrative Drafter" description="Generate compliance narratives powered by AI, then review and edit."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Narrative" }]} />
-        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="narrative" completedSteps={["company_info", "expenditure", "employment", "capacity"]} />
+        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="narrative" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="space-y-4">
             <Card className="p-4"><h4 className="text-sm font-semibold text-text-secondary mb-3">Expenditure</h4><div className="space-y-2 text-sm"><div className="flex justify-between"><span className="text-text-muted">Total</span><span className="font-medium">{formatCurrency(lcMetrics.total_expenditure, "GYD")}</span></div><div className="flex justify-between"><span className="text-text-muted">LC Rate</span><span className="font-bold text-gold">{formatPercentage(lcMetrics.local_content_rate)}</span></div></div></Card>

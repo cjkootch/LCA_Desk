@@ -6,9 +6,7 @@ import { tenants, tenantMembers } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
 function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-04-30.basil",
-  });
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
 // Stripe Price IDs — create these in your Stripe Dashboard

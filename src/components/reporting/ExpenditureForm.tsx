@@ -22,6 +22,7 @@ const expenditureSchema = z.object({
   supplier_bank: z.string().optional(),
   bank_location_country: z.string().optional(),
   currency_of_payment: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type ExpenditureFormData = z.infer<typeof expenditureSchema>;
@@ -187,6 +188,8 @@ export function ExpenditureForm({
           {...register("bank_location_country")}
         />
       </div>
+
+      <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes or context" />
 
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="ghost" onClick={onCancel}>
