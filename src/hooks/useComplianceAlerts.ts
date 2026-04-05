@@ -58,7 +58,7 @@ export function useComplianceAlerts(
       // Check supplier certs
       const expRecords = expendituresByEntity[entity.id] || [];
       const missingCerts = expRecords.filter(
-        (e) => e.is_guyanese_supplier && !e.supplier_lcs_cert_id
+        (e) => e.sole_source_code && !e.supplier_certificate_id
       );
       if (missingCerts.length > 0) {
         alerts.push({

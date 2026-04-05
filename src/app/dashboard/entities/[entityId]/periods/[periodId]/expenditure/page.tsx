@@ -14,44 +14,31 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { calculateLocalContentRate } from "@/lib/compliance/calculators";
-import { fetchEntity, fetchExpenditures, fetchCategories, addExpenditure, removeExpenditure } from "@/server/actions";
-import type { ExpenditureRecord, SectorCategory } from "@/types/database.types";
+import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure } from "@/server/actions";
+import { RELATED_SECTORS } from "@/lib/compliance/sectors";
+import type { ExpenditureRecord } from "@/types/database.types";
 
 function mapExpenditure(e: Record<string, unknown>): ExpenditureRecord {
   return {
     id: e.id as string,
     reporting_period_id: e.reportingPeriodId as string,
     entity_id: e.entityId as string,
-    sector_category_id: e.sectorCategoryId as string,
+    type_of_item_procured: e.typeOfItemProcured as string,
+    related_sector: e.relatedSector as string | null,
+    description_of_good_service: e.descriptionOfGoodService as string | null,
     supplier_name: e.supplierName as string,
-    supplier_lcs_cert_id: e.supplierLcsCertId as string | null,
-    is_guyanese_supplier: e.isGuyaneseSupplier as boolean,
-    is_sole_sourced: e.isSoleSourced as boolean,
     sole_source_code: e.soleSourceCode as string | null,
-    amount_local: Number(e.amountLocal),
-    amount_usd: e.amountUsd ? Number(e.amountUsd) : null,
-    currency_code: e.currencyCode as string,
+    supplier_certificate_id: e.supplierCertificateId as string | null,
+    actual_payment: Number(e.actualPayment),
+    outstanding_payment: e.outstandingPayment ? Number(e.outstandingPayment) : null,
+    projection_next_period: e.projectionNextPeriod ? Number(e.projectionNextPeriod) : null,
     payment_method: e.paymentMethod as string | null,
-    contract_date: e.contractDate as string | null,
-    payment_date: e.paymentDate as string | null,
-    description: e.description as string | null,
+    supplier_bank: e.supplierBank as string | null,
+    bank_location_country: e.bankLocationCountry as string | null,
+    currency_of_payment: (e.currencyOfPayment as string) || "GYD",
     notes: e.notes as string | null,
     created_at: "",
     updated_at: "",
-  };
-}
-
-function mapCategory(c: Record<string, unknown>): SectorCategory {
-  return {
-    id: c.id as string,
-    jurisdiction_id: c.jurisdictionId as string,
-    code: c.code as string,
-    name: c.name as string,
-    description: c.description as string | null,
-    min_local_content_pct: c.minLocalContentPct ? Number(c.minLocalContentPct) : null,
-    reserved: c.reserved as boolean,
-    active: c.active as boolean,
-    sort_order: c.sortOrder as number | null,
   };
 }
 
@@ -61,20 +48,17 @@ export default function ExpenditurePage() {
   const periodId = params.periodId as string;
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<ExpenditureRecord[]>([]);
-  const [categories, setCategories] = useState<SectorCategory[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
-    const [entity, rawRecords, rawCats] = await Promise.all([
+    const [entity, rawRecords] = await Promise.all([
       fetchEntity(entityId),
       fetchExpenditures(periodId),
-      fetchCategories(),
     ]);
     setEntityName(entity?.legalName || "");
     setRecords(rawRecords.map((r) => mapExpenditure(r as unknown as Record<string, unknown>)));
-    setCategories(rawCats.map((c) => mapCategory(c as unknown as Record<string, unknown>)));
     setLoading(false);
   };
 
@@ -119,7 +103,7 @@ export default function ExpenditurePage() {
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Add Expenditure Record</DialogTitle></DialogHeader>
-              <ExpenditureForm categories={categories} onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
+              <ExpenditureForm sectorOptions={RELATED_SECTORS} onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
             </DialogContent>
           </Dialog>
         </PageHeader>
@@ -129,7 +113,7 @@ export default function ExpenditurePage() {
             {records.length === 0 ? (
               <EmptyState icon={Receipt} title="No expenditure records" description="Add your first expenditure record to start tracking supplier procurement." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
-              <ExpenditureTable records={records} categories={categories} onDelete={handleDelete} />
+              <ExpenditureTable records={records} onDelete={handleDelete} />
             )}
           </div>
           <div><LocalContentRateCard metrics={metrics} /></div>

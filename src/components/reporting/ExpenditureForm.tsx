@@ -6,26 +6,27 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import type { SectorCategory } from "@/types/database.types";
 
 const expenditureSchema = z.object({
-  sector_category_id: z.string().min(1, "Sector category is required"),
+  type_of_item_procured: z.string().min(1, "Type of item is required"),
+  related_sector: z.string().optional(),
+  description_of_good_service: z.string().optional(),
   supplier_name: z.string().min(1, "Supplier name is required"),
-  supplier_lcs_cert_id: z.string().optional(),
-  is_guyanese_supplier: z.coerce.boolean(),
-  is_sole_sourced: z.coerce.boolean(),
   sole_source_code: z.string().optional(),
-  amount_local: z.coerce.number().positive("Amount must be positive"),
-  amount_usd: z.coerce.number().optional(),
+  supplier_certificate_id: z.string().optional(),
+  actual_payment: z.coerce.number().positive("Actual payment must be positive"),
+  outstanding_payment: z.coerce.number().optional(),
+  projection_next_period: z.coerce.number().optional(),
   payment_method: z.string().optional(),
-  payment_date: z.string().optional(),
-  description: z.string().optional(),
+  supplier_bank: z.string().optional(),
+  bank_location_country: z.string().optional(),
+  currency_of_payment: z.string().optional(),
 });
 
 type ExpenditureFormData = z.infer<typeof expenditureSchema>;
 
 interface ExpenditureFormProps {
-  categories: SectorCategory[];
+  sectorOptions: string[];
   defaultValues?: Partial<ExpenditureFormData>;
   onSubmit: (data: ExpenditureFormData) => Promise<void>;
   onCancel: () => void;
@@ -33,7 +34,7 @@ interface ExpenditureFormProps {
 }
 
 export function ExpenditureForm({
-  categories,
+  sectorOptions,
   defaultValues,
   onSubmit,
   onCancel,
@@ -42,115 +43,135 @@ export function ExpenditureForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<ExpenditureFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(expenditureSchema) as any,
     defaultValues: {
-      is_guyanese_supplier: false,
-      is_sole_sourced: false,
+      currency_of_payment: "GYD",
       ...defaultValues,
     },
   });
 
-  const isGuyanese = watch("is_guyanese_supplier");
-  const isSoleSourced = watch("is_sole_sourced");
-
-  const categoryOptions = categories.map((c) => ({
-    value: c.id,
-    label: `${c.code} - ${c.name}`,
+  const sectorSelectOptions = sectorOptions.map((s) => ({
+    value: s,
+    label: s,
   }));
+
+  const paymentMethodOptions = [
+    { value: "", label: "Select..." },
+    { value: "Cash", label: "Cash" },
+    { value: "Cheque", label: "Cheque" },
+    { value: "Bank Transfer", label: "Bank Transfer" },
+    { value: "Wire Transfer", label: "Wire Transfer" },
+    { value: "Credit", label: "Credit" },
+  ];
+
+  const currencyOptions = [
+    { value: "GYD", label: "GYD" },
+    { value: "USD", label: "USD" },
+    { value: "TTD", label: "TTD" },
+    { value: "Other", label: "Other" },
+  ];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Select
-        label="Sector Category *"
-        id="sector_category_id"
-        {...register("sector_category_id")}
-        options={categoryOptions}
-        placeholder="Select a category"
-        error={errors.sector_category_id?.message}
-      />
       <Input
-        label="Supplier Name *"
-        id="supplier_name"
-        {...register("supplier_name")}
-        error={errors.supplier_name?.message}
+        label="Type of Item Procured *"
+        id="type_of_item_procured"
+        {...register("type_of_item_procured")}
+        error={errors.type_of_item_procured?.message}
       />
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Guyanese Supplier?"
-          id="is_guyanese_supplier"
-          {...register("is_guyanese_supplier")}
-          options={[
-            { value: "true", label: "Yes" },
-            { value: "false", label: "No" },
-          ]}
-        />
-        <Input
-          label="LCS Certificate ID"
-          id="supplier_lcs_cert_id"
-          {...register("supplier_lcs_cert_id")}
-          hint={isGuyanese ? "Required for Guyanese suppliers" : undefined}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Sole Sourced?"
-          id="is_sole_sourced"
-          {...register("is_sole_sourced")}
-          options={[
-            { value: "false", label: "No" },
-            { value: "true", label: "Yes" },
-          ]}
-        />
-        {isSoleSourced && (
-          <Input
-            label="Sole Source Code"
-            id="sole_source_code"
-            {...register("sole_source_code")}
-          />
-        )}
-      </div>
+
+      <Select
+        label="Related Sector"
+        id="related_sector"
+        {...register("related_sector")}
+        options={sectorSelectOptions}
+        placeholder="Select a sector"
+        error={errors.related_sector?.message}
+      />
+
+      <Input
+        label="Description of Good/Service"
+        id="description_of_good_service"
+        {...register("description_of_good_service")}
+        error={errors.description_of_good_service?.message}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Amount (GYD) *"
-          id="amount_local"
+          label="Supplier Name *"
+          id="supplier_name"
+          {...register("supplier_name")}
+          error={errors.supplier_name?.message}
+        />
+        <Input
+          label="Sole Source Code"
+          id="sole_source_code"
+          {...register("sole_source_code")}
+        />
+      </div>
+
+      <Input
+        label="Supplier Certificate ID"
+        id="supplier_certificate_id"
+        {...register("supplier_certificate_id")}
+      />
+
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Actual Payment *"
+          id="actual_payment"
           type="number"
           step="0.01"
-          {...register("amount_local")}
-          error={errors.amount_local?.message}
+          {...register("actual_payment")}
+          error={errors.actual_payment?.message}
         />
         <Input
-          label="Amount (USD)"
-          id="amount_usd"
+          label="Outstanding Payment"
+          id="outstanding_payment"
           type="number"
           step="0.01"
-          {...register("amount_usd")}
+          {...register("outstanding_payment")}
+        />
+        <Input
+          label="Projection for Next Period"
+          id="projection_next_period"
+          type="number"
+          step="0.01"
+          {...register("projection_next_period")}
         />
       </div>
+
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Payment Method"
+          label="Method of Payment"
           id="payment_method"
           {...register("payment_method")}
-          options={[
-            { value: "", label: "Select..." },
-            { value: "cash", label: "Cash" },
-            { value: "cheque", label: "Cheque" },
-            { value: "bank_transfer", label: "Bank Transfer" },
-            { value: "credit", label: "Credit" },
-          ]}
+          options={paymentMethodOptions}
         />
-        <Input
-          label="Payment/Invoice Date"
-          id="payment_date"
-          type="date"
-          {...register("payment_date")}
+        <Select
+          label="Currency of Payment"
+          id="currency_of_payment"
+          {...register("currency_of_payment")}
+          options={currencyOptions}
         />
       </div>
-      <Input label="Description" id="description" {...register("description")} />
+
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Supplier's (Recipient's) Bank"
+          id="supplier_bank"
+          {...register("supplier_bank")}
+        />
+        <Input
+          label="Location of Bank (Country)"
+          id="bank_location_country"
+          {...register("bank_location_country")}
+        />
+      </div>
+
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel

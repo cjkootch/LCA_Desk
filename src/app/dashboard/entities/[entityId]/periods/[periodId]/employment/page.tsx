@@ -25,15 +25,13 @@ function mapEmployment(e: Record<string, unknown>): EmploymentRecord {
     reporting_period_id: e.reportingPeriodId as string,
     entity_id: e.entityId as string,
     job_title: e.jobTitle as string,
-    isco_08_code: e.isco08Code as string | null,
-    position_type: e.positionType as EmploymentRecord["position_type"],
-    is_guyanese: e.isGuyanese as boolean,
-    nationality: e.nationality as string | null,
-    headcount: e.headcount as number,
-    remuneration_band: e.remunerationBand as string | null,
-    total_remuneration_local: e.totalRemunerationLocal ? Number(e.totalRemunerationLocal) : null,
-    total_remuneration_usd: e.totalRemunerationUsd ? Number(e.totalRemunerationUsd) : null,
-    contract_type: e.contractType as EmploymentRecord["contract_type"],
+    employment_category: e.employmentCategory as EmploymentRecord["employment_category"],
+    employment_classification: e.employmentClassification as string | null,
+    related_company: e.relatedCompany as string | null,
+    total_employees: (e.totalEmployees as number) || 0,
+    guyanese_employed: (e.guyanaeseEmployed as number) || 0,
+    total_remuneration_paid: e.totalRemunerationPaid ? Number(e.totalRemunerationPaid) : null,
+    remuneration_guyanese_only: e.remunerationGuyanaeseOnly ? Number(e.remunerationGuyanaeseOnly) : null,
     notes: e.notes as string | null,
     created_at: "",
   };
@@ -102,7 +100,7 @@ export default function EmploymentPage() {
     <div>
       <TopBar title={`${entityName} — Employment`} />
       <div className="p-8">
-        <PageHeader title="Employment Sub-Report" description="Record all employment data disaggregated by job title, nationality, and position type."
+        <PageHeader title="Employment Sub-Report" description="Record all employment data by job title, category, and Guyanese employment."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Employment" }]}>
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
@@ -116,7 +114,7 @@ export default function EmploymentPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
             {records.length === 0 ? (
-              <EmptyState icon={Users} title="No employment records" description="Add employment data to track Guyanese employment rates by position type." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
+              <EmptyState icon={Users} title="No employment records" description="Add employment data to track Guyanese employment rates by category." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
               <EmploymentTable records={records} onDelete={handleDelete} />
             )}
@@ -124,7 +122,7 @@ export default function EmploymentPage() {
           <div>
             <Card className="p-4 space-y-4">
               <h4 className="text-sm font-medium text-text-secondary">Employment Summary</h4>
-              <div className="flex justify-between text-sm"><span className="text-text-muted">Total Headcount</span><span className="text-2xl font-bold">{metrics.total_headcount}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-text-muted">Total Employees</span><span className="text-2xl font-bold">{metrics.total_headcount}</span></div>
               <div className="flex justify-between text-sm"><span className="text-text-muted">Guyanese</span><span className="text-lg font-bold text-success">{metrics.guyanese_headcount} ({formatPercentage(metrics.guyanese_percentage)})</span></div>
               <div className="border-t border-border pt-3 space-y-2">
                 <MetricRow label="Managerial" value={metrics.managerial_guyanese_pct} minimum={minimums.managerial} />

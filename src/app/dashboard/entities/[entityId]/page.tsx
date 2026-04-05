@@ -58,6 +58,8 @@ export default function EntityDetailPage() {
           contact_name: entityData.contactName,
           contact_email: entityData.contactEmail,
           contact_phone: entityData.contactPhone,
+          authorized_rep_name: entityData.authorizedRepName,
+          authorized_rep_designation: entityData.authorizedRepDesignation,
           active: entityData.active ?? true,
           created_at: entityData.createdAt?.toISOString() || "",
           updated_at: entityData.updatedAt?.toISOString() || "",

@@ -71,6 +71,8 @@ export interface Entity {
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  authorized_rep_name: string | null;
+  authorized_rep_designation: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -117,67 +119,72 @@ export interface ReportingPeriod {
   updated_at: string;
 }
 
+// LCS Template v4.0 — Expenditure Sub-Report (13 columns)
 export interface ExpenditureRecord {
   id: string;
   reporting_period_id: string;
   entity_id: string;
-  sector_category_id: string;
+  type_of_item_procured: string;
+  related_sector: string | null;
+  description_of_good_service: string | null;
   supplier_name: string;
-  supplier_lcs_cert_id: string | null;
-  is_guyanese_supplier: boolean;
-  is_sole_sourced: boolean;
   sole_source_code: string | null;
-  amount_local: number;
-  amount_usd: number | null;
-  currency_code: string;
+  supplier_certificate_id: string | null;
+  actual_payment: number;
+  outstanding_payment: number | null;
+  projection_next_period: number | null;
   payment_method: string | null;
-  contract_date: string | null;
-  payment_date: string | null;
-  description: string | null;
+  supplier_bank: string | null;
+  bank_location_country: string | null;
+  currency_of_payment: string;
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
+// LCS Template v4.0 — Employment Sub-Report (8 columns)
 export interface EmploymentRecord {
   id: string;
   reporting_period_id: string;
   entity_id: string;
   job_title: string;
-  isco_08_code: string | null;
-  position_type: "managerial" | "technical" | "non_technical";
-  is_guyanese: boolean;
-  nationality: string | null;
-  headcount: number;
-  remuneration_band: string | null;
-  total_remuneration_local: number | null;
-  total_remuneration_usd: number | null;
-  contract_type: "permanent" | "contract" | "temporary" | null;
+  employment_category: "Managerial" | "Technical" | "Non-Technical";
+  employment_classification: string | null;
+  related_company: string | null;
+  total_employees: number;
+  guyanese_employed: number;
+  total_remuneration_paid: number | null;
+  remuneration_guyanese_only: number | null;
   notes: string | null;
   created_at: string;
 }
+
+// LCS Template v4.0 — Capacity Development Sub-Report (9 columns)
+export type ParticipantType =
+  | "Guyanese (Internal)"
+  | "Guyanese (External)"
+  | "Non-Guyanese (Internal)"
+  | "Non-Guyanese (External)"
+  | "Mixed (Internal)"
+  | "Mixed (External)"
+  | "Mixed"
+  | "Guyanese Supplier"
+  | "Non-Guyanese Supplier"
+  | "Mixed Supplier";
 
 export interface CapacityDevelopmentRecord {
   id: string;
   reporting_period_id: string;
   entity_id: string;
-  activity_type:
-    | "training"
-    | "scholarship"
-    | "apprenticeship"
-    | "on_the_job"
-    | "certification";
-  activity_name: string;
-  provider_name: string | null;
-  provider_type: "local" | "international" | null;
-  participant_count: number;
-  guyanese_participant_count: number;
+  activity: string;
+  category: string | null;
+  participant_type: ParticipantType | null;
+  guyanese_participants_only: number;
+  total_participants: number;
   start_date: string | null;
-  end_date: string | null;
-  total_hours: number | null;
-  cost_local: number | null;
-  cost_usd: number | null;
-  description: string | null;
+  duration_days: number | null;
+  cost_to_participants: number | null;
+  expenditure_on_capacity: number | null;
   notes: string | null;
   created_at: string;
 }

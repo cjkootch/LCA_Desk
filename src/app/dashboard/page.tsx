@@ -48,6 +48,8 @@ export default function DashboardPage() {
           contact_name: e.contactName,
           contact_email: e.contactEmail,
           contact_phone: e.contactPhone,
+          authorized_rep_name: e.authorizedRepName,
+          authorized_rep_designation: e.authorizedRepDesignation,
           active: e.active ?? true,
           created_at: e.createdAt?.toISOString() || "",
           updated_at: e.updatedAt?.toISOString() || "",

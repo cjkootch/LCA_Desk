@@ -31,9 +31,9 @@ export default function ReviewPage() {
 
       // Map to types expected by validators
       const entity = { id: entityData?.id || "", legal_name: entityData?.legalName || "", lcs_certificate_id: entityData?.lcsCertificateId || null, lcs_certificate_expiry: entityData?.lcsCertificateExpiry || null } as Entity;
-      const expenditures = rawExp.map((e) => ({ id: e.id, sector_category_id: e.sectorCategoryId, supplier_name: e.supplierName, supplier_lcs_cert_id: e.supplierLcsCertId, is_guyanese_supplier: e.isGuyaneseSupplier, is_sole_sourced: e.isSoleSourced, sole_source_code: e.soleSourceCode, amount_local: Number(e.amountLocal) })) as ExpenditureRecord[];
-      const employment = rawEmp.map((e) => ({ id: e.id, position_type: e.positionType, is_guyanese: e.isGuyanese, headcount: e.headcount })) as EmploymentRecord[];
-      const capacity = rawCap.map((c) => ({ id: c.id, activity_name: c.activityName, start_date: c.startDate, end_date: c.endDate, participant_count: c.participantCount })) as CapacityDevelopmentRecord[];
+      const expenditures = rawExp.map((e) => ({ id: e.id, type_of_item_procured: e.typeOfItemProcured, related_sector: e.relatedSector, supplier_name: e.supplierName, supplier_certificate_id: e.supplierCertificateId, sole_source_code: e.soleSourceCode, actual_payment: Number(e.actualPayment) })) as ExpenditureRecord[];
+      const employment = rawEmp.map((e) => ({ id: e.id, employment_category: e.employmentCategory, total_employees: e.totalEmployees, guyanese_employed: e.guyanaeseEmployed })) as EmploymentRecord[];
+      const capacity = rawCap.map((c) => ({ id: c.id, activity: c.activity, start_date: c.startDate, total_participants: c.totalParticipants })) as CapacityDevelopmentRecord[];
       const narratives = rawNar.map((n) => ({ id: n.id, section: n.section, draft_content: n.draftContent })) as NarrativeDraft[];
 
       setResults(runFullValidation(entity, expenditures, employment, capacity, narratives, "GY"));

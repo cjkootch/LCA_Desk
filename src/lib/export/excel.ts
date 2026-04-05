@@ -301,14 +301,8 @@ function buildGeneralInfoSheet(data: ReportExportData): XLSX.WorkSheet {
 
 // ─── EXPENDITURE TAB ─────────────────────────────────────────────────
 function buildExpenditureSheet(
-  expenditures: ReportExportData["expenditures"],
-  sectorCategories: ReportExportData["sectorCategories"]
+  expenditures: ReportExportData["expenditures"]
 ): XLSX.WorkSheet {
-  const getCategoryName = (id: string) => {
-    const cat = sectorCategories.find((c) => c.id === id);
-    return cat ? cat.name : "";
-  };
-
   const rows: (string | number)[][] = [
     [],
     ["Local Content Half-Yearly Report"],
@@ -343,19 +337,19 @@ function buildExpenditureSheet(
   // Data rows
   for (const e of expenditures) {
     rows.push([
-      e.description || "",
-      getCategoryName(e.sector_category_id),
-      e.description || "",
+      e.type_of_item_procured || "",
+      e.related_sector || "",
+      e.description_of_good_service || "",
       e.supplier_name,
       e.sole_source_code || "",
-      e.supplier_lcs_cert_id || "",
-      e.amount_local,
-      "",
-      "",
+      e.supplier_certificate_id || "",
+      e.actual_payment,
+      e.outstanding_payment || "",
+      e.projection_next_period || "",
       e.payment_method || "",
-      "",
-      "",
-      e.currency_code || "GYD",
+      e.supplier_bank || "",
+      e.bank_location_country || "",
+      e.currency_of_payment || "GYD",
     ]);
   }
 
@@ -404,22 +398,16 @@ function buildEmploymentSheet(
     ],
   ];
 
-  const CATEGORY_MAP: Record<string, string> = {
-    managerial: "Managerial",
-    technical: "Technical",
-    non_technical: "Non-Technical",
-  };
-
   for (const e of employment) {
     rows.push([
       e.job_title,
-      CATEGORY_MAP[e.position_type] || e.position_type,
-      e.isco_08_code || "",
-      "",
-      e.headcount,
-      e.is_guyanese ? e.headcount : 0,
-      e.total_remuneration_local || "",
-      e.is_guyanese ? (e.total_remuneration_local || "") : "",
+      e.employment_category,
+      e.employment_classification || "",
+      e.related_company || "",
+      e.total_employees,
+      e.guyanese_employed,
+      e.total_remuneration_paid || "",
+      e.remuneration_guyanese_only || "",
     ]);
   }
 
@@ -533,26 +521,16 @@ function buildCapacitySheet(
   ];
 
   for (const c of capacity) {
-    const participantType =
-      c.provider_type === "local"
-        ? "Guyanese (Internal)"
-        : "Non-Guyanese (Internal)";
-
-    let durationDays = "";
-    if (c.total_hours) {
-      durationDays = Math.ceil(c.total_hours / 8).toString();
-    }
-
     rows.push([
-      c.activity_name,
-      c.activity_type.charAt(0).toUpperCase() + c.activity_type.slice(1),
-      participantType,
-      c.guyanese_participant_count,
-      c.participant_count,
+      c.activity,
+      c.category || "",
+      c.participant_type || "",
+      c.guyanese_participants_only,
+      c.total_participants,
       c.start_date || "",
-      durationDays,
-      "",
-      c.cost_local || "",
+      c.duration_days || "",
+      c.cost_to_participants || "",
+      c.expenditure_on_capacity || "",
     ]);
   }
 
@@ -603,10 +581,7 @@ export async function generateHalfYearlyReport(
   XLSX.utils.book_append_sheet(wb, generalSheet, "General Information");
 
   // Tab 3: Expenditure
-  const expenditureSheet = buildExpenditureSheet(
-    data.expenditures,
-    data.sectorCategories
-  );
+  const expenditureSheet = buildExpenditureSheet(data.expenditures);
   XLSX.utils.book_append_sheet(wb, expenditureSheet, "Expenditure");
 
   // Tab 4: Employment

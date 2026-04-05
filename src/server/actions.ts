@@ -193,18 +193,19 @@ export async function addExpenditure(
       reportingPeriodId: periodId,
       entityId,
       tenantId,
-      sectorCategoryId: data.sector_category_id as string,
+      typeOfItemProcured: data.type_of_item_procured as string,
+      relatedSector: (data.related_sector as string) || null,
+      descriptionOfGoodService: (data.description_of_good_service as string) || null,
       supplierName: data.supplier_name as string,
-      supplierLcsCertId: (data.supplier_lcs_cert_id as string) || null,
-      isGuyaneseSupplier: data.is_guyanese_supplier === true || data.is_guyanese_supplier === "true",
-      isSoleSourced: data.is_sole_sourced === true || data.is_sole_sourced === "true",
       soleSourceCode: (data.sole_source_code as string) || null,
-      amountLocal: String(data.amount_local),
-      amountUsd: data.amount_usd ? String(data.amount_usd) : null,
-      currencyCode: "GYD",
+      supplierCertificateId: (data.supplier_certificate_id as string) || null,
+      actualPayment: String(data.actual_payment),
+      outstandingPayment: data.outstanding_payment ? String(data.outstanding_payment) : null,
+      projectionNextPeriod: data.projection_next_period ? String(data.projection_next_period) : null,
       paymentMethod: (data.payment_method as string) || null,
-      paymentDate: (data.payment_date as string) || null,
-      description: (data.description as string) || null,
+      supplierBank: (data.supplier_bank as string) || null,
+      bankLocationCountry: (data.bank_location_country as string) || null,
+      currencyOfPayment: (data.currency_of_payment as string) || "GYD",
     })
     .returning();
   return record;
@@ -247,16 +248,17 @@ export async function addEmployment(
       entityId,
       tenantId,
       jobTitle: data.job_title as string,
-      isco08Code: (data.isco_08_code as string) || null,
-      positionType: data.position_type as string,
-      isGuyanese: data.is_guyanese === true || data.is_guyanese === "true",
-      nationality: (data.nationality as string) || null,
-      headcount: Number(data.headcount) || 1,
-      remunerationBand: (data.remuneration_band as string) || null,
-      totalRemunerationLocal: data.total_remuneration_local
-        ? String(data.total_remuneration_local)
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      relatedCompany: (data.related_company as string) || null,
+      totalEmployees: Number(data.total_employees) || 1,
+      guyanaeseEmployed: Number(data.guyanese_employed) || 0,
+      totalRemunerationPaid: data.total_remuneration_paid
+        ? String(data.total_remuneration_paid)
         : null,
-      contractType: (data.contract_type as string) || null,
+      remunerationGuyanaeseOnly: data.remuneration_guyanese_only
+        ? String(data.remuneration_guyanese_only)
+        : null,
     })
     .returning();
   return record;
@@ -298,18 +300,15 @@ export async function addCapacity(
       reportingPeriodId: periodId,
       entityId,
       tenantId,
-      activityType: data.activity_type as string,
-      activityName: data.activity_name as string,
-      providerName: (data.provider_name as string) || null,
-      providerType: (data.provider_type as string) || null,
-      participantCount: Number(data.participant_count) || 0,
-      guyanaeseParticipantCount: Number(data.guyanese_participant_count) || 0,
+      activity: data.activity as string,
+      category: (data.category as string) || null,
+      participantType: (data.participant_type as string) || null,
+      guyanaeseParticipantsOnly: Number(data.guyanese_participants_only) || 0,
+      totalParticipants: Number(data.total_participants) || 0,
       startDate: (data.start_date as string) || null,
-      endDate: (data.end_date as string) || null,
-      totalHours: data.total_hours ? String(data.total_hours) : null,
-      costLocal: data.cost_local ? String(data.cost_local) : null,
-      costUsd: data.cost_usd ? String(data.cost_usd) : null,
-      description: (data.description as string) || null,
+      durationDays: data.duration_days ? Number(data.duration_days) : null,
+      costToParticipants: data.cost_to_participants ? String(data.cost_to_participants) : null,
+      expenditureOnCapacity: data.expenditure_on_capacity ? String(data.expenditure_on_capacity) : null,
     })
     .returning();
   return record;

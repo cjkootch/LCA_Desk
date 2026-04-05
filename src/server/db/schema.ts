@@ -152,6 +152,8 @@ export const entities = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
+    authorizedRepName: text("authorized_rep_name"),
+    authorizedRepDesignation: text("authorized_rep_designation"),
     active: boolean("active").default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -203,6 +205,7 @@ export const reportingPeriods = pgTable(
 );
 
 // ─── EXPENDITURE RECORDS ──────────────────────────────────────────
+// Matches LCS Template v4.0 Expenditure tab: 13 columns
 export const expenditureRecords = pgTable(
   "expenditure_records",
   {
@@ -216,21 +219,21 @@ export const expenditureRecords = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id),
-    sectorCategoryId: uuid("sector_category_id").references(
-      () => sectorCategories.id
-    ),
+    // Template columns (in order)
+    typeOfItemProcured: text("type_of_item_procured").notNull(),
+    relatedSector: text("related_sector"),            // from Related Sector dropdown
+    descriptionOfGoodService: text("description_of_good_service"),
     supplierName: text("supplier_name").notNull(),
-    supplierLcsCertId: text("supplier_lcs_cert_id"),
-    isGuyaneseSupplier: boolean("is_guyanese_supplier").default(false),
-    isSoleSourced: boolean("is_sole_sourced").default(false),
     soleSourceCode: text("sole_source_code"),
-    amountLocal: numeric("amount_local").notNull(),
-    amountUsd: numeric("amount_usd"),
-    currencyCode: text("currency_code").default("GYD"),
+    supplierCertificateId: text("supplier_certificate_id"),
+    actualPayment: numeric("actual_payment").notNull(), // "Actual Payments made during reporting period"
+    outstandingPayment: numeric("outstanding_payment"),
+    projectionNextPeriod: numeric("projection_next_period"),
     paymentMethod: text("payment_method"),
-    contractDate: date("contract_date"),
-    paymentDate: date("payment_date"),
-    description: text("description"),
+    supplierBank: text("supplier_bank"),               // "Supplier's (Recipient's) Bank"
+    bankLocationCountry: text("bank_location_country"), // "Location of Bank (Country)"
+    currencyOfPayment: text("currency_of_payment").default("GYD"),
+    // Internal fields (not in template but useful)
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -242,6 +245,7 @@ export const expenditureRecords = pgTable(
 );
 
 // ─── EMPLOYMENT RECORDS ───────────────────────────────────────────
+// Matches LCS Template v4.0 Employment tab: 8 columns
 export const employmentRecords = pgTable(
   "employment_records",
   {
@@ -255,16 +259,16 @@ export const employmentRecords = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id),
+    // Template columns (in order)
     jobTitle: text("job_title").notNull(),
-    isco08Code: text("isco_08_code"),
-    positionType: text("position_type").notNull(),
-    isGuyanese: boolean("is_guyanese").notNull(),
-    nationality: text("nationality"),
-    headcount: integer("headcount").notNull().default(1),
-    remunerationBand: text("remuneration_band"),
-    totalRemunerationLocal: numeric("total_remuneration_local"),
-    totalRemunerationUsd: numeric("total_remuneration_usd"),
-    contractType: text("contract_type"),
+    employmentCategory: text("employment_category").notNull(), // Managerial | Technical | Non-Technical
+    employmentClassification: text("employment_classification"), // ISCO-08 code
+    relatedCompany: text("related_company"),
+    totalEmployees: integer("total_employees").notNull().default(1),
+    guyanaeseEmployed: integer("guyanese_employed").notNull().default(0),
+    totalRemunerationPaid: numeric("total_remuneration_paid"),
+    remunerationGuyanaeseOnly: numeric("remuneration_guyanese_only"),
+    // Internal fields
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow(),
   },
@@ -275,6 +279,7 @@ export const employmentRecords = pgTable(
 );
 
 // ─── CAPACITY DEVELOPMENT ─────────────────────────────────────────
+// Matches LCS Template v4.0 Capacity Development tab: 9 columns
 export const capacityDevelopmentRecords = pgTable(
   "capacity_development_records",
   {
@@ -288,18 +293,17 @@ export const capacityDevelopmentRecords = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id),
-    activityType: text("activity_type").notNull(),
-    activityName: text("activity_name").notNull(),
-    providerName: text("provider_name"),
-    providerType: text("provider_type"),
-    participantCount: integer("participant_count").default(0),
-    guyanaeseParticipantCount: integer("guyanese_participant_count").default(0),
+    // Template columns (in order)
+    activity: text("activity").notNull(),
+    category: text("category"),
+    participantType: text("participant_type"),  // 10 specific enum values from template
+    guyanaeseParticipantsOnly: integer("guyanese_participants_only").default(0),
+    totalParticipants: integer("total_participants").default(0),
     startDate: date("start_date"),
-    endDate: date("end_date"),
-    totalHours: numeric("total_hours"),
-    costLocal: numeric("cost_local"),
-    costUsd: numeric("cost_usd"),
-    description: text("description"),
+    durationDays: integer("duration_days"),     // "Duration of Activity (# of Days)"
+    costToParticipants: numeric("cost_to_participants"),
+    expenditureOnCapacity: numeric("expenditure_on_capacity"), // "Expenditure on Capacity Building"
+    // Internal fields
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow(),
   },
@@ -436,10 +440,6 @@ export const expenditureRecordsRelations = relations(
     entity: one(entities, {
       fields: [expenditureRecords.entityId],
       references: [entities.id],
-    }),
-    sectorCategory: one(sectorCategories, {
-      fields: [expenditureRecords.sectorCategoryId],
-      references: [sectorCategories.id],
     }),
   })
 );
