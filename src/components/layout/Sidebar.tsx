@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2 } from "lucide-react";
+import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserContext } from "@/server/actions";
@@ -37,10 +37,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 bg-sidebar-bg flex flex-col">
       {/* Logo */}
-      <div className="flex items-center h-16 px-5 border-b border-white/10">
-        <Link href="/dashboard">
+      <div className="flex items-center justify-between h-16 px-5 border-b border-white/10">
+        <Link href="/dashboard" onClick={onNavigate}>
           <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={40} priority />
         </Link>
+        {onNavigate && (
+          <button onClick={onNavigate} className="lg:hidden text-sidebar-text-muted hover:text-sidebar-text p-1">
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
