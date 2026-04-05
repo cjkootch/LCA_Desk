@@ -82,10 +82,6 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-
-        <p className="text-xs text-text-muted text-center mt-6">
-          Powered by Stabroek Advisory
-        </p>
       </div>
     </div>
   );
