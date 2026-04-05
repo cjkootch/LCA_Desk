@@ -111,7 +111,7 @@ export default function SettingsPage() {
         {activeTab === "profile" && <ProfileTab ctx={ctx} />}
         {activeTab === "company" && <CompanyTab ctx={ctx} />}
         {activeTab === "team" && <TeamTab />}
-        {activeTab === "integrations" && <IntegrationsTab />}
+        {activeTab === "integrations" && <IntegrationsTab plan={ctx?.tenant?.plan as string || "starter"} />}
         {activeTab === "notifications" && (
           <div className="space-y-6">
             <NotificationsTab />
@@ -494,7 +494,9 @@ const notificationOptions = [
 ];
 
 // ─── Integrations Tab ────────────────────────────────────────────
-function IntegrationsTab() {
+function IntegrationsTab({ plan }: { plan: string }) {
+  const isEnterprise = plan === "enterprise";
+  const isPro = plan === "pro" || plan === "enterprise";
   const [qbo, setQbo] = useState<{
     connected: boolean;
     companyName: string | null;
@@ -587,12 +589,21 @@ function IntegrationsTab() {
                 Connect your QuickBooks Online account to automatically import expenditure
                 and payroll data into your LCA reports. Eliminates manual data re-entry.
               </p>
-              <a href="/api/integrations/qbo/connect">
-                <Button size="sm">
-                  <ExternalLink className="h-4 w-4 mr-1" />
-                  Connect QuickBooks
-                </Button>
-              </a>
+              {isPro ? (
+                <a href="/api/integrations/qbo/connect">
+                  <Button size="sm">
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Connect QuickBooks
+                  </Button>
+                </a>
+              ) : (
+                <div className="rounded-lg border border-accent/20 bg-accent-light p-3 flex items-center justify-between">
+                  <p className="text-sm text-text-secondary">Available on <span className="font-semibold text-accent">Pro</span> and <span className="font-semibold text-accent">Enterprise</span> plans.</p>
+                  <a href="/dashboard/settings/billing">
+                    <Button size="sm" variant="outline">Upgrade</Button>
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -602,9 +613,7 @@ function IntegrationsTab() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-[#13B5EA] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">X</span>
-            </div>
+            <img src="/xero-logo.png" alt="Xero" className="h-10 w-10 rounded-lg object-contain" />
             <div>
               <CardTitle className="text-base text-text-muted">Xero</CardTitle>
               <p className="text-sm text-text-muted mt-0.5">Coming soon</p>
