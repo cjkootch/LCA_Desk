@@ -12,9 +12,12 @@ import { cn } from "@/lib/utils";
 import { fetchPlanAndUsage } from "@/server/actions";
 import { PLANS, getPlan, type PlanCode } from "@/lib/plans";
 
+const ANNUAL_DISCOUNT = 0.20; // 20% off
+
 export default function BillingPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchPlanAndUsage>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
 
   useEffect(() => {
     fetchPlanAndUsage()
@@ -24,6 +27,14 @@ export default function BillingPage() {
   }, []);
 
   const currentPlan = getPlan(data?.plan);
+
+  const getPrice = (monthlyPrice: number) => {
+    if (monthlyPrice === 0) return 0;
+    if (billing === "annual") {
+      return Math.round(monthlyPrice * (1 - ANNUAL_DISCOUNT));
+    }
+    return monthlyPrice;
+  };
 
   const features: { label: string; starter: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
     { label: "Entities", starter: "1", pro: "5", enterprise: "Unlimited" },
@@ -132,11 +143,47 @@ export default function BillingPage() {
           </Card>
         )}
 
+        {/* Billing toggle */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <button
+            onClick={() => setBilling("monthly")}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              billing === "monthly"
+                ? "bg-accent text-white"
+                : "bg-bg-primary text-text-secondary hover:text-text-primary"
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBilling("annual")}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
+              billing === "annual"
+                ? "bg-accent text-white"
+                : "bg-bg-primary text-text-secondary hover:text-text-primary"
+            )}
+          >
+            Annual
+            <span className={cn(
+              "text-xs px-1.5 py-0.5 rounded-full font-semibold",
+              billing === "annual"
+                ? "bg-white/20 text-white"
+                : "bg-accent-light text-accent"
+            )}>
+              Save 20%
+            </span>
+          </button>
+        </div>
+
         {/* Plan cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {(Object.values(PLANS) as typeof PLANS[PlanCode][]).map((plan) => {
             const isCurrent = plan.code === currentPlan.code;
             const isPopular = plan.code === "pro";
+            const price = getPrice(plan.price);
+            const originalPrice = plan.price;
 
             return (
               <Card
@@ -158,14 +205,29 @@ export default function BillingPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold text-text-primary">
-                      ${plan.price}
-                    </span>
-                    {plan.price > 0 && (
-                      <span className="text-text-muted text-sm">/month</span>
-                    )}
-                    {plan.price === 0 && (
-                      <span className="text-text-muted text-sm ml-1">Free</span>
+                    {plan.price === 0 ? (
+                      <>
+                        <span className="text-3xl font-bold text-text-primary">$0</span>
+                        <span className="text-text-muted text-sm ml-1">Free</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold text-text-primary">${price}</span>
+                        <span className="text-text-muted text-sm">/month</span>
+                        {billing === "annual" && (
+                          <div className="mt-1">
+                            <span className="text-sm text-text-muted line-through">${originalPrice}/mo</span>
+                            <span className="text-sm text-accent font-medium ml-2">
+                              ${price * 12}/year
+                            </span>
+                          </div>
+                        )}
+                        {billing === "monthly" && plan.price > 0 && (
+                          <p className="text-xs text-text-muted mt-1">
+                            or ${getPrice(plan.price) * 10}/yr with annual billing
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </CardHeader>
@@ -194,13 +256,13 @@ export default function BillingPage() {
                       </span>
                     </li>
                     <li className="text-sm flex items-center gap-2">
-                      {plan.features.complianceScan ? (
+                      {plan.features.qboIntegration ? (
                         <Check className="h-4 w-4 text-success shrink-0" />
                       ) : (
                         <X className="h-4 w-4 text-text-muted shrink-0" />
                       )}
-                      <span className={!plan.features.complianceScan ? "text-text-muted" : ""}>
-                        AI Compliance Scan
+                      <span className={!plan.features.qboIntegration ? "text-text-muted" : ""}>
+                        QuickBooks integration
                       </span>
                     </li>
                     <li className="text-sm flex items-center gap-2">
