@@ -189,6 +189,58 @@ export const entityCoventurers = pgTable("entity_coventurers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── SUPPLIER DIRECTORY ──────────────────────────────────────────
+export const suppliers = pgTable(
+  "suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    certificateId: text("certificate_id"),
+    soleSourceCode: text("sole_source_code"),
+    bankName: text("bank_name"),
+    bankCountry: text("bank_country"),
+    defaultSector: text("default_sector"),
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [index("suppliers_tenant_idx").on(table.tenantId)]
+);
+
+// ─── EMPLOYEE ROSTER ─────────────────────────────────────────────
+export const employees = pgTable(
+  "employees",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    entityId: uuid("entity_id").references(() => entities.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    jobTitle: text("job_title").notNull(),
+    employmentCategory: text("employment_category").notNull(), // Managerial | Technical | Non-Technical
+    employmentClassification: text("employment_classification"), // ISCO-08
+    isGuyanese: boolean("is_guyanese").default(true),
+    nationality: text("nationality"),
+    contractType: text("contract_type"), // permanent | contract | temporary
+    startDate: date("start_date"),
+    active: boolean("active").default(true),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("employees_tenant_idx").on(table.tenantId),
+    index("employees_entity_idx").on(table.entityId),
+  ]
+);
+
 // ─── REPORTING PERIODS ────────────────────────────────────────────
 export const reportingPeriods = pgTable(
   "reporting_periods",

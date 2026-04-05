@@ -16,6 +16,8 @@ import {
   tenants,
   tenantMembers,
   sectorCategories,
+  suppliers,
+  employees,
   users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -812,4 +814,242 @@ export async function disconnectQbo() {
       qboConnectedAt: null,
     })
     .where(eq(tenants.id, tenantId));
+}
+
+// ─── SUPPLIER DIRECTORY ──────────────────────────────────────────
+export async function fetchSuppliers() {
+  const { tenantId } = await getSessionTenant();
+  return db
+    .select()
+    .from(suppliers)
+    .where(eq(suppliers.tenantId, tenantId))
+    .orderBy(suppliers.name);
+}
+
+export async function addSupplier(data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [supplier] = await db
+    .insert(suppliers)
+    .values({
+      tenantId,
+      name: data.name as string,
+      certificateId: (data.certificate_id as string) || null,
+      soleSourceCode: (data.sole_source_code as string) || null,
+      bankName: (data.bank_name as string) || null,
+      bankCountry: (data.bank_country as string) || null,
+      defaultSector: (data.default_sector as string) || null,
+      contactName: (data.contact_name as string) || null,
+      contactEmail: (data.contact_email as string) || null,
+      contactPhone: (data.contact_phone as string) || null,
+      notes: (data.notes as string) || null,
+    })
+    .returning();
+  return supplier;
+}
+
+export async function updateSupplier(supplierId: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(suppliers)
+    .set({
+      name: data.name as string,
+      certificateId: (data.certificate_id as string) || null,
+      soleSourceCode: (data.sole_source_code as string) || null,
+      bankName: (data.bank_name as string) || null,
+      bankCountry: (data.bank_country as string) || null,
+      defaultSector: (data.default_sector as string) || null,
+      contactName: (data.contact_name as string) || null,
+      contactEmail: (data.contact_email as string) || null,
+      contactPhone: (data.contact_phone as string) || null,
+      notes: (data.notes as string) || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(suppliers.id, supplierId), eq(suppliers.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
+export async function deleteSupplier(supplierId: string) {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .delete(suppliers)
+    .where(and(eq(suppliers.id, supplierId), eq(suppliers.tenantId, tenantId)));
+}
+
+// ─── EMPLOYEE ROSTER ─────────────────────────────────────────────
+export async function fetchEmployees(entityId?: string) {
+  const { tenantId } = await getSessionTenant();
+  if (entityId) {
+    return db
+      .select()
+      .from(employees)
+      .where(and(eq(employees.tenantId, tenantId), eq(employees.entityId, entityId), eq(employees.active, true)))
+      .orderBy(employees.fullName);
+  }
+  return db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.tenantId, tenantId), eq(employees.active, true)))
+    .orderBy(employees.fullName);
+}
+
+export async function addEmployee(data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [employee] = await db
+    .insert(employees)
+    .values({
+      tenantId,
+      entityId: (data.entity_id as string) || null,
+      fullName: data.full_name as string,
+      jobTitle: data.job_title as string,
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      isGuyanese: data.is_guyanese === true || data.is_guyanese === "true",
+      nationality: (data.nationality as string) || null,
+      contractType: (data.contract_type as string) || null,
+      startDate: (data.start_date as string) || null,
+      notes: (data.notes as string) || null,
+    })
+    .returning();
+  return employee;
+}
+
+export async function updateEmployee(employeeId: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(employees)
+    .set({
+      fullName: data.full_name as string,
+      jobTitle: data.job_title as string,
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      isGuyanese: data.is_guyanese === true || data.is_guyanese === "true",
+      nationality: (data.nationality as string) || null,
+      contractType: (data.contract_type as string) || null,
+      startDate: (data.start_date as string) || null,
+      notes: (data.notes as string) || null,
+      active: data.active !== false,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
+export async function deleteEmployee(employeeId: string) {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .update(employees)
+    .set({ active: false, updatedAt: new Date() })
+    .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId)));
+}
+
+// ─── DUPLICATE PERIOD ────────────────────────────────────────────
+export async function duplicatePeriod(sourcePeriodId: string, newReportType: string, newFiscalYear: number, newPeriodStart: string, newPeriodEnd: string, newDueDate: string) {
+  const { tenantId } = await getSessionTenant();
+
+  // Verify source period belongs to tenant
+  const source = await db.query.reportingPeriods.findFirst({
+    where: and(
+      eq(reportingPeriods.id, sourcePeriodId),
+      eq(reportingPeriods.tenantId, tenantId)
+    ),
+  });
+  if (!source) throw new Error("Source period not found");
+
+  // Create new period
+  const [newPeriod] = await db
+    .insert(reportingPeriods)
+    .values({
+      entityId: source.entityId,
+      tenantId,
+      jurisdictionId: source.jurisdictionId,
+      reportType: newReportType,
+      periodStart: newPeriodStart,
+      periodEnd: newPeriodEnd,
+      dueDate: newDueDate,
+      fiscalYear: newFiscalYear,
+      status: "not_started",
+    })
+    .returning();
+
+  // Copy expenditure records
+  const sourceExp = await db
+    .select()
+    .from(expenditureRecords)
+    .where(eq(expenditureRecords.reportingPeriodId, sourcePeriodId));
+
+  if (sourceExp.length > 0) {
+    await db.insert(expenditureRecords).values(
+      sourceExp.map((e) => ({
+        reportingPeriodId: newPeriod.id,
+        entityId: e.entityId,
+        tenantId,
+        typeOfItemProcured: e.typeOfItemProcured,
+        relatedSector: e.relatedSector,
+        descriptionOfGoodService: e.descriptionOfGoodService,
+        supplierName: e.supplierName,
+        soleSourceCode: e.soleSourceCode,
+        supplierCertificateId: e.supplierCertificateId,
+        actualPayment: "0",
+        outstandingPayment: null,
+        projectionNextPeriod: null,
+        paymentMethod: e.paymentMethod,
+        supplierBank: e.supplierBank,
+        bankLocationCountry: e.bankLocationCountry,
+        currencyOfPayment: e.currencyOfPayment,
+      }))
+    );
+  }
+
+  // Copy employment records
+  const sourceEmp = await db
+    .select()
+    .from(employmentRecords)
+    .where(eq(employmentRecords.reportingPeriodId, sourcePeriodId));
+
+  if (sourceEmp.length > 0) {
+    await db.insert(employmentRecords).values(
+      sourceEmp.map((e) => ({
+        reportingPeriodId: newPeriod.id,
+        entityId: e.entityId,
+        tenantId,
+        jobTitle: e.jobTitle,
+        employmentCategory: e.employmentCategory,
+        employmentClassification: e.employmentClassification,
+        relatedCompany: e.relatedCompany,
+        totalEmployees: e.totalEmployees,
+        guyanaeseEmployed: e.guyanaeseEmployed,
+        totalRemunerationPaid: "0",
+        remunerationGuyanaeseOnly: "0",
+      }))
+    );
+  }
+
+  // Copy capacity records (structure only, reset amounts)
+  const sourceCap = await db
+    .select()
+    .from(capacityDevelopmentRecords)
+    .where(eq(capacityDevelopmentRecords.reportingPeriodId, sourcePeriodId));
+
+  if (sourceCap.length > 0) {
+    await db.insert(capacityDevelopmentRecords).values(
+      sourceCap.map((c) => ({
+        reportingPeriodId: newPeriod.id,
+        entityId: c.entityId,
+        tenantId,
+        activity: c.activity,
+        category: c.category,
+        participantType: c.participantType,
+        guyanaeseParticipantsOnly: 0,
+        totalParticipants: 0,
+        startDate: null,
+        durationDays: null,
+        costToParticipants: null,
+        expenditureOnCapacity: null,
+      }))
+    );
+  }
+
+  return newPeriod;
 }
