@@ -10,77 +10,158 @@ interface TourStep {
   title: string;
   description: string;
   icon: React.ElementType;
-  target?: string; // CSS selector to highlight
-  position?: "center" | "top-right" | "bottom-left";
+  extra?: React.ReactNode;
   navigateTo?: string;
 }
+
+const WORKFLOW_STEPS = [
+  { num: 1, label: "Company Info", color: "bg-accent" },
+  { num: 2, label: "Expenditure", color: "bg-accent" },
+  { num: 3, label: "Employment", color: "bg-accent" },
+  { num: 4, label: "Capacity Dev", color: "bg-accent" },
+  { num: 5, label: "AI Narrative", color: "bg-gold" },
+  { num: 6, label: "Review", color: "bg-warning" },
+  { num: 7, label: "Export", color: "bg-success" },
+];
 
 const TOUR_STEPS: TourStep[] = [
   {
     title: "Welcome to LCA Desk",
-    description: "LCA Desk is your AI-powered compliance platform for Guyana's Local Content Act. Let's take a quick tour of the key features.",
+    description: "Your AI-powered compliance platform for Guyana's Local Content Act. Let's take a 2-minute tour.",
     icon: Sparkles,
-    position: "center",
   },
   {
     title: "Your Dashboard",
-    description: "This is your compliance command center. See all your entities, upcoming deadlines, and compliance status at a glance. The stats bar shows your portfolio summary.",
+    description: "Your compliance command center — entities, deadlines, and status at a glance.",
     icon: Building2,
-    position: "center",
     navigateTo: "/dashboard",
+    extra: (
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        {[
+          { label: "Entities", desc: "Companies you manage" },
+          { label: "Deadlines", desc: "Upcoming due dates" },
+          { label: "LC Rate", desc: "Local content %" },
+        ].map((item) => (
+          <div key={item.label} className="rounded-lg bg-bg-primary p-2.5 text-center">
+            <p className="text-xs font-semibold text-accent">{item.label}</p>
+            <p className="text-[10px] text-text-muted mt-0.5">{item.desc}</p>
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     title: "Manage Entities",
-    description: "Each company you manage is an \"entity\". Add your companies here with their LCS Certificate IDs, registration numbers, and contact details. You can manage multiple entities from one account.",
+    description: "Each company is an \"entity\" with its LCS Certificate, registration, and contact details. Manage multiple companies from one account.",
     icon: Building2,
-    position: "center",
     navigateTo: "/dashboard/entities",
   },
   {
     title: "Start a New Report",
-    description: "Click \"Start New Report\" on any entity to begin a filing. Select the report type (H1, H2, Annual Plan) and year — dates auto-fill from the official Secretariat schedule. No manual date entry needed.",
+    description: "Select the report type and year — dates auto-fill from the official Secretariat schedule. No manual entry needed.",
     icon: FileText,
-    position: "center",
+    extra: (
+      <div className="mt-4 rounded-lg border border-border p-3 bg-bg-primary">
+        <div className="space-y-1.5 text-xs">
+          {["H1 Half-Yearly (Jan–Jun)", "H2 Half-Yearly (Jul–Dec)", "Annual Plan", "Performance Report"].map((r) => (
+            <div key={r} className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-accent" />
+              <span className="text-text-secondary">{r}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
   },
   {
     title: "The Filing Workflow",
-    description: "Each report follows a 7-step workflow: Company Info → Expenditure → Employment → Capacity Development → AI Narrative → Review → Export. Progress is tracked at every step.",
+    description: "Each report follows 7 guided steps. Progress is tracked and validated before export.",
     icon: FileText,
-    position: "center",
+    extra: (
+      <div className="mt-4 flex gap-1">
+        {WORKFLOW_STEPS.map((s) => (
+          <div key={s.num} className="flex-1 text-center">
+            <div className={cn("mx-auto h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold", s.color)}>
+              {s.num}
+            </div>
+            <p className="text-[9px] text-text-muted mt-1 leading-tight">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     title: "AI Narrative Drafting",
-    description: "The most powerful feature. After entering your data, the AI drafts your Comparative Analysis Report — the written narrative the Secretariat requires. It uses correct LCA terminology and formal language. You can edit and regenerate.",
+    description: "After entering data, AI drafts your Comparative Analysis Report using correct LCA terminology. Edit, regenerate, or write your own.",
     icon: Sparkles,
-    position: "center",
+    extra: (
+      <div className="mt-4 rounded-lg border border-accent/20 bg-accent-light p-3">
+        <p className="text-xs text-accent font-medium mb-1">AI-Generated Draft</p>
+        <p className="text-[11px] text-text-secondary italic leading-relaxed">
+          &quot;During the reporting period, first consideration was accorded to Guyanese suppliers across all reserved sector categories...&quot;
+        </p>
+      </div>
+    ),
   },
   {
     title: "Ask the LCA Expert",
-    description: "Have a compliance question? The LCA Expert is an AI assistant trained on the complete Local Content Act, all Secretariat guidelines, and Version 4.1. Get answers with specific section citations.",
+    description: "AI assistant trained on the complete Local Content Act and Version 4.1 guidelines. Get cited answers instantly.",
     icon: MessageSquare,
-    position: "center",
     navigateTo: "/dashboard/expert",
+    extra: (
+      <div className="mt-4 space-y-2">
+        <div className="rounded-lg bg-accent text-white px-3 py-2 text-xs ml-auto max-w-[80%]">
+          What are the penalties for late filing?
+        </div>
+        <div className="rounded-lg bg-bg-primary border border-border px-3 py-2 text-xs max-w-[90%]">
+          GY$1M–GY$50M fines under Section 23 of the Act...
+        </div>
+      </div>
+    ),
   },
   {
     title: "Compliance Calendar",
-    description: "Never miss a deadline. The calendar shows all filing due dates color-coded by urgency: red for overdue, amber for due soon, green for on track. Click any date to see details.",
+    description: "Monthly view with color-coded deadlines. Click any date for details. Never miss a filing.",
     icon: Calendar,
-    position: "center",
     navigateTo: "/dashboard/calendar",
+    extra: (
+      <div className="mt-4 flex items-center gap-4 justify-center">
+        {[
+          { color: "bg-danger", label: "Overdue" },
+          { color: "bg-warning", label: "Due Soon" },
+          { color: "bg-accent", label: "On Track" },
+        ].map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5 text-xs text-text-secondary">
+            <div className={cn("h-2.5 w-2.5 rounded-full", s.color)} />
+            {s.label}
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     title: "Settings & Team",
-    description: "Manage your profile, company details, and team members. Invite colleagues and assign roles (admin, member, viewer) to control who can view and edit filings.",
+    description: "Edit your profile, manage team members with role-based access, and configure notifications.",
     icon: Settings,
-    position: "center",
     navigateTo: "/dashboard/settings",
   },
   {
     title: "You're All Set!",
-    description: "Start by adding your first entity, then create a reporting period to begin filing. If you need help, the LCA Expert is always available in the sidebar. Welcome aboard!",
+    description: "Add your first entity and start filing. The LCA Expert is always in the sidebar if you need help.",
     icon: CheckCircle,
-    position: "center",
     navigateTo: "/dashboard",
+    extra: (
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-accent-light p-2.5 text-center">
+          <Building2 className="h-4 w-4 text-accent mx-auto mb-1" />
+          <p className="text-xs font-medium text-accent">Add Entity</p>
+        </div>
+        <div className="rounded-lg bg-accent-light p-2.5 text-center">
+          <FileText className="h-4 w-4 text-accent mx-auto mb-1" />
+          <p className="text-xs font-medium text-accent">Start Report</p>
+        </div>
+      </div>
+    ),
   },
 ];
 
@@ -191,9 +272,11 @@ export function OnboardingTour() {
             <h2 className="text-xl font-heading font-bold text-text-primary mb-3">
               {currentStep.title}
             </h2>
-            <p className="text-text-secondary leading-relaxed mb-8">
+            <p className="text-text-secondary leading-relaxed">
               {currentStep.description}
             </p>
+            {currentStep.extra && <div className="mb-6">{currentStep.extra}</div>}
+            {!currentStep.extra && <div className="mb-8" />}
 
             {/* Navigation */}
             <div className="flex items-center justify-between">
