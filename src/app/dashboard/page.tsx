@@ -21,7 +21,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const load = async () => {
-      const data = await fetchEntities();
+      let data;
+      try {
+        data = await fetchEntities();
+      } catch {
+        setLoading(false);
+        return;
+      }
       // Map Drizzle rows to Entity type
       setEntities(
         data.map((e) => ({
