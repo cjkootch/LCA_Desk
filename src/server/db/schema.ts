@@ -438,6 +438,32 @@ export const lcsRegister = pgTable(
   ]
 );
 
+// ─── LCS CONTRACTORS (Filing Client Prospects) ───────────────────
+// Companies that post procurement notices on the LCS opportunities board.
+// These are confirmed LCA filing clients — not suppliers.
+export const lcsContractors = pgTable(
+  "lcs_contractors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyName: text("company_name").notNull(),
+    profileSlug: text("profile_slug").unique(),
+    confirmedFiler: boolean("confirmed_filer").default(true),
+    noticeCount: integer("notice_count").default(0),
+    lastNoticedAt: date("last_noticed_at"),
+    procurementCategories: text("procurement_categories").array(),
+    sampleNotices: text("sample_notices").array(),
+    outreachStatus: text("outreach_status").default("not_contacted"),
+    scrapedAt: timestamp("scraped_at").defaultNow(),
+    scrapeError: text("scrape_error"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("lcs_contractors_name_idx").on(table.companyName),
+    index("lcs_contractors_status_idx").on(table.outreachStatus),
+  ]
+);
+
 // ─── USAGE TRACKING ──────────────────────────────────────────────
 export const usageTracking = pgTable(
   "usage_tracking",
