@@ -130,7 +130,7 @@ export async function addPeriod(data: {
     .values({
       entityId: data.entity_id,
       tenantId,
-      jurisdictionId: data.jurisdiction_id,
+      jurisdictionId: data.jurisdiction_id || null,
       reportType: data.report_type,
       periodStart: data.period_start,
       periodEnd: data.period_end,
