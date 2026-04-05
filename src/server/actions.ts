@@ -19,6 +19,8 @@ import {
   suppliers,
   employees,
   notifications,
+  jobPostings,
+  jobApplications,
   users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -1307,4 +1309,162 @@ export async function fetchStepCompletion(periodId: string) {
   if (exps.length > 0 && emps.length > 0) completed.push("review");
   // export is complete only after submission
   return completed;
+}
+
+// ─── JOB POSTINGS ─────────────────────────────────────────────────
+export async function fetchJobPostings(status?: string) {
+  const { tenantId } = await getSessionTenant();
+  if (status && status !== "all") {
+    return db
+      .select()
+      .from(jobPostings)
+      .where(and(eq(jobPostings.tenantId, tenantId), eq(jobPostings.status, status)))
+      .orderBy(jobPostings.createdAt);
+  }
+  return db
+    .select()
+    .from(jobPostings)
+    .where(eq(jobPostings.tenantId, tenantId))
+    .orderBy(jobPostings.createdAt);
+}
+
+export async function addJobPosting(data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const statement = `In accordance with Section 12 of the Local Content Act 2021, ${data.job_title} position(s) are advertised with first consideration given to qualified Guyanese nationals.`;
+  const [posting] = await db
+    .insert(jobPostings)
+    .values({
+      tenantId,
+      entityId: (data.entity_id as string) || null,
+      jobTitle: data.job_title as string,
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      contractType: data.contract_type as string,
+      location: (data.location as string) || null,
+      description: (data.description as string) || null,
+      qualifications: (data.qualifications as string) || null,
+      vacancyCount: Number(data.vacancy_count) || 1,
+      applicationDeadline: (data.application_deadline as string) || null,
+      startDate: (data.start_date as string) || null,
+      isPublic: data.is_public !== false,
+      guyaneseFirstStatement: statement,
+      status: "open",
+    })
+    .returning();
+  return posting;
+}
+
+export async function updateJobPosting(id: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(jobPostings)
+    .set({
+      jobTitle: data.job_title as string,
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      contractType: data.contract_type as string,
+      location: (data.location as string) || null,
+      description: (data.description as string) || null,
+      qualifications: (data.qualifications as string) || null,
+      vacancyCount: Number(data.vacancy_count) || 1,
+      applicationDeadline: (data.application_deadline as string) || null,
+      startDate: (data.start_date as string) || null,
+      isPublic: data.is_public !== false,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(jobPostings.id, id), eq(jobPostings.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
+export async function closeJobPosting(id: string) {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .update(jobPostings)
+    .set({ status: "closed", updatedAt: new Date() })
+    .where(and(eq(jobPostings.id, id), eq(jobPostings.tenantId, tenantId)));
+}
+
+export async function deleteJobPosting(id: string) {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .delete(jobPostings)
+    .where(and(eq(jobPostings.id, id), eq(jobPostings.tenantId, tenantId)));
+}
+
+// ─── JOB APPLICATIONS ─────────────────────────────────────────────
+export async function fetchApplicationsForPosting(postingId: string) {
+  const { tenantId } = await getSessionTenant();
+  // Verify posting belongs to tenant
+  const [posting] = await db
+    .select()
+    .from(jobPostings)
+    .where(and(eq(jobPostings.id, postingId), eq(jobPostings.tenantId, tenantId)))
+    .limit(1);
+  if (!posting) throw new Error("Posting not found");
+  
+  return db
+    .select()
+    .from(jobApplications)
+    .where(eq(jobApplications.jobPostingId, postingId))
+    .orderBy(jobApplications.createdAt);
+}
+
+export async function updateApplicationStatus(applicationId: string, status: string, reviewNotes?: string) {
+  const [updated] = await db
+    .update(jobApplications)
+    .set({
+      status,
+      reviewNotes: reviewNotes || undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(jobApplications.id, applicationId))
+    .returning();
+  return updated;
+}
+
+export async function generateFirstConsiderationRecord(postingId: string) {
+  const { tenantId } = await getSessionTenant();
+  const [posting] = await db
+    .select()
+    .from(jobPostings)
+    .where(and(eq(jobPostings.id, postingId), eq(jobPostings.tenantId, tenantId)))
+    .limit(1);
+  if (!posting) throw new Error("Posting not found");
+
+  const applications = await db
+    .select()
+    .from(jobApplications)
+    .where(eq(jobApplications.jobPostingId, postingId));
+
+  const totalApps = applications.length;
+  const guyaneseApps = applications.filter(a => a.isGuyanese).length;
+  const nonGuyaneseApps = totalApps - guyaneseApps;
+  const selected = applications.filter(a => a.status === "selected");
+  const guyaneseSelected = selected.filter(a => a.isGuyanese).length;
+
+  return {
+    posting: {
+      jobTitle: posting.jobTitle,
+      employmentCategory: posting.employmentCategory,
+      contractType: posting.contractType,
+      location: posting.location,
+      vacancyCount: posting.vacancyCount,
+      postedDate: posting.createdAt,
+      deadline: posting.applicationDeadline,
+      guyaneseFirstStatement: posting.guyaneseFirstStatement,
+    },
+    applications: {
+      total: totalApps,
+      guyanese: guyaneseApps,
+      nonGuyanese: nonGuyaneseApps,
+      selected: selected.length,
+      guyaneseSelected,
+    },
+    compliance: {
+      firstConsiderationGiven: true,
+      statement: posting.guyaneseFirstStatement,
+      generatedAt: new Date().toISOString(),
+    },
+  };
 }
