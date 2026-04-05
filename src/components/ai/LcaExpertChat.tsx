@@ -5,6 +5,32 @@ import { Send, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+function renderMarkdown(text: string): React.ReactNode {
+  // Split into lines and process
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+
+  lines.forEach((line, lineIdx) => {
+    if (lineIdx > 0) elements.push(<br key={`br-${lineIdx}`} />);
+
+    // Process inline formatting
+    const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+    const formatted = parts.map((part, partIdx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={partIdx}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
+        return <em key={partIdx}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+
+    elements.push(<span key={`line-${lineIdx}`}>{formatted}</span>);
+  });
+
+  return <>{elements}</>;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -144,7 +170,7 @@ export function LcaExpertChat() {
                     : "bg-bg-card border border-border text-text-primary"
                 )}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap">{renderMarkdown(msg.content)}</div>
                 {msg.role === "assistant" && streaming && i === messages.length - 1 && (
                   <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
                 )}
