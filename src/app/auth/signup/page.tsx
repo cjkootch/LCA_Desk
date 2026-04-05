@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
 
 export default function SignupPage() {
@@ -96,16 +97,15 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <Input
+            <PasswordInput
               id="password"
               label="Password"
-              type="password"
               placeholder="Min 8 characters"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              hint="Must be at least 8 characters"
+              showStrength
             />
             <Input
               id="companyName"
