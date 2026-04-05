@@ -168,17 +168,19 @@ export default function ExpertPage() {
     setInput("");
     setStreaming(true);
 
-    // Create conversation if needed
+    // Create conversation if needed — don't block chat if DB fails
     let convId = activeConvId;
-    if (!convId) {
-      const conv = await createChatConversation(text.trim());
-      convId = conv.id;
-      setActiveConvId(convId);
-      setConversations((prev) => [conv, ...prev]);
+    try {
+      if (!convId) {
+        const conv = await createChatConversation(text.trim());
+        convId = conv.id;
+        setActiveConvId(convId);
+        setConversations((prev) => [conv, ...prev]);
+      }
+      await saveChatMessage(convId, "user", text.trim());
+    } catch {
+      // DB save failed — chat still works, just won't persist
     }
-
-    // Save user message
-    await saveChatMessage(convId, "user", text.trim());
 
     try {
       const response = await fetch("/api/ai/chat", {
@@ -203,12 +205,16 @@ export default function ExpertPage() {
         setMessages([...newMessages, { role: "assistant", content: accumulated }]);
       }
 
-      // Save assistant message
-      await saveChatMessage(convId, "assistant", accumulated);
-
-      // Refresh conversation list to get updated title
-      const convs = await fetchChatConversations();
-      setConversations(convs);
+      // Save assistant message — don't fail if DB is unavailable
+      try {
+        if (convId) {
+          await saveChatMessage(convId, "assistant", accumulated);
+          const convs = await fetchChatConversations();
+          setConversations(convs);
+        }
+      } catch {
+        // Persistence failed — chat response still shown
+      }
     } catch {
       const errorMsg = "Sorry, I couldn't process that. Please try again.";
       setMessages([...newMessages, { role: "assistant", content: errorMsg }]);
