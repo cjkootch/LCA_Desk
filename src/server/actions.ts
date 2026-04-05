@@ -787,3 +787,29 @@ export async function incrementUsage(
 
   return created[type] || 1;
 }
+
+// ─── QBO INTEGRATION ─────────────────────────────────────────────
+export async function fetchQboStatus() {
+  const { tenant } = await getSessionTenant();
+  return {
+    connected: !!tenant.qboRealmId,
+    companyName: tenant.qboCompanyName || null,
+    realmId: tenant.qboRealmId || null,
+    connectedAt: tenant.qboConnectedAt || null,
+  };
+}
+
+export async function disconnectQbo() {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .update(tenants)
+    .set({
+      qboRealmId: null,
+      qboCompanyName: null,
+      qboAccessToken: null,
+      qboRefreshToken: null,
+      qboTokenExpiresAt: null,
+      qboConnectedAt: null,
+    })
+    .where(eq(tenants.id, tenantId));
+}

@@ -19,6 +19,9 @@ import {
   Trash2,
   Plus,
   Save,
+  Plug,
+  CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import {
   fetchUserContext,
@@ -28,10 +31,12 @@ import {
   fetchTeamMembers,
   inviteTeamMember,
   removeTeamMember,
+  fetchQboStatus,
+  disconnectQbo,
 } from "@/server/actions";
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = "profile" | "company" | "team" | "notifications";
+type Tab = "profile" | "company" | "team" | "integrations" | "notifications";
 
 interface TeamMember {
   id: string;
@@ -47,6 +52,7 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "profile", label: "Profile", icon: User },
   { key: "company", label: "Company", icon: Building2 },
   { key: "team", label: "Team", icon: Users },
+  { key: "integrations", label: "Integrations", icon: Plug },
   { key: "notifications", label: "Notifications", icon: Bell },
 ];
 
@@ -105,6 +111,7 @@ export default function SettingsPage() {
         {activeTab === "profile" && <ProfileTab ctx={ctx} />}
         {activeTab === "company" && <CompanyTab ctx={ctx} />}
         {activeTab === "team" && <TeamTab />}
+        {activeTab === "integrations" && <IntegrationsTab />}
         {activeTab === "notifications" && (
           <div className="space-y-6">
             <NotificationsTab />
@@ -485,6 +492,134 @@ const notificationOptions = [
     description: "A weekly summary of your compliance status",
   },
 ];
+
+// ─── Integrations Tab ────────────────────────────────────────────
+function IntegrationsTab() {
+  const [qbo, setQbo] = useState<{
+    connected: boolean;
+    companyName: string | null;
+    connectedAt: Date | null;
+  }>({ connected: false, companyName: null, connectedAt: null });
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    fetchQboStatus()
+      .then(setQbo)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await disconnectQbo();
+      setQbo({ connected: false, companyName: null, connectedAt: null });
+      toast.success("QuickBooks disconnected");
+    } catch {
+      toast.error("Failed to disconnect");
+    }
+    setDisconnecting(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* QuickBooks Online */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/qbo-icon.svg" alt="QuickBooks" className="h-10 w-10 rounded-lg" />
+              <div>
+                <CardTitle className="text-base">QuickBooks Online</CardTitle>
+                <p className="text-sm text-text-muted mt-0.5">Import expenditure and payroll data</p>
+              </div>
+            </div>
+            {qbo.connected && (
+              <Badge variant="success">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Connected
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent" />
+            </div>
+          ) : qbo.connected ? (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-bg-primary p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-text-muted">Connected Company</p>
+                    <p className="font-medium text-text-primary">{qbo.companyName || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-text-muted">Connected Since</p>
+                    <p className="font-medium text-text-primary">
+                      {qbo.connectedAt
+                        ? new Date(qbo.connectedAt).toLocaleDateString()
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-muted">
+                  Data import coming soon. Your connection is active.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  loading={disconnecting}
+                  className="text-danger border-danger/30 hover:bg-danger-light"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-text-secondary mb-4">
+                Connect your QuickBooks Online account to automatically import expenditure
+                and payroll data into your LCA reports. Eliminates manual data re-entry.
+              </p>
+              <a href="/api/integrations/qbo/connect">
+                <Button size="sm">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Connect QuickBooks
+                </Button>
+              </a>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Future integrations placeholder */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-[#13B5EA] flex items-center justify-center">
+              <span className="text-white font-bold text-sm">X</span>
+            </div>
+            <div>
+              <CardTitle className="text-base text-text-muted">Xero</CardTitle>
+              <p className="text-sm text-text-muted mt-0.5">Coming soon</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-text-muted">
+            Xero integration for accounting data import will be available in a future update.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function RestartTour() {
   return (

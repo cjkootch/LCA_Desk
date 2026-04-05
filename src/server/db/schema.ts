@@ -111,6 +111,13 @@ export const tenants = pgTable("tenants", {
   planEntityLimit: integer("plan_entity_limit").default(1),
   active: boolean("active").default(true),
   trialEndsAt: timestamp("trial_ends_at"),
+  // QuickBooks Online integration
+  qboRealmId: text("qbo_realm_id"),
+  qboCompanyName: text("qbo_company_name"),
+  qboAccessToken: text("qbo_access_token"),
+  qboRefreshToken: text("qbo_refresh_token"),
+  qboTokenExpiresAt: timestamp("qbo_token_expires_at"),
+  qboConnectedAt: timestamp("qbo_connected_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
