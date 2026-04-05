@@ -36,18 +36,67 @@ function renderMarkdown(text: string): React.ReactNode {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Skip table separator rows (|---|---|)
-    if (/^\|[-\s|]+\|$/.test(line.trim())) continue;
+    const trimmed = line.trim();
 
-    // Horizontal rule
-    if (/^---+$/.test(line.trim())) {
-      elements.push(<hr key={`hr-${i}`} className="my-2 border-border" />);
+    // Skip empty lines — just add spacing
+    if (trimmed === "") {
+      elements.push(<div key={`sp-${i}`} className="h-2" />);
       continue;
     }
 
-    // Table rows — render as simple text without pipes
-    if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
-      const cells = line.split("|").filter(c => c.trim()).map(c => c.trim());
+    // Horizontal rule
+    if (/^-{3,}$/.test(trimmed) || /^\*{3,}$/.test(trimmed)) {
+      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
+      continue;
+    }
+
+    // Skip table separator rows (|---|---|)
+    if (/^\|[-\s|:]+\|$/.test(trimmed)) continue;
+
+    // Headings
+    const h3Match = trimmed.match(/^###\s+(.+)/);
+    if (h3Match) {
+      elements.push(<p key={`h3-${i}`} className="font-bold text-text-primary mt-3 mb-1">{renderInline(h3Match[1], `h3-${i}`)}</p>);
+      continue;
+    }
+    const h2Match = trimmed.match(/^##\s+(.+)/);
+    if (h2Match) {
+      elements.push(<p key={`h2-${i}`} className="font-bold text-text-primary text-base mt-3 mb-1">{renderInline(h2Match[1], `h2-${i}`)}</p>);
+      continue;
+    }
+    const h1Match = trimmed.match(/^#\s+(.+)/);
+    if (h1Match) {
+      elements.push(<p key={`h1-${i}`} className="font-bold text-text-primary text-lg mt-3 mb-1">{renderInline(h1Match[1], `h1-${i}`)}</p>);
+      continue;
+    }
+
+    // Bullet points (- item or * item)
+    const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (bulletMatch) {
+      elements.push(
+        <div key={`li-${i}`} className="flex gap-2 pl-2">
+          <span className="text-accent mt-0.5">•</span>
+          <span>{renderInline(bulletMatch[1], `li-${i}`)}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Numbered list (1. item)
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+    if (numMatch) {
+      elements.push(
+        <div key={`ol-${i}`} className="flex gap-2 pl-2">
+          <span className="text-accent font-medium min-w-[1.2em]">{numMatch[1]}.</span>
+          <span>{renderInline(numMatch[2], `ol-${i}`)}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Table rows
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const cells = trimmed.split("|").filter(c => c.trim()).map(c => c.trim());
       elements.push(
         <div key={`tr-${i}`} className="flex gap-4 py-0.5">
           {cells.map((cell, ci) => (
@@ -60,9 +109,8 @@ function renderMarkdown(text: string): React.ReactNode {
       continue;
     }
 
-    // Regular line
-    if (i > 0) elements.push(<br key={`br-${i}`} />);
-    elements.push(<span key={`ln-${i}`}>{renderInline(line, `ln-${i}`)}</span>);
+    // Regular paragraph
+    elements.push(<p key={`ln-${i}`} className="my-0.5">{renderInline(line, `ln-${i}`)}</p>);
   }
 
   return <>{elements}</>;
