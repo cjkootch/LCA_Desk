@@ -9,15 +9,13 @@ import { Select } from "@/components/ui/select";
 
 const employmentSchema = z.object({
   job_title: z.string().min(1, "Job title is required"),
-  isco_08_code: z.string().optional(),
-  position_type: z.enum(["managerial", "technical", "non_technical"]),
-  is_guyanese: z.coerce.boolean(),
-  nationality: z.string().optional(),
-  headcount: z.coerce.number().int().positive(),
-  remuneration_band: z.string().optional(),
-  total_remuneration_local: z.coerce.number().optional(),
-  total_remuneration_usd: z.coerce.number().optional(),
-  contract_type: z.enum(["permanent", "contract", "temporary"]).optional(),
+  employment_category: z.enum(["Managerial", "Technical", "Non-Technical"]),
+  employment_classification: z.string().optional(),
+  related_company: z.string().optional(),
+  total_employees: z.coerce.number().int().min(1, "Must be at least 1"),
+  guyanese_employed: z.coerce.number().int().min(0, "Must be 0 or more"),
+  total_remuneration_paid: z.coerce.number().optional(),
+  remuneration_guyanese_only: z.coerce.number().optional(),
 });
 
 type EmploymentFormData = z.infer<typeof employmentSchema>;
@@ -33,20 +31,17 @@ export function EmploymentForm({ defaultValues, onSubmit, onCancel, loading }: E
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<EmploymentFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(employmentSchema) as any,
     defaultValues: {
-      position_type: "non_technical",
-      is_guyanese: true,
-      headcount: 1,
+      employment_category: "Non-Technical",
+      total_employees: 1,
+      guyanese_employed: 0,
       ...defaultValues,
     },
   });
-
-  const isGuyanese = watch("is_guyanese");
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -57,73 +52,64 @@ export function EmploymentForm({ defaultValues, onSubmit, onCancel, loading }: E
         error={errors.job_title?.message}
       />
       <div className="grid grid-cols-2 gap-4">
-        <Input label="ISCO-08 Code" id="isco_08_code" {...register("isco_08_code")} />
         <Select
-          label="Position Type *"
-          id="position_type"
-          {...register("position_type")}
+          label="Employment Category *"
+          id="employment_category"
+          {...register("employment_category")}
           options={[
-            { value: "managerial", label: "Managerial" },
-            { value: "technical", label: "Technical" },
-            { value: "non_technical", label: "Non-Technical" },
+            { value: "Managerial", label: "Managerial" },
+            { value: "Technical", label: "Technical" },
+            { value: "Non-Technical", label: "Non-Technical" },
           ]}
-          error={errors.position_type?.message}
+          error={errors.employment_category?.message}
+        />
+        <Input
+          label="Employment Classification (ISCO-08)"
+          id="employment_classification"
+          {...register("employment_classification")}
+          error={errors.employment_classification?.message}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Guyanese?"
-          id="is_guyanese"
-          {...register("is_guyanese")}
-          options={[
-            { value: "true", label: "Yes" },
-            { value: "false", label: "No" },
-          ]}
-        />
-        {!isGuyanese && (
-          <Input label="Nationality (ISO)" id="nationality" {...register("nationality")} />
-        )}
-      </div>
+      <Input
+        label="Related Company"
+        id="related_company"
+        {...register("related_company")}
+        error={errors.related_company?.message}
+      />
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Headcount *"
-          id="headcount"
+          label="Total Number of Employees *"
+          id="total_employees"
           type="number"
           min="1"
-          {...register("headcount")}
-          error={errors.headcount?.message}
+          {...register("total_employees")}
+          error={errors.total_employees?.message}
         />
-        <Select
-          label="Contract Type"
-          id="contract_type"
-          {...register("contract_type")}
-          options={[
-            { value: "", label: "Select..." },
-            { value: "permanent", label: "Permanent" },
-            { value: "contract", label: "Contract" },
-            { value: "temporary", label: "Temporary" },
-          ]}
+        <Input
+          label="Number of Guyanese Employed *"
+          id="guyanese_employed"
+          type="number"
+          min="0"
+          {...register("guyanese_employed")}
+          error={errors.guyanese_employed?.message}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Remuneration Band"
-          id="remuneration_band"
-          {...register("remuneration_band")}
-          options={[
-            { value: "", label: "Select..." },
-            { value: "band_1", label: "Band 1" },
-            { value: "band_2", label: "Band 2" },
-            { value: "band_3", label: "Band 3" },
-            { value: "band_4", label: "Band 4" },
-          ]}
-        />
         <Input
-          label="Total Remuneration (GYD)"
-          id="total_remuneration_local"
+          label="Total Remuneration Paid"
+          id="total_remuneration_paid"
           type="number"
           step="0.01"
-          {...register("total_remuneration_local")}
+          {...register("total_remuneration_paid")}
+          error={errors.total_remuneration_paid?.message}
+        />
+        <Input
+          label="Remuneration Paid to Guyanese Only"
+          id="remuneration_guyanese_only"
+          type="number"
+          step="0.01"
+          {...register("remuneration_guyanese_only")}
+          error={errors.remuneration_guyanese_only?.message}
         />
       </div>
       <div className="flex justify-end gap-3 pt-4">

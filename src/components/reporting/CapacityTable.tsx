@@ -18,48 +18,37 @@ export function CapacityTable({ records, onDelete }: CapacityTableProps) {
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Activity Name</TableHead>
-          <TableHead>Provider</TableHead>
-          <TableHead>Local/Intl</TableHead>
-          <TableHead className="text-right">Participants</TableHead>
+          <TableHead>Activity</TableHead>
+          <TableHead>Category</TableHead>
+          <TableHead>Participant Type</TableHead>
           <TableHead className="text-right">Guyanese</TableHead>
-          <TableHead className="text-right">Hours</TableHead>
-          <TableHead className="text-right">Cost (GYD)</TableHead>
+          <TableHead className="text-right">Total</TableHead>
+          <TableHead>Start Date</TableHead>
+          <TableHead className="text-right">Days</TableHead>
+          <TableHead className="text-right">Expenditure</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {records.map((record, i) => (
-          <TableRow key={record.id}>
+        {records.map((r, i) => (
+          <TableRow key={r.id}>
             <TableCell className="text-text-muted">{i + 1}</TableCell>
+            <TableCell className="font-medium">{r.activity}</TableCell>
+            <TableCell>{r.category || "—"}</TableCell>
             <TableCell>
-              <Badge variant="default">{record.activity_type.replace(/_/g, " ")}</Badge>
+              {r.participant_type ? (
+                <Badge variant="default">{r.participant_type}</Badge>
+              ) : "—"}
             </TableCell>
-            <TableCell className="font-medium">{record.activity_name}</TableCell>
-            <TableCell>{record.provider_name || "—"}</TableCell>
-            <TableCell>
-              {record.provider_type ? (
-                <Badge variant={record.provider_type === "local" ? "success" : "warning"}>
-                  {record.provider_type}
-                </Badge>
-              ) : (
-                "—"
-              )}
-            </TableCell>
-            <TableCell className="text-right">{record.participant_count}</TableCell>
-            <TableCell className="text-right">{record.guyanese_participant_count}</TableCell>
-            <TableCell className="text-right">{record.total_hours || "—"}</TableCell>
+            <TableCell className="text-right">{r.guyanese_participants_only}</TableCell>
+            <TableCell className="text-right">{r.total_participants}</TableCell>
+            <TableCell>{r.start_date || "—"}</TableCell>
+            <TableCell className="text-right">{r.duration_days || "—"}</TableCell>
             <TableCell className="text-right font-mono">
-              {record.cost_local ? formatCurrency(record.cost_local, "GYD") : "—"}
+              {r.expenditure_on_capacity ? formatCurrency(r.expenditure_on_capacity, "GYD") : "—"}
             </TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(record.id)}
-                className="text-danger hover:text-danger"
-              >
+              <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TableCell>

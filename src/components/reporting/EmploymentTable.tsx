@@ -12,10 +12,10 @@ interface EmploymentTableProps {
   onDelete: (id: string) => void;
 }
 
-const POSITION_TYPE_LABEL: Record<string, string> = {
-  managerial: "Managerial",
-  technical: "Technical",
-  non_technical: "Non-Technical",
+const CATEGORY_VARIANT: Record<string, "accent" | "gold" | "default"> = {
+  Managerial: "accent",
+  Technical: "gold",
+  "Non-Technical": "default",
 };
 
 export function EmploymentTable({ records, onDelete }: EmploymentTableProps) {
@@ -25,45 +25,38 @@ export function EmploymentTable({ records, onDelete }: EmploymentTableProps) {
         <TableRow>
           <TableHead>#</TableHead>
           <TableHead>Job Title</TableHead>
-          <TableHead>ISCO-08</TableHead>
-          <TableHead>Position Type</TableHead>
-          <TableHead>Guyanese</TableHead>
-          <TableHead>Nationality</TableHead>
-          <TableHead className="text-right">Headcount</TableHead>
-          <TableHead>Band</TableHead>
-          <TableHead className="text-right">Remuneration (GYD)</TableHead>
+          <TableHead>Employment Category</TableHead>
+          <TableHead>Classification</TableHead>
+          <TableHead>Related Company</TableHead>
+          <TableHead className="text-right">Total Employees</TableHead>
+          <TableHead className="text-right">Guyanese Employed</TableHead>
+          <TableHead className="text-right">Total Remuneration</TableHead>
+          <TableHead className="text-right">Remuneration (Guyanese)</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {records.map((record, i) => (
-          <TableRow key={record.id}>
+        {records.map((r, i) => (
+          <TableRow key={r.id}>
             <TableCell className="text-text-muted">{i + 1}</TableCell>
-            <TableCell className="font-medium">{record.job_title}</TableCell>
-            <TableCell className="font-mono text-xs">{record.isco_08_code || "—"}</TableCell>
+            <TableCell className="font-medium">{r.job_title}</TableCell>
             <TableCell>
-              <Badge variant="default">{POSITION_TYPE_LABEL[record.position_type] || record.position_type}</Badge>
-            </TableCell>
-            <TableCell>
-              <Badge variant={record.is_guyanese ? "success" : "default"}>
-                {record.is_guyanese ? "Yes" : "No"}
+              <Badge variant={CATEGORY_VARIANT[r.employment_category] || "default"}>
+                {r.employment_category}
               </Badge>
             </TableCell>
-            <TableCell>{record.is_guyanese ? "GY" : record.nationality || "—"}</TableCell>
-            <TableCell className="text-right font-mono">{record.headcount}</TableCell>
-            <TableCell>{record.remuneration_band || "—"}</TableCell>
+            <TableCell className="font-mono text-xs">{r.employment_classification || "—"}</TableCell>
+            <TableCell>{r.related_company || "—"}</TableCell>
+            <TableCell className="text-right font-mono">{r.total_employees}</TableCell>
+            <TableCell className="text-right font-mono">{r.guyanese_employed}</TableCell>
             <TableCell className="text-right font-mono">
-              {record.total_remuneration_local
-                ? formatCurrency(record.total_remuneration_local, "GYD")
-                : "—"}
+              {r.total_remuneration_paid ? formatCurrency(r.total_remuneration_paid, "GYD") : "—"}
+            </TableCell>
+            <TableCell className="text-right font-mono">
+              {r.remuneration_guyanese_only ? formatCurrency(r.remuneration_guyanese_only, "GYD") : "—"}
             </TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(record.id)}
-                className="text-danger hover:text-danger"
-              >
+              <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TableCell>

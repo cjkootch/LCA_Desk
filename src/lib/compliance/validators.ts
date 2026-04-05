@@ -10,7 +10,7 @@ export function validateCompanyInfo(entity: Entity): ValidationResult[] {
     results.push({ level: "error", section: "company_info", message: "Legal name is required" });
   }
   if (!entity.lcs_certificate_id) {
-    results.push({ level: "error", section: "company_info", message: "LCS Certificate ID is required" });
+    results.push({ level: "warning", section: "company_info", message: "LCS Certificate ID not provided" });
   }
   if (entity.lcs_certificate_expiry) {
     const expiry = new Date(entity.lcs_certificate_expiry);
@@ -26,9 +26,7 @@ export function validateCompanyInfo(entity: Entity): ValidationResult[] {
   return results;
 }
 
-export function validateExpenditure(
-  records: ExpenditureRecord[]
-): ValidationResult[] {
+export function validateExpenditure(records: ExpenditureRecord[]): ValidationResult[] {
   const results: ValidationResult[] = [];
 
   if (records.length === 0) {
@@ -37,29 +35,14 @@ export function validateExpenditure(
   }
 
   records.forEach((r, i) => {
-    if (!r.sector_category_id) {
-      results.push({
-        level: "error",
-        section: "expenditure",
-        message: `Row ${i + 1}: Missing sector category`,
-        field: "sector_category_id",
-      });
+    if (!r.type_of_item_procured) {
+      results.push({ level: "error", section: "expenditure", message: `Row ${i + 1}: Missing type of item procured` });
     }
-    if (r.is_guyanese_supplier && !r.supplier_lcs_cert_id) {
-      results.push({
-        level: "warning",
-        section: "expenditure",
-        message: `Row ${i + 1}: Guyanese supplier "${r.supplier_name}" missing LCS Certificate ID`,
-        field: "supplier_lcs_cert_id",
-      });
+    if (!r.related_sector) {
+      results.push({ level: "warning", section: "expenditure", message: `Row ${i + 1}: Missing related sector` });
     }
-    if (r.is_sole_sourced && !r.sole_source_code) {
-      results.push({
-        level: "error",
-        section: "expenditure",
-        message: `Row ${i + 1}: Sole-sourced item missing sole source code`,
-        field: "sole_source_code",
-      });
+    if (r.sole_source_code && !r.supplier_certificate_id) {
+      results.push({ level: "warning", section: "expenditure", message: `Row ${i + 1}: Sole-sourced item "${r.supplier_name}" missing supplier certificate ID` });
     }
   });
 
@@ -104,23 +87,10 @@ export function validateEmployment(
     });
   }
 
-  records.forEach((r, i) => {
-    if (!r.position_type) {
-      results.push({
-        level: "error",
-        section: "employment",
-        message: `Row ${i + 1}: Missing position type`,
-        field: "position_type",
-      });
-    }
-  });
-
   return results;
 }
 
-export function validateCapacity(
-  records: CapacityDevelopmentRecord[]
-): ValidationResult[] {
+export function validateCapacity(records: CapacityDevelopmentRecord[]): ValidationResult[] {
   const results: ValidationResult[] = [];
 
   if (records.length === 0) {
@@ -128,31 +98,19 @@ export function validateCapacity(
     return results;
   }
 
-  records.forEach((r, i) => {
-    if (!r.start_date || !r.end_date) {
-      results.push({
-        level: "warning",
-        section: "capacity",
-        message: `Activity "${r.activity_name}": Missing dates`,
-        field: "dates",
-      });
+  records.forEach((r) => {
+    if (!r.start_date) {
+      results.push({ level: "warning", section: "capacity", message: `Activity "${r.activity}": Missing start date` });
     }
-    if (r.participant_count === 0) {
-      results.push({
-        level: "warning",
-        section: "capacity",
-        message: `Activity "${r.activity_name}": No participants recorded`,
-        field: "participant_count",
-      });
+    if (r.total_participants === 0) {
+      results.push({ level: "warning", section: "capacity", message: `Activity "${r.activity}": No participants recorded` });
     }
   });
 
   return results;
 }
 
-export function validateNarratives(
-  drafts: NarrativeDraft[]
-): ValidationResult[] {
+export function validateNarratives(drafts: NarrativeDraft[]): ValidationResult[] {
   const results: ValidationResult[] = [];
   const sections = ["expenditure_narrative", "employment_narrative", "capacity_narrative"];
 

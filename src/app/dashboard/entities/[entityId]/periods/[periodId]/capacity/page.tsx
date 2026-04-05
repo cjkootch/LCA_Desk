@@ -20,15 +20,20 @@ import type { CapacityDevelopmentRecord } from "@/types/database.types";
 
 function mapCapacity(c: Record<string, unknown>): CapacityDevelopmentRecord {
   return {
-    id: c.id as string, reporting_period_id: c.reportingPeriodId as string, entity_id: c.entityId as string,
-    activity_type: c.activityType as CapacityDevelopmentRecord["activity_type"],
-    activity_name: c.activityName as string, provider_name: c.providerName as string | null,
-    provider_type: c.providerType as CapacityDevelopmentRecord["provider_type"],
-    participant_count: c.participantCount as number, guyanese_participant_count: c.guyanaeseParticipantCount as number,
-    start_date: c.startDate as string | null, end_date: c.endDate as string | null,
-    total_hours: c.totalHours ? Number(c.totalHours) : null,
-    cost_local: c.costLocal ? Number(c.costLocal) : null, cost_usd: c.costUsd ? Number(c.costUsd) : null,
-    description: c.description as string | null, notes: c.notes as string | null, created_at: "",
+    id: c.id as string,
+    reporting_period_id: c.reportingPeriodId as string,
+    entity_id: c.entityId as string,
+    activity: c.activity as string,
+    category: c.category as string | null,
+    participant_type: c.participantType as CapacityDevelopmentRecord["participant_type"],
+    guyanese_participants_only: (c.guyanaeseParticipantsOnly as number) || 0,
+    total_participants: (c.totalParticipants as number) || 0,
+    start_date: c.startDate as string | null,
+    duration_days: c.durationDays as number | null,
+    cost_to_participants: c.costToParticipants ? Number(c.costToParticipants) : null,
+    expenditure_on_capacity: c.expenditureOnCapacity ? Number(c.expenditureOnCapacity) : null,
+    notes: c.notes as string | null,
+    created_at: "",
   };
 }
 
@@ -80,7 +85,7 @@ export default function CapacityPage() {
     <div>
       <TopBar title={`${entityName} — Capacity Development`} />
       <div className="p-8">
-        <PageHeader title="Capacity Development Sub-Report" description="Record training, scholarships, and capacity building activities."
+        <PageHeader title="Capacity Development Sub-Report" description="Record all capacity development activities undertaken during the reporting period."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Capacity Development" }]}>
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Activity</Button></DialogTrigger>
@@ -104,10 +109,9 @@ export default function CapacityPage() {
               <h4 className="text-sm font-medium text-text-secondary">Summary</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-text-muted">Activities</span><span className="font-bold text-gold">{metrics.total_activities}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">Participants</span><span className="font-medium">{metrics.total_participants}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">Total Participants</span><span className="font-medium">{metrics.total_participants}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">Guyanese</span><span className="font-medium text-success">{metrics.total_guyanese_participants}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">Total Hours</span><span className="font-medium">{metrics.total_hours}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">Total Cost</span><span className="font-medium">{formatCurrency(metrics.total_cost_local, "GYD")}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">Total Investment</span><span className="font-medium">{formatCurrency(metrics.total_cost_local, "GYD")}</span></div>
               </div>
             </Card>
           </div>

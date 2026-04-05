@@ -4,10 +4,11 @@ import type { LocalContentMetrics, EmploymentMetrics, CapacityMetrics } from "@/
 export function calculateLocalContentRate(
   expenditures: ExpenditureRecord[]
 ): LocalContentMetrics {
-  const total = expenditures.reduce((sum, e) => sum + e.amount_local, 0);
+  const total = expenditures.reduce((sum, e) => sum + e.actual_payment, 0);
+  // A supplier with a certificate ID is considered Guyanese
   const guyanese = expenditures
-    .filter((e) => e.is_guyanese_supplier)
-    .reduce((sum, e) => sum + e.amount_local, 0);
+    .filter((e) => !!e.supplier_certificate_id)
+    .reduce((sum, e) => sum + e.actual_payment, 0);
 
   return {
     total_expenditure: total,
@@ -15,10 +16,10 @@ export function calculateLocalContentRate(
     non_guyanese_expenditure: total - guyanese,
     local_content_rate: total > 0 ? (guyanese / total) * 100 : 0,
     supplier_count_guyanese: new Set(
-      expenditures.filter((e) => e.is_guyanese_supplier).map((e) => e.supplier_name)
+      expenditures.filter((e) => !!e.supplier_certificate_id).map((e) => e.supplier_name)
     ).size,
     supplier_count_non_guyanese: new Set(
-      expenditures.filter((e) => !e.is_guyanese_supplier).map((e) => e.supplier_name)
+      expenditures.filter((e) => !e.supplier_certificate_id).map((e) => e.supplier_name)
     ).size,
   };
 }
@@ -26,23 +27,19 @@ export function calculateLocalContentRate(
 export function calculateEmploymentMetrics(
   records: EmploymentRecord[]
 ): EmploymentMetrics {
-  const totalHeadcount = records.reduce((sum, r) => sum + r.headcount, 0);
-  const guyaneseHeadcount = records
-    .filter((r) => r.is_guyanese)
-    .reduce((sum, r) => sum + r.headcount, 0);
+  const totalHeadcount = records.reduce((sum, r) => sum + r.total_employees, 0);
+  const guyaneseHeadcount = records.reduce((sum, r) => sum + r.guyanese_employed, 0);
 
-  const byType = (type: string) => {
-    const filtered = records.filter((r) => r.position_type === type);
-    const total = filtered.reduce((sum, r) => sum + r.headcount, 0);
-    const guyanese = filtered
-      .filter((r) => r.is_guyanese)
-      .reduce((sum, r) => sum + r.headcount, 0);
+  const byCategory = (cat: string) => {
+    const filtered = records.filter((r) => r.employment_category === cat);
+    const total = filtered.reduce((sum, r) => sum + r.total_employees, 0);
+    const guyanese = filtered.reduce((sum, r) => sum + r.guyanese_employed, 0);
     return { total, guyanese, pct: total > 0 ? (guyanese / total) * 100 : 0 };
   };
 
-  const managerial = byType("managerial");
-  const technical = byType("technical");
-  const nonTechnical = byType("non_technical");
+  const managerial = byCategory("Managerial");
+  const technical = byCategory("Technical");
+  const nonTechnical = byCategory("Non-Technical");
 
   return {
     total_headcount: totalHeadcount,
@@ -66,13 +63,13 @@ export function calculateCapacityMetrics(
 ): CapacityMetrics {
   return {
     total_activities: records.length,
-    total_participants: records.reduce((sum, r) => sum + r.participant_count, 0),
+    total_participants: records.reduce((sum, r) => sum + r.total_participants, 0),
     total_guyanese_participants: records.reduce(
-      (sum, r) => sum + r.guyanese_participant_count,
+      (sum, r) => sum + r.guyanese_participants_only,
       0
     ),
-    total_hours: records.reduce((sum, r) => sum + (r.total_hours || 0), 0),
-    total_cost_local: records.reduce((sum, r) => sum + (r.cost_local || 0), 0),
-    total_cost_usd: records.reduce((sum, r) => sum + (r.cost_usd || 0), 0),
+    total_hours: records.reduce((sum, r) => sum + (r.duration_days || 0) * 8, 0),
+    total_cost_local: records.reduce((sum, r) => sum + (r.expenditure_on_capacity || 0), 0),
+    total_cost_usd: 0,
   };
 }
