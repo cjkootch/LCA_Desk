@@ -28,15 +28,15 @@ export function WelcomeBanner({ entityCount, overdueCount, dueSoonCount }: Welco
   }
 
   return (
-    <div className="rounded-xl border border-border bg-gradient-to-r from-sidebar-bg to-accent p-6 mb-8">
-      <div className="flex items-start justify-between">
+    <div className="rounded-xl border border-border bg-gradient-to-r from-sidebar-bg to-accent p-4 sm:p-6 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-white mb-1">
+          <h1 className="text-xl sm:text-2xl font-heading font-bold text-white mb-1">
             {greeting}, {firstName}
           </h1>
           <p className="text-white/80 text-sm">{summaryText}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {entityCount > 0 && (
             <Link href="/dashboard/entities">
               <Button variant="secondary" size="sm" className="bg-white text-sidebar-bg hover:bg-white/90">
