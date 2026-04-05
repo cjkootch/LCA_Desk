@@ -6,6 +6,12 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
+declare module "next-auth" {
+  interface User {
+    isSuperAdmin?: boolean;
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
@@ -43,7 +49,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
         if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isSuperAdmin: user.isSuperAdmin ?? false,
+        };
       },
     }),
   ],
@@ -51,18 +62,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
+      const isOnAdmin = nextUrl.pathname.startsWith("/dashboard/admin");
+
+      if (isOnAdmin) {
+        // Block admin access at the middleware level — must be logged in
+        // Fine-grained super_admin check happens server-side in the page
+        if (!isLoggedIn) return false;
+        return true;
+      }
+
       if (isOnDashboard) {
         if (isLoggedIn) return true;
-        return false; // Redirect to login
+        return false;
       }
       return true;
     },
     jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (token as any).isSuperAdmin = user.isSuperAdmin ?? false;
+      }
       return token;
     },
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session.user as any).isSuperAdmin = (token as any).isSuperAdmin ?? false;
       return session;
     },
   },

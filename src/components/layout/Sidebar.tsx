@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchUserContext } from "@/server/actions";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -17,6 +19,13 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    fetchUserContext().then((ctx) => {
+      if (ctx?.isSuperAdmin) setIsSuperAdmin(true);
+    }).catch(() => {});
+  }, []);
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 bg-sidebar-bg flex flex-col">
@@ -52,18 +61,20 @@ export function Sidebar() {
           );
         })}
 
-        <Link
-          href="/dashboard/admin"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            pathname.startsWith("/dashboard/admin")
-              ? "bg-sidebar-active text-sidebar-text"
-              : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
-          )}
-        >
-          <Shield className="h-4 w-4" />
-          Admin
-        </Link>
+        {isSuperAdmin && (
+          <Link
+            href="/dashboard/admin"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              pathname.startsWith("/dashboard/admin")
+                ? "bg-sidebar-active text-sidebar-text"
+                : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
+            )}
+          >
+            <Shield className="h-4 w-4" />
+            Admin
+          </Link>
+        )}
       </nav>
 
       {/* User menu */}
