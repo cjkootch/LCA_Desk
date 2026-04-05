@@ -16,7 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Plus, ArrowRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { fetchEntity, fetchPeriodsForEntity, addPeriod, updateEntity } from "@/server/actions";
+import { fetchEntity, fetchPeriodsForEntity, addPeriod, updateEntity, duplicatePeriod } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import { EntityForm } from "@/components/entity/EntityForm";
 import { calculateDeadlines } from "@/lib/compliance/deadlines";
@@ -46,6 +46,7 @@ export default function EntityDetailPage() {
   const currentYear = new Date().getFullYear();
   const [reportType, setReportType] = useState("half_yearly_h1");
   const [fiscalYear, setFiscalYear] = useState(currentYear.toString());
+  const [copyFromPeriod, setCopyFromPeriod] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -69,16 +70,29 @@ export default function EntityDetailPage() {
     if (!entity || !autoFill) return;
     setCreating(true);
     try {
-      const period = await addPeriod({
-        entity_id: entity.id,
-        jurisdiction_id: entity.jurisdiction_id,
-        report_type: reportType,
-        period_start: autoFill.period_start,
-        period_end: autoFill.period_end,
-        due_date: autoFill.due_date,
-        fiscal_year: parseInt(fiscalYear),
-      });
-      toast.success("Report created — starting filing workflow");
+      let period;
+      if (copyFromPeriod) {
+        period = await duplicatePeriod(
+          copyFromPeriod,
+          reportType,
+          parseInt(fiscalYear),
+          autoFill.period_start,
+          autoFill.period_end,
+          autoFill.due_date
+        );
+        toast.success("Report created from previous data — review and update amounts");
+      } else {
+        period = await addPeriod({
+          entity_id: entity.id,
+          jurisdiction_id: entity.jurisdiction_id,
+          report_type: reportType,
+          period_start: autoFill.period_start,
+          period_end: autoFill.period_end,
+          due_date: autoFill.due_date,
+          fiscal_year: parseInt(fiscalYear),
+        });
+        toast.success("Report created — starting filing workflow");
+      }
       setCreateOpen(false);
       router.push(`/dashboard/entities/${entityId}/periods/${period.id}`);
     } catch (error) {
@@ -197,8 +211,23 @@ export default function EntityDetailPage() {
                     </div>
                   </div>
                 )}
+                {periods.length > 0 && (
+                  <Select
+                    label="Copy data from previous period"
+                    id="copy_from"
+                    value={copyFromPeriod}
+                    onChange={(e) => setCopyFromPeriod(e.target.value)}
+                    options={[
+                      { value: "", label: "Start fresh (empty)" },
+                      ...periods.map((p) => ({
+                        value: p.id,
+                        label: `${p.reportType.replace(/_/g, " ").toUpperCase()} ${p.fiscalYear || ""}`,
+                      })),
+                    ]}
+                  />
+                )}
                 <Button onClick={handleCreatePeriod} className="w-full" loading={creating} disabled={!autoFill}>
-                  Start Filing
+                  {copyFromPeriod ? "Start Filing (with previous data)" : "Start Filing"}
                 </Button>
               </div>
             </DialogContent>
