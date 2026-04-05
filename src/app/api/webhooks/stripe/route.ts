@@ -1,9 +1,101 @@
+import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/server/db";
+import { tenants } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-04-30.basil",
+});
+
+function getPlanFromPriceId(priceId: string): string {
+  if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID) return "pro";
+  if (priceId === process.env.STRIPE_PRO_ANNUAL_PRICE_ID) return "pro";
+  if (priceId === process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID) return "enterprise";
+  if (priceId === process.env.STRIPE_ENTERPRISE_ANNUAL_PRICE_ID) return "enterprise";
+  return "starter";
+}
 
 export async function POST(req: NextRequest) {
-  // Stripe webhook placeholder — to be implemented with billing
   const body = await req.text();
-  console.log("Stripe webhook received:", body.substring(0, 100));
+  const signature = req.headers.get("stripe-signature");
+
+  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const tenantId = session.metadata?.tenantId;
+      const plan = session.metadata?.plan;
+
+      if (tenantId && plan) {
+        await db
+          .update(tenants)
+          .set({
+            plan,
+            stripeSubscriptionId: session.subscription as string,
+            stripeCustomerId: session.customer as string,
+          })
+          .where(eq(tenants.id, tenantId));
+      }
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+      const priceId = subscription.items.data[0]?.price?.id;
+      const plan = priceId ? getPlanFromPriceId(priceId) : "starter";
+
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId))
+        .limit(1);
+
+      if (tenant && (subscription.status === "active" || subscription.status === "trialing")) {
+        await db
+          .update(tenants)
+          .set({ plan, stripeSubscriptionId: subscription.id, stripePriceId: priceId || null })
+          .where(eq(tenants.id, tenant.id));
+      }
+      break;
+    }
+
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId))
+        .limit(1);
+
+      if (tenant) {
+        await db
+          .update(tenants)
+          .set({ plan: "starter", stripeSubscriptionId: null, stripePriceId: null })
+          .where(eq(tenants.id, tenant.id));
+      }
+      break;
+    }
+  }
 
   return NextResponse.json({ received: true });
 }

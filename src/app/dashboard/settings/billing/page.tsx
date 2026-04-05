@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Check, X, Sparkles, Crown } from "lucide-react";
+import { Check, X, Sparkles, Crown, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchPlanAndUsage } from "@/server/actions";
+import { toast } from "sonner";
 import { PLANS, getPlan, type PlanCode } from "@/lib/plans";
 
 const ANNUAL_DISCOUNT = 0.20; // 20% off
@@ -26,7 +27,43 @@ export default function BillingPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const [upgrading, setUpgrading] = useState<string | null>(null);
+
   const currentPlan = getPlan(data?.plan);
+
+  const handleUpgrade = async (planCode: string) => {
+    setUpgrading(planCode);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planCode, billing }),
+      });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        toast.error(result.error || "Failed to start checkout");
+      }
+    } catch {
+      toast.error("Failed to start checkout");
+    }
+    setUpgrading(null);
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        toast.error("No active subscription to manage");
+      }
+    } catch {
+      toast.error("Failed to open billing portal");
+    }
+  };
 
   const getPrice = (monthlyPrice: number) => {
     if (monthlyPrice === 0) return 0;
@@ -277,16 +314,29 @@ export default function BillingPage() {
                     </li>
                   </ul>
                   {isCurrent ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
+                    currentPlan.code !== "starter" ? (
+                      <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Manage Subscription
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled>
+                        Current Plan
+                      </Button>
+                    )
+                  ) : plan.price === 0 ? (
+                    <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
+                      Downgrade
                     </Button>
                   ) : (
                     <Button
                       variant={isPopular ? "primary" : "outline"}
                       className="w-full"
+                      onClick={() => handleUpgrade(plan.code)}
+                      loading={upgrading === plan.code}
                     >
                       <Sparkles className="h-4 w-4 mr-1" />
-                      {plan.price === 0 ? "Downgrade" : "Upgrade"}
+                      Upgrade to {plan.name}
                     </Button>
                   )}
                 </CardContent>
