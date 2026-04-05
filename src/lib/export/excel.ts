@@ -1,0 +1,184 @@
+import * as XLSX from "xlsx";
+import type { ReportExportData } from "@/types/reporting.types";
+
+function buildBackgroundSheet(data: ReportExportData): XLSX.WorkSheet {
+  const rows = [
+    ["LOCAL CONTENT HALF-YEARLY REPORT"],
+    ["Version 4.1"],
+    [],
+    ["Company Legal Name", data.entity.legal_name],
+    ["Trading Name", data.entity.trading_name || ""],
+    ["Registration Number", data.entity.registration_number || ""],
+    ["LCS Certificate ID", data.entity.lcs_certificate_id || ""],
+    ["Company Type", data.entity.company_type || ""],
+    ["Guyanese Ownership %", data.entity.guyanese_ownership_pct?.toString() || ""],
+    ["Petroleum Agreement Ref", data.entity.petroleum_agreement_ref || ""],
+    [],
+    ["Reporting Period", `${data.period.period_start} to ${data.period.period_end}`],
+    ["Report Type", data.period.report_type],
+    ["Fiscal Year", data.period.fiscal_year?.toString() || ""],
+    ["Due Date", data.period.due_date],
+    [],
+    ["Contact Name", data.entity.contact_name || ""],
+    ["Contact Email", data.entity.contact_email || ""],
+    ["Contact Phone", data.entity.contact_phone || ""],
+    ["Registered Address", data.entity.registered_address || ""],
+  ];
+  return XLSX.utils.aoa_to_sheet(rows);
+}
+
+function buildGeneralInfoSheet(data: ReportExportData): XLSX.WorkSheet {
+  const rows = [
+    ["GENERAL INFORMATION"],
+    [],
+    ["Jurisdiction", data.jurisdictionCode],
+    ["Local Content Rate", `${data.localContentMetrics.local_content_rate.toFixed(1)}%`],
+    ["Total Expenditure (Local)", data.localContentMetrics.total_expenditure],
+    ["Guyanese Expenditure", data.localContentMetrics.guyanese_expenditure],
+    ["Non-Guyanese Expenditure", data.localContentMetrics.non_guyanese_expenditure],
+    [],
+    ["Total Headcount", data.employmentMetrics.total_headcount],
+    ["Guyanese Headcount", data.employmentMetrics.guyanese_headcount],
+    ["Guyanese Employment %", `${data.employmentMetrics.guyanese_percentage.toFixed(1)}%`],
+    ["Managerial Guyanese %", `${data.employmentMetrics.managerial_guyanese_pct.toFixed(1)}%`],
+    ["Technical Guyanese %", `${data.employmentMetrics.technical_guyanese_pct.toFixed(1)}%`],
+    ["Non-Technical Guyanese %", `${data.employmentMetrics.non_technical_guyanese_pct.toFixed(1)}%`],
+    [],
+    ["Capacity Dev Activities", data.capacityMetrics.total_activities],
+    ["Total Participants", data.capacityMetrics.total_participants],
+    ["Total Training Hours", data.capacityMetrics.total_hours],
+  ];
+  return XLSX.utils.aoa_to_sheet(rows);
+}
+
+function buildExpenditureSheet(expenditures: ReportExportData["expenditures"]): XLSX.WorkSheet {
+  const headers = [
+    "Item No",
+    "Sector Category",
+    "Supplier Name",
+    "LCS Cert ID",
+    "Guyanese/Non-Guyanese",
+    "Sole Sourced",
+    "Sole Source Code",
+    "Amount (GYD)",
+    "Amount (USD)",
+    "Payment Method",
+    "Invoice Date",
+  ];
+
+  const rows = expenditures.map((e, i) => [
+    i + 1,
+    e.sector_category_id,
+    e.supplier_name,
+    e.supplier_lcs_cert_id || "",
+    e.is_guyanese_supplier ? "Guyanese" : "Non-Guyanese",
+    e.is_sole_sourced ? "Yes" : "No",
+    e.sole_source_code || "",
+    e.amount_local,
+    e.amount_usd || "",
+    e.payment_method || "",
+    e.payment_date || e.contract_date || "",
+  ]);
+
+  return XLSX.utils.aoa_to_sheet([headers, ...rows]);
+}
+
+function buildEmploymentSheet(employment: ReportExportData["employment"]): XLSX.WorkSheet {
+  const headers = [
+    "Item No",
+    "Job Title",
+    "ISCO-08 Code",
+    "Guyanese/Non-Guyanese",
+    "Nationality",
+    "Position Type",
+    "Headcount",
+    "Remuneration Band",
+    "Total Remuneration (GYD)",
+  ];
+
+  const rows = employment.map((e, i) => [
+    i + 1,
+    e.job_title,
+    e.isco_08_code || "",
+    e.is_guyanese ? "Guyanese" : "Non-Guyanese",
+    e.nationality || "GY",
+    e.position_type,
+    e.headcount,
+    e.remuneration_band || "",
+    e.total_remuneration_local || "",
+  ]);
+
+  return XLSX.utils.aoa_to_sheet([headers, ...rows]);
+}
+
+function buildCapacitySheet(capacity: ReportExportData["capacity"]): XLSX.WorkSheet {
+  const headers = [
+    "Item No",
+    "Activity Type",
+    "Activity Name",
+    "Provider",
+    "Local/International",
+    "Participants",
+    "Guyanese Participants",
+    "Duration (Hours)",
+    "Start Date",
+    "End Date",
+    "Cost (GYD)",
+  ];
+
+  const rows = capacity.map((c, i) => [
+    i + 1,
+    c.activity_type,
+    c.activity_name,
+    c.provider_name || "",
+    c.provider_type || "",
+    c.participant_count,
+    c.guyanese_participant_count,
+    c.total_hours || "",
+    c.start_date || "",
+    c.end_date || "",
+    c.cost_local || "",
+  ]);
+
+  return XLSX.utils.aoa_to_sheet([headers, ...rows]);
+}
+
+function buildExportSheet(data: ReportExportData): XLSX.WorkSheet {
+  const rows = [
+    ["EXPORT INFORMATION"],
+    [],
+    ["Generated At", new Date().toISOString()],
+    ["Generated By", "LCA Desk"],
+    ["Report Version", "4.1"],
+    [],
+    ["Submit to:", data.jurisdictionCode === "GY" ? "localcontent@nre.gov.gy" : ""],
+    ["Subject Line", `Local Content Half-Yearly Report – ${data.period.report_type === "half_yearly_h1" ? "H1" : "H2"} ${data.period.fiscal_year} – ${data.entity.legal_name}`],
+  ];
+  return XLSX.utils.aoa_to_sheet(rows);
+}
+
+export async function generateHalfYearlyReport(
+  data: ReportExportData
+): Promise<Uint8Array> {
+  const wb = XLSX.utils.book_new();
+
+  const backgroundSheet = buildBackgroundSheet(data);
+  XLSX.utils.book_append_sheet(wb, backgroundSheet, "Background");
+
+  const generalSheet = buildGeneralInfoSheet(data);
+  XLSX.utils.book_append_sheet(wb, generalSheet, "General Information");
+
+  const expenditureSheet = buildExpenditureSheet(data.expenditures);
+  XLSX.utils.book_append_sheet(wb, expenditureSheet, "Expenditure Sub-Report");
+
+  const employmentSheet = buildEmploymentSheet(data.employment);
+  XLSX.utils.book_append_sheet(wb, employmentSheet, "Employment Sub-Report");
+
+  const capacitySheet = buildCapacitySheet(data.capacity);
+  XLSX.utils.book_append_sheet(wb, capacitySheet, "Capacity Development");
+
+  const exportSheet = buildExportSheet(data);
+  XLSX.utils.book_append_sheet(wb, exportSheet, "Export");
+
+  return XLSX.write(wb, { type: "array", bookType: "xlsx" }) as Uint8Array;
+}
