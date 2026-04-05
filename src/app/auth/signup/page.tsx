@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Building2, Users, ArrowRight, ArrowLeft } from "lucide-react";
@@ -19,14 +18,21 @@ export default function SignupPage() {
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const password = passwordRef.current?.value || "";
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/auth/register", {
@@ -182,16 +188,21 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <PasswordInput
-                  id="password"
-                  label="Password"
-                  placeholder="Min 8 characters"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  showStrength
-                />
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-text-secondary">Password</label>
+                  <input
+                    ref={passwordRef}
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Min 8 characters"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    className="w-full h-10 px-3 rounded-lg bg-white border border-border text-text-primary placeholder:text-text-muted text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                  />
+                  <p className="text-sm text-text-muted">Must be at least 8 characters</p>
+                </div>
                 <Input
                   id="companyName"
                   label={accountType === "self" ? "Company Name" : "Firm / Organization Name"}
