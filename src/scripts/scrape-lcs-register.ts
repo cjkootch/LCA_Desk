@@ -258,13 +258,14 @@ async function upsertProfile(
   db: ReturnType<typeof getDb>,
   profile: ScrapedProfile
 ) {
-  await db
-    .insert(lcsRegister)
-    .values({
-      certId: profile.certId,
-      profileSlug: profile.profileSlug,
-      profileUrl: profile.profileUrl,
-      legalName: profile.legalName,
+  try {
+    await db
+      .insert(lcsRegister)
+      .values({
+        certId: profile.certId,
+        profileSlug: profile.profileSlug,
+        profileUrl: profile.profileUrl,
+        legalName: profile.legalName,
       tradingName: profile.tradingName,
       status: profile.status,
       expirationDate: profile.expirationDate ?? undefined,
@@ -295,6 +296,15 @@ async function upsertProfile(
         updatedAt: new Date(),
       },
     });
+  } catch (err) {
+    // Duplicate cert_id across different companies — skip silently
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("duplicate key") || message.includes("unique")) {
+      profile.scrapeError = "duplicate_cert_id";
+    } else {
+      throw err;
+    }
+  }
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────
