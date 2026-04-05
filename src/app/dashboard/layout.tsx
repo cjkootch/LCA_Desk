@@ -15,28 +15,17 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       {/* Mobile overlay */}
-      <div
-        className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-        style={{ display: sidebarOpen ? "block" : "none" }}
-        onClick={() => setSidebarOpen(false)}
-      />
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* Sidebar */}
-      <div
-        className="fixed inset-y-0 left-0 z-40 lg:translate-x-0 transition-transform duration-200"
-        style={{ transform: sidebarOpen ? "translateX(0)" : undefined }}
-      >
-        {/* On mobile, default is off-screen. On lg+, always visible via lg:translate-x-0 */}
-        <style>{`
-          @media (max-width: 1023px) {
-            .sidebar-wrapper { transform: translateX(-100%); }
-            .sidebar-wrapper.open { transform: translateX(0) !important; }
-          }
-        `}</style>
-        <div className={`sidebar-wrapper ${sidebarOpen ? "open" : ""}`}>
-          <Sidebar onNavigate={() => setSidebarOpen(false)} />
-        </div>
-      </div>
+      <Sidebar
+        isOpen={sidebarOpen}
+        onNavigate={() => setSidebarOpen(false)}
+      />
 
       {/* Main content */}
       <main className="flex-1 lg:ml-60 min-w-0">
