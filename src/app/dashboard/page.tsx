@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/layout/TopBar";
 import { StatsBar } from "@/components/dashboard/StatsBar";
+import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { PortfolioCard } from "@/components/dashboard/PortfolioCard";
 import { ComplianceCalendar } from "@/components/dashboard/ComplianceCalendar";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { FilingProgress } from "@/components/dashboard/FilingProgress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -28,7 +31,6 @@ export default function DashboardPage() {
         setLoading(false);
         return;
       }
-      // Map Drizzle rows to Entity type
       setEntities(
         data.map((e) => ({
           id: e.id,
@@ -89,18 +91,21 @@ export default function DashboardPage() {
       <TopBar
         title="Portfolio Overview"
         description="Manage your local content compliance across all entities"
-        action={{
-          label: "Add Entity",
-          onClick: () => router.push("/dashboard/entities/new"),
-        }}
       />
       <div className="p-8">
+        <WelcomeBanner
+          entityCount={entities.length}
+          overdueCount={overdueCount}
+          dueSoonCount={dueSoonCount}
+        />
+
         <StatsBar
           totalEntities={entities.length}
           reportsDueThisMonth={dueSoonCount}
           overdueReports={overdueCount}
           avgLocalContentRate={0}
         />
+
         {entities.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -111,6 +116,7 @@ export default function DashboardPage() {
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main content — entities */}
             <div className="lg:col-span-2">
               <h2 className="text-lg font-heading font-semibold mb-4">Entities</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,8 +125,12 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            {/* Sidebar — calendar, activity, filings */}
             <div className="space-y-6">
               <ComplianceCalendar deadlines={upcomingDeadlines} />
+              <RecentActivity />
+              <FilingProgress filings={[]} />
               <AlertsPanel alerts={[]} />
             </div>
           </div>
