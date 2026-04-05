@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -35,7 +35,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-60 bg-sidebar-bg flex flex-col">
+    <aside
+      className="fixed top-0 z-40 h-screen w-60 bg-sidebar-bg flex flex-col transition-all duration-200 lg:left-0"
+      style={{ left: isOpen ? 0 : undefined }}
+      data-open={isOpen}
+    >
+      <style>{`
+        aside[data-open="false"] { left: -15rem; }
+        @media (min-width: 1024px) { aside[data-open] { left: 0 !important; } }
+      `}</style>
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-5 border-b border-white/10">
         <Link href="/dashboard" onClick={onNavigate}>
