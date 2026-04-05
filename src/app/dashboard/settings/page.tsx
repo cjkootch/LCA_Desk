@@ -626,6 +626,25 @@ function IntegrationsTab({ plan }: { plan: string }) {
           </p>
         </CardContent>
       </Card>
+
+      {/* Zapier */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <img src="/zapier-logo.svg" alt="Zapier" className="h-10 w-10 rounded-lg object-contain" />
+            <div>
+              <CardTitle className="text-base">Zapier</CardTitle>
+              <p className="text-sm text-text-muted mt-0.5">Connect LCA Desk to 5,000+ apps</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-text-secondary mb-4">
+            Automate workflows between LCA Desk and your existing tools — Slack notifications on submission, Google Sheets exports, email alerts, and more.
+          </p>
+          <Badge variant="default">Coming Soon</Badge>
+        </CardContent>
+      </Card>
     </div>
   );
 }
