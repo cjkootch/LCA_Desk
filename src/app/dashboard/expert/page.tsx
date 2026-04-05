@@ -72,12 +72,22 @@ function renderMarkdown(text: string): React.ReactNode {
     if (/^-{3,}$/.test(trimmed) || /^\*{3,}$/.test(trimmed)) { elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />); continue; }
     if (/^\|[-\s|:]+\|$/.test(trimmed)) continue;
 
-    const h3Match = trimmed.match(/^###\s+(.+)/);
-    if (h3Match) { elements.push(<p key={`h3-${i}`} className="font-bold text-text-primary mt-3 mb-1">{renderInline(h3Match[1], `h3-${i}`)}</p>); continue; }
-    const h2Match = trimmed.match(/^##\s+(.+)/);
-    if (h2Match) { elements.push(<p key={`h2-${i}`} className="font-bold text-text-primary text-base mt-3 mb-1">{renderInline(h2Match[1], `h2-${i}`)}</p>); continue; }
-    const h1Match = trimmed.match(/^#\s+(.+)/);
-    if (h1Match) { elements.push(<p key={`h1-${i}`} className="font-bold text-text-primary text-lg mt-3 mb-1">{renderInline(h1Match[1], `h1-${i}`)}</p>); continue; }
+    // Headings — check h3 first (most specific), then h2, then h1
+    if (trimmed.startsWith("### ") || trimmed.startsWith("###")) {
+      const content = trimmed.replace(/^###\s*/, "");
+      elements.push(<p key={`h3-${i}`} className="font-semibold text-text-primary mt-3 mb-1">{renderInline(content, `h3-${i}`)}</p>);
+      continue;
+    }
+    if (trimmed.startsWith("## ") || trimmed.startsWith("##")) {
+      const content = trimmed.replace(/^##\s*/, "");
+      elements.push(<p key={`h2-${i}`} className="font-bold text-text-primary text-base mt-4 mb-1">{renderInline(content, `h2-${i}`)}</p>);
+      continue;
+    }
+    if (trimmed.startsWith("# ")) {
+      const content = trimmed.replace(/^#\s+/, "");
+      elements.push(<p key={`h1-${i}`} className="font-bold text-text-primary text-lg mt-4 mb-2">{renderInline(content, `h1-${i}`)}</p>);
+      continue;
+    }
 
     const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
     if (bulletMatch) { elements.push(<div key={`li-${i}`} className="flex gap-2 pl-2"><span className="text-accent mt-0.5">•</span><span>{renderInline(bulletMatch[1], `li-${i}`)}</span></div>); continue; }
