@@ -3,13 +3,14 @@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { EmploymentRecord } from "@/types/database.types";
 
 interface EmploymentTableProps {
   records: EmploymentRecord[];
   onDelete: (id: string) => void;
+  onEdit?: (record: EmploymentRecord) => void;
 }
 
 const CATEGORY_VARIANT: Record<string, "accent" | "gold" | "default"> = {
@@ -18,7 +19,7 @@ const CATEGORY_VARIANT: Record<string, "accent" | "gold" | "default"> = {
   "Non-Technical": "default",
 };
 
-export function EmploymentTable({ records, onDelete }: EmploymentTableProps) {
+export function EmploymentTable({ records, onDelete, onEdit }: EmploymentTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -56,9 +57,16 @@ export function EmploymentTable({ records, onDelete }: EmploymentTableProps) {
               {r.remuneration_guyanese_only ? formatCurrency(r.remuneration_guyanese_only, "GYD") : "—"}
             </TableCell>
             <TableCell>
-              <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                {onEdit && (
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

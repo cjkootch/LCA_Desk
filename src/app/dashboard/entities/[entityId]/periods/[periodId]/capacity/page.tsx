@@ -16,7 +16,7 @@ import { Plus, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatCurrency } from "@/lib/utils";
-import { fetchEntity, fetchCapacity, addCapacity, removeCapacity } from "@/server/actions";
+import { fetchEntity, fetchCapacity, addCapacity, removeCapacity, updateCapacityRecord } from "@/server/actions";
 import type { CapacityDevelopmentRecord } from "@/types/database.types";
 
 function mapCapacity(c: Record<string, unknown>): CapacityDevelopmentRecord {
@@ -46,6 +46,7 @@ export default function CapacityPage() {
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<CapacityDevelopmentRecord[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [editRecord, setEditRecord] = useState<CapacityDevelopmentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -77,6 +78,18 @@ export default function CapacityPage() {
     } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to delete"); }
   };
 
+  const handleEdit = async (data: Record<string, unknown>) => {
+    if (!editRecord) return;
+    setSaving(true);
+    try {
+      await updateCapacityRecord(editRecord.id, data);
+      toast.success("Record updated");
+      setEditRecord(null);
+      await loadData();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to update"); }
+    setSaving(false);
+  };
+
   const metrics = calculateCapacityMetrics(records);
 
   if (loading) {
@@ -103,7 +116,7 @@ export default function CapacityPage() {
             {records.length === 0 ? (
               <EmptyState icon={GraduationCap} title="No capacity development activities" description="Record training, scholarships, and other capacity building activities." actionLabel="Add Activity" onAction={() => setFormOpen(true)} />
             ) : (
-              <CapacityTable records={records} onDelete={handleDelete} />
+              <CapacityTable records={records} onDelete={handleDelete} onEdit={(r) => setEditRecord(r)} />
             )}
           </div>
           <div>
@@ -118,6 +131,31 @@ export default function CapacityPage() {
             </Card>
           </div>
         </div>
+
+        <Dialog open={!!editRecord} onOpenChange={(open) => { if (!open) setEditRecord(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Edit Capacity Development Activity</DialogTitle></DialogHeader>
+            {editRecord && (
+              <CapacityForm
+                defaultValues={{
+                  activity: editRecord.activity,
+                  category: editRecord.category || undefined,
+                  participant_type: editRecord.participant_type || undefined,
+                  guyanese_participants_only: editRecord.guyanese_participants_only,
+                  total_participants: editRecord.total_participants,
+                  start_date: editRecord.start_date || undefined,
+                  duration_days: editRecord.duration_days || undefined,
+                  cost_to_participants: editRecord.cost_to_participants || undefined,
+                  expenditure_on_capacity: editRecord.expenditure_on_capacity || undefined,
+                  notes: editRecord.notes || undefined,
+                }}
+                onSubmit={handleEdit}
+                onCancel={() => setEditRecord(null)}
+                loading={saving}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

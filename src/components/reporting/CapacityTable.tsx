@@ -3,16 +3,17 @@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { CapacityDevelopmentRecord } from "@/types/database.types";
 
 interface CapacityTableProps {
   records: CapacityDevelopmentRecord[];
   onDelete: (id: string) => void;
+  onEdit?: (record: CapacityDevelopmentRecord) => void;
 }
 
-export function CapacityTable({ records, onDelete }: CapacityTableProps) {
+export function CapacityTable({ records, onDelete, onEdit }: CapacityTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -48,9 +49,16 @@ export function CapacityTable({ records, onDelete }: CapacityTableProps) {
               {r.expenditure_on_capacity ? formatCurrency(r.expenditure_on_capacity, "GYD") : "—"}
             </TableCell>
             <TableCell>
-              <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                {onEdit && (
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { calculateLocalContentRate } from "@/lib/compliance/calculators";
-import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure } from "@/server/actions";
+import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure, updateExpenditure } from "@/server/actions";
 import { RELATED_SECTORS } from "@/lib/compliance/sectors";
 import type { ExpenditureRecord } from "@/types/database.types";
 
@@ -51,6 +51,7 @@ export default function ExpenditurePage() {
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<ExpenditureRecord[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [editRecord, setEditRecord] = useState<ExpenditureRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -89,6 +90,20 @@ export default function ExpenditurePage() {
     }
   };
 
+  const handleEdit = async (data: Record<string, unknown>) => {
+    if (!editRecord) return;
+    setSaving(true);
+    try {
+      await updateExpenditure(editRecord.id, data);
+      toast.success("Record updated");
+      setEditRecord(null);
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update");
+    }
+    setSaving(false);
+  };
+
   const metrics = calculateLocalContentRate(records);
 
   if (loading) {
@@ -115,11 +130,42 @@ export default function ExpenditurePage() {
             {records.length === 0 ? (
               <EmptyState icon={Receipt} title="No expenditure records" description="Add your first expenditure record to start tracking supplier procurement." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
-              <ExpenditureTable records={records} onDelete={handleDelete} />
+              <ExpenditureTable records={records} onDelete={handleDelete} onEdit={(r) => setEditRecord(r)} />
             )}
           </div>
           <div><LocalContentRateCard metrics={metrics} /></div>
         </div>
+
+        {/* Edit dialog */}
+        <Dialog open={!!editRecord} onOpenChange={(open) => { if (!open) setEditRecord(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Edit Expenditure Record</DialogTitle></DialogHeader>
+            {editRecord && (
+              <ExpenditureForm
+                sectorOptions={RELATED_SECTORS}
+                defaultValues={{
+                  type_of_item_procured: editRecord.type_of_item_procured,
+                  related_sector: editRecord.related_sector || undefined,
+                  description_of_good_service: editRecord.description_of_good_service || undefined,
+                  supplier_name: editRecord.supplier_name,
+                  sole_source_code: editRecord.sole_source_code || undefined,
+                  supplier_certificate_id: editRecord.supplier_certificate_id || undefined,
+                  actual_payment: editRecord.actual_payment,
+                  outstanding_payment: editRecord.outstanding_payment || undefined,
+                  projection_next_period: editRecord.projection_next_period || undefined,
+                  payment_method: editRecord.payment_method || undefined,
+                  supplier_bank: editRecord.supplier_bank || undefined,
+                  bank_location_country: editRecord.bank_location_country || undefined,
+                  currency_of_payment: editRecord.currency_of_payment || "GYD",
+                  notes: editRecord.notes || undefined,
+                }}
+                onSubmit={handleEdit}
+                onCancel={() => setEditRecord(null)}
+                loading={saving}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
