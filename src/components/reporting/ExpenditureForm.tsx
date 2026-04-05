@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { CertVerification } from "@/components/reporting/CertVerification";
 
 const expenditureSchema = z.object({
   type_of_item_procured: z.string().min(1, "Type of item is required"),
@@ -43,6 +44,8 @@ export function ExpenditureForm({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ExpenditureFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +55,8 @@ export function ExpenditureForm({
       ...defaultValues,
     },
   });
+
+  const watchCertId = watch("supplier_certificate_id") || "";
 
   const sectorSelectOptions = sectorOptions.map((s) => ({
     value: s,
@@ -113,11 +118,22 @@ export function ExpenditureForm({
         />
       </div>
 
-      <Input
-        label="Supplier Certificate ID"
-        id="supplier_certificate_id"
-        {...register("supplier_certificate_id")}
-      />
+      <div>
+        <Input
+          label="Supplier Certificate ID"
+          id="supplier_certificate_id"
+          placeholder="LCSR-XXXXXXXX"
+          {...register("supplier_certificate_id")}
+        />
+        <CertVerification
+          certId={watchCertId}
+          onCompanyFound={(company) => {
+            if (company) {
+              setValue("supplier_name", company.legalName);
+            }
+          }}
+        />
+      </div>
 
       <div className="grid grid-cols-3 gap-4">
         <Input
