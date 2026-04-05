@@ -403,6 +403,37 @@ export const notifications = pgTable(
   ]
 );
 
+// ─── LCS SUPPLIER REGISTER ───────────────────────────────────────
+// Local copy of Guyana's public Local Content Register
+// Populated by the scraper script, used for supplier cert ID verification
+export const lcsRegister = pgTable(
+  "lcs_register",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    certId: text("cert_id").unique(),
+    profileSlug: text("profile_slug").unique().notNull(),
+    profileUrl: text("profile_url"),
+    legalName: text("legal_name").notNull(),
+    tradingName: text("trading_name"),
+    status: text("status"),
+    expirationDate: date("expiration_date"),
+    address: text("address"),
+    email: text("email"),
+    website: text("website"),
+    phone: text("phone"),
+    serviceCategories: text("service_categories").array(),
+    scrapedAt: timestamp("scraped_at").defaultNow(),
+    scrapeError: text("scrape_error"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("lcs_cert_id_idx").on(table.certId),
+    index("lcs_legal_name_idx").on(table.legalName),
+    index("lcs_status_idx").on(table.status),
+  ]
+);
+
 // ─── USAGE TRACKING ──────────────────────────────────────────────
 export const usageTracking = pgTable(
   "usage_tracking",
