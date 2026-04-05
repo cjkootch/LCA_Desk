@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const anthropic = getAnthropicClient();
 
-    const stream = await anthropic.messages.stream({
+    const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
@@ -48,7 +48,22 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    return new Response(stream.toReadableStream(), {
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        stream.on("text", (text) => {
+          controller.enqueue(encoder.encode(text));
+        });
+        stream.on("end", () => {
+          controller.close();
+        });
+        stream.on("error", (err) => {
+          controller.error(err);
+        });
+      },
+    });
+
+    return new Response(readable, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
