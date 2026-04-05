@@ -30,6 +30,7 @@ const capacitySchema = z.object({
   duration_days: z.coerce.number().min(0).optional(),
   cost_to_participants: z.coerce.number().optional(),
   expenditure_on_capacity: z.coerce.number().optional(),
+  notes: z.string().optional(),
 });
 
 type CapacityFormData = z.infer<typeof capacitySchema>;
@@ -135,6 +136,7 @@ export function CapacityForm({ defaultValues, onSubmit, onCancel, loading }: Cap
         {...register("expenditure_on_capacity")}
         error={errors.expenditure_on_capacity?.message}
       />
+      <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes" />
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel

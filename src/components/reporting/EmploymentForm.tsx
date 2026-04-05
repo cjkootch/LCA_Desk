@@ -16,6 +16,7 @@ const employmentSchema = z.object({
   guyanese_employed: z.coerce.number().int().min(0, "Must be 0 or more"),
   total_remuneration_paid: z.coerce.number().optional(),
   remuneration_guyanese_only: z.coerce.number().optional(),
+  notes: z.string().optional(),
 });
 
 type EmploymentFormData = z.infer<typeof employmentSchema>;
@@ -112,6 +113,7 @@ export function EmploymentForm({ defaultValues, onSubmit, onCancel, loading }: E
           error={errors.remuneration_guyanese_only?.message}
         />
       </div>
+      <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes" />
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel

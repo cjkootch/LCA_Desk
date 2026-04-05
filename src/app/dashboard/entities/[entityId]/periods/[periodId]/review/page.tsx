@@ -1,4 +1,5 @@
 "use client";
+import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -19,6 +20,7 @@ export default function ReviewPage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const completedSteps = useStepCompletion(periodId);
   const [entityName, setEntityName] = useState("");
   const [results, setResults] = useState<ValidationResult[]>([]);
   const [scanData, setScanData] = useState<Record<string, unknown>>({});
@@ -95,7 +97,7 @@ export default function ReviewPage() {
       <div className="p-8">
         <PageHeader title="Review & Validate" description="Pre-submission compliance checklist."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Review" }]} />
-        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="review" completedSteps={["company_info", "expenditure", "employment", "capacity", "narrative"]} />
+        <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="review" completedSteps={completedSteps} />
         <div className="flex gap-4 mb-6">
           <Badge variant={errors.length > 0 ? "danger" : "success"}>{errors.length} Error{errors.length !== 1 ? "s" : ""}</Badge>
           <Badge variant={warnings.length > 0 ? "warning" : "success"}>{warnings.length} Warning{warnings.length !== 1 ? "s" : ""}</Badge>
