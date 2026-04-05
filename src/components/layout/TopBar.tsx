@@ -49,10 +49,9 @@ export function TopBar({ title, description, action }: TopBarProps) {
             </Button>
           </Link>
         )}
-        <button className="relative p-2 text-text-muted hover:text-text-primary transition-colors">
+        <Link href="/dashboard/settings" className="relative p-2 text-text-muted hover:text-text-primary transition-colors">
           <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-danger rounded-full" />
-        </button>
+        </Link>
         {action && (
           <Button onClick={action.onClick} size="sm">
             {action.label}
