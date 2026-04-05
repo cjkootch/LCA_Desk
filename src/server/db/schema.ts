@@ -313,6 +313,26 @@ export const capacityDevelopmentRecords = pgTable(
   ]
 );
 
+// ─── USAGE TRACKING ──────────────────────────────────────────────
+export const usageTracking = pgTable(
+  "usage_tracking",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    periodMonth: text("period_month").notNull(), // "2026-04" format
+    aiDraftsUsed: integer("ai_drafts_used").default(0),
+    aiChatMessagesUsed: integer("ai_chat_messages_used").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    unique("usage_tenant_month").on(table.tenantId, table.periodMonth),
+    index("usage_tenant_idx").on(table.tenantId),
+  ]
+);
+
 // ─── AI CHAT CONVERSATIONS ───────────────────────────────────────
 export const chatConversations = pgTable(
   "chat_conversations",

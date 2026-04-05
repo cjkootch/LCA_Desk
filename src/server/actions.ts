@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import {
   chatConversations,
   chatMessages,
+  usageTracking,
   entities,
   reportingPeriods,
   expenditureRecords,
@@ -685,4 +686,87 @@ export async function deleteChatConversation(conversationId: string) {
         eq(chatConversations.userId, session.user.id)
       )
     );
+}
+
+// ─── PLAN & USAGE ────────────────────────────────────────────────
+export async function fetchPlanAndUsage() {
+  const { tenantId, tenant } = await getSessionTenant();
+  const plan = tenant.plan || "starter";
+
+  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+
+  const [usage] = await db
+    .select()
+    .from(usageTracking)
+    .where(
+      and(
+        eq(usageTracking.tenantId, tenantId),
+        eq(usageTracking.periodMonth, currentMonth)
+      )
+    )
+    .limit(1);
+
+  // Count entities and team members
+  const entityCount = (
+    await db
+      .select()
+      .from(entities)
+      .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)))
+  ).length;
+
+  const memberCount = (
+    await db
+      .select()
+      .from(tenantMembers)
+      .where(eq(tenantMembers.tenantId, tenantId))
+  ).length;
+
+  return {
+    plan,
+    usage: {
+      aiDraftsUsed: usage?.aiDraftsUsed || 0,
+      aiChatMessagesUsed: usage?.aiChatMessagesUsed || 0,
+      entityCount,
+      memberCount,
+    },
+    periodMonth: currentMonth,
+  };
+}
+
+export async function incrementUsage(
+  type: "aiDraftsUsed" | "aiChatMessagesUsed"
+) {
+  const { tenantId } = await getSessionTenant();
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const [existing] = await db
+    .select()
+    .from(usageTracking)
+    .where(
+      and(
+        eq(usageTracking.tenantId, tenantId),
+        eq(usageTracking.periodMonth, currentMonth)
+      )
+    )
+    .limit(1);
+
+  if (existing) {
+    const newValue = (existing[type] || 0) + 1;
+    await db
+      .update(usageTracking)
+      .set({ [type]: newValue, updatedAt: new Date() })
+      .where(eq(usageTracking.id, existing.id));
+    return newValue;
+  }
+
+  const [created] = await db
+    .insert(usageTracking)
+    .values({
+      tenantId,
+      periodMonth: currentMonth,
+      [type]: 1,
+    })
+    .returning();
+
+  return created[type] || 1;
 }

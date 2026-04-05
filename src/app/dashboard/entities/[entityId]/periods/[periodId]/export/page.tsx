@@ -8,16 +8,18 @@ import { PeriodChecklist } from "@/components/reporting/PeriodChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FileText, Send, CheckCircle } from "lucide-react";
+import { FeatureGate } from "@/components/billing/FeatureGate";
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
-import { fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, markPeriodSubmitted } from "@/server/actions";
+import { fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, markPeriodSubmitted, fetchPlanAndUsage } from "@/server/actions";
 import type { Entity, ReportingPeriod, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
 
 export default function ExportPage() {
   const params = useParams();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
+  const [currentPlan, setCurrentPlan] = useState("starter");
   const [entityName, setEntityName] = useState("");
   const [entity, setEntity] = useState<Entity | null>(null);
   const [period, setPeriod] = useState<{ reportType: string; fiscalYear: number | null; periodStart: string; periodEnd: string; status: string | null; submittedAt: Date | null } | null>(null);
@@ -27,6 +29,7 @@ export default function ExportPage() {
 
   useEffect(() => {
     const load = async () => {
+      fetchPlanAndUsage().then(d => setCurrentPlan(d.plan)).catch(() => {});
       const [rawEntity, rawPeriod, rawExp, rawEmp, rawCap, rawNar] = await Promise.all([
         fetchEntity(entityId), fetchPeriod(periodId), fetchExpenditures(periodId), fetchEmployment(periodId), fetchCapacity(periodId), fetchNarratives(periodId),
       ]);
@@ -96,6 +99,7 @@ export default function ExportPage() {
         <PageHeader title="Export & Submit" description="Generate official reports and submit to the Local Content Secretariat."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Export" }]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={["company_info", "expenditure", "employment", "capacity", "narrative", "review"]} />
+        <FeatureGate planRequired="pro" featureName="Report Export" currentPlan={currentPlan}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success-light"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
@@ -106,6 +110,7 @@ export default function ExportPage() {
             <CardContent><Button onClick={() => handleExport("pdf")} variant="secondary" loading={exporting === "pdf"} className="w-full"><FileText className="h-4 w-4 mr-2" />Download Narrative PDF</Button></CardContent>
           </Card>
         </div>
+        </FeatureGate>
         <Card className="mb-8">
           <CardHeader><div className="flex items-center gap-2"><Send className="h-5 w-5 text-accent" /><CardTitle className="text-base">Submission Instructions</CardTitle></div></CardHeader>
           <CardContent>

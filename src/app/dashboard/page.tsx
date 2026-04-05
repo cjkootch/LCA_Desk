@@ -10,6 +10,7 @@ import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { FilingProgress } from "@/components/dashboard/FilingProgress";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
@@ -98,6 +99,8 @@ export default function DashboardPage() {
           overdueCount={overdueCount}
           dueSoonCount={dueSoonCount}
         />
+
+        <UsageBanner />
 
         <StatsBar
           totalEntities={entities.length}
