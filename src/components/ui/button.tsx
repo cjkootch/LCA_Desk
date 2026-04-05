@@ -15,11 +15,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:pointer-events-none";
 
     const variants = {
-      primary: "bg-accent text-bg-primary hover:bg-accent-hover",
-      secondary: "bg-bg-card text-text-primary border border-border hover:bg-bg-surface",
-      ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-card",
-      danger: "bg-danger text-white hover:bg-red-600",
-      outline: "border border-border text-text-primary hover:bg-bg-card",
+      primary: "bg-accent text-white hover:bg-accent-hover",
+      secondary: "bg-bg-surface text-text-primary border border-border hover:bg-bg-primary",
+      ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-primary",
+      danger: "bg-danger text-white hover:bg-red-700",
+      outline: "border border-border text-text-primary hover:bg-bg-primary",
     };
 
     const sizes = {

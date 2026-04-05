@@ -15,9 +15,9 @@ interface AlertsPanelProps {
 }
 
 const LEVEL_CONFIG = {
-  error: { icon: XCircle, color: "text-danger", bg: "bg-danger/5" },
-  warning: { icon: AlertTriangle, color: "text-warning", bg: "bg-warning/5" },
-  info: { icon: Info, color: "text-accent", bg: "bg-accent/5" },
+  error: { icon: XCircle, color: "text-danger", bg: "bg-danger-light" },
+  warning: { icon: AlertTriangle, color: "text-warning", bg: "bg-warning-light" },
+  info: { icon: Info, color: "text-accent", bg: "bg-accent-light" },
 };
 
 export function AlertsPanel({ alerts }: AlertsPanelProps) {

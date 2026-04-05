@@ -10,7 +10,7 @@ interface ProgressProps extends React.ComponentProps<typeof ProgressPrimitive.Ro
 function Progress({ className, value, indicatorClassName, ...props }: ProgressProps) {
   return (
     <ProgressPrimitive.Root
-      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-bg-surface", className)}
+      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-bg-primary", className)}
       {...props}
     >
       <ProgressPrimitive.Indicator

@@ -20,7 +20,7 @@ export default function RootLayout({
         <SessionProvider>
           {children}
           <Toaster
-            theme="dark"
+            theme="light"
             position="top-right"
             toastOptions={{
               style: {
