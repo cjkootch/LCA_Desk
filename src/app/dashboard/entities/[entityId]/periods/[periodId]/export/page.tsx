@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PeriodChecklist } from "@/components/reporting/PeriodChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Send, CheckCircle } from "lucide-react";
+import { FileSpreadsheet, FileText, Send, CheckCircle, Mail } from "lucide-react";
 import { FeatureGate } from "@/components/billing/FeatureGate";
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
@@ -113,12 +113,32 @@ export default function ExportPage() {
         </div>
         </FeatureGate>
         <Card className="mb-8">
-          <CardHeader><div className="flex items-center gap-2"><Send className="h-5 w-5 text-accent" /><CardTitle className="text-base">Submission Instructions</CardTitle></div></CardHeader>
+          <CardHeader><div className="flex items-center gap-2"><Send className="h-5 w-5 text-accent" /><CardTitle className="text-base">Submit to Secretariat</CardTitle></div></CardHeader>
           <CardContent>
-            <div className="bg-bg-surface rounded-lg p-4 space-y-2 text-sm">
+            <p className="text-sm text-text-secondary mb-4">
+              Download both files above, then submit via email to the Local Content Secretariat.
+              Use the button below to open your email client with the correct recipient and subject line pre-filled.
+            </p>
+            <div className="bg-bg-primary rounded-lg p-4 space-y-2 text-sm mb-4">
               <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">localcontent@nre.gov.gy</span></div>
               <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
             </div>
+            <div className="flex gap-3">
+              <a
+                href={`mailto:localcontent@nre.gov.gy?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
+                  `Dear Local Content Secretariat,\n\nPlease find attached the Local Content Half-Yearly Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
+                )}`}
+                className="flex-1"
+              >
+                <Button variant="primary" className="w-full">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Compose Submission Email
+                </Button>
+              </a>
+            </div>
+            <p className="text-xs text-text-muted mt-3">
+              Remember to attach both downloaded files (Excel report + PDF narrative) before sending.
+            </p>
           </CardContent>
         </Card>
         {period.status !== "submitted" && period.status !== "acknowledged" ? (
