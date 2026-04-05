@@ -271,9 +271,14 @@ function CompanyTab({ ctx }: { ctx: UserContext | null }) {
             </div>
             <div>
               <p className="text-sm font-medium text-text-secondary mb-1">Plan</p>
-              <Badge variant="accent" className="capitalize">
-                {plan}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="accent" className="capitalize">
+                  {plan}
+                </Badge>
+                <a href="/dashboard/settings/billing" className="text-xs text-accent hover:text-accent-hover font-medium">
+                  Manage plan →
+                </a>
+              </div>
             </div>
           </div>
           <div className="mt-4 flex justify-end">
