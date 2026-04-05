@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { slugify } from "@/lib/utils";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -17,64 +16,47 @@ export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (authError) {
-      toast.error(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (authData.user) {
-      // Create profile
-      await supabase.from("profiles").insert({
-        id: authData.user.id,
-        email,
-        full_name: fullName,
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName,
+          email,
+          password,
+          companyName,
+        }),
       });
 
-      // Get default jurisdiction (Guyana)
-      const { data: jurisdiction } = await supabase
-        .from("jurisdictions")
-        .select("id")
-        .eq("code", "GY")
-        .single();
+      const data = await res.json();
 
-      // Create tenant
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .insert({
-          name: companyName,
-          slug: slugify(companyName),
-          jurisdiction_id: jurisdiction?.id,
-        })
-        .select()
-        .single();
-
-      if (tenant) {
-        // Create membership
-        await supabase.from("tenant_members").insert({
-          tenant_id: tenant.id,
-          user_id: authData.user.id,
-          role: "owner",
-        });
+      if (!res.ok) {
+        toast.error(data.error || "Registration failed");
+        setLoading(false);
+        return;
       }
 
-      toast.success("Account created! Check your email to verify.");
-      router.push("/dashboard");
+      // Auto sign in after registration
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error("Account created. Please sign in.");
+        router.push("/auth/login");
+      } else {
+        toast.success("Account created!");
+        router.push("/dashboard");
+      }
+    } catch {
+      toast.error("Registration failed");
     }
 
     setLoading(false);

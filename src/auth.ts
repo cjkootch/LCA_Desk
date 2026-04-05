@@ -1,0 +1,60 @@
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { getDb } from "@/server/db";
+import { users } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  session: { strategy: "jwt" },
+  pages: {
+    signIn: "/auth/login",
+    error: "/auth/error",
+  },
+  providers: [
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const parsed = z
+          .object({
+            email: z.string().email(),
+            password: z.string().min(8),
+          })
+          .safeParse(credentials);
+
+        if (!parsed.success) return null;
+
+        const db = getDb();
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, parsed.data.email))
+          .limit(1);
+
+        if (!user?.passwordHash) return null;
+
+        const valid = await bcrypt.compare(
+          parsed.data.password,
+          user.passwordHash
+        );
+        if (!valid) return null;
+
+        return { id: user.id, email: user.email, name: user.name };
+      },
+    }),
+  ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      return session;
+    },
+  },
+});

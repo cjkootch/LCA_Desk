@@ -1,39 +1,40 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { ReportingPeriod, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord, NarrativeDraft } from "@/types/database.types";
+import {
+  fetchPeriod,
+  fetchExpenditures,
+  fetchEmployment,
+  fetchCapacity,
+  fetchNarratives,
+} from "@/server/actions";
 
 export function useReportingPeriod(periodId?: string) {
-  const [period, setPeriod] = useState<ReportingPeriod | null>(null);
-  const [expenditures, setExpenditures] = useState<ExpenditureRecord[]>([]);
-  const [employment, setEmployment] = useState<EmploymentRecord[]>([]);
-  const [capacity, setCapacity] = useState<CapacityDevelopmentRecord[]>([]);
-  const [narratives, setNarratives] = useState<NarrativeDraft[]>([]);
+  const [period, setPeriod] = useState<Awaited<ReturnType<typeof fetchPeriod>> | null>(null);
+  const [expenditures, setExpenditures] = useState<Awaited<ReturnType<typeof fetchExpenditures>>>([]);
+  const [employment, setEmployment] = useState<Awaited<ReturnType<typeof fetchEmployment>>>([]);
+  const [capacity, setCapacity] = useState<Awaited<ReturnType<typeof fetchCapacity>>>([]);
+  const [narratives, setNarratives] = useState<Awaited<ReturnType<typeof fetchNarratives>>>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchAll = useCallback(async (id: string) => {
-    const [periodRes, expRes, empRes, capRes, narRes] = await Promise.all([
-      supabase.from("reporting_periods").select("*").eq("id", id).single(),
-      supabase.from("expenditure_records").select("*").eq("reporting_period_id", id).order("created_at"),
-      supabase.from("employment_records").select("*").eq("reporting_period_id", id).order("created_at"),
-      supabase.from("capacity_development_records").select("*").eq("reporting_period_id", id).order("created_at"),
-      supabase.from("narrative_drafts").select("*").eq("reporting_period_id", id).order("created_at"),
+    const [p, exp, emp, cap, nar] = await Promise.all([
+      fetchPeriod(id),
+      fetchExpenditures(id),
+      fetchEmployment(id),
+      fetchCapacity(id),
+      fetchNarratives(id),
     ]);
-
-    setPeriod(periodRes.data);
-    setExpenditures(expRes.data || []);
-    setEmployment(empRes.data || []);
-    setCapacity(capRes.data || []);
-    setNarratives(narRes.data || []);
+    setPeriod(p);
+    setExpenditures(exp);
+    setEmployment(emp);
+    setCapacity(cap);
+    setNarratives(nar);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
-    if (periodId) {
-      fetchAll(periodId);
-    }
+    if (periodId) fetchAll(periodId);
   }, [periodId, fetchAll]);
 
   return {

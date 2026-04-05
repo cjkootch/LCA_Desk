@@ -1,61 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/types/database.types";
-import type { User } from "@supabase/supabase-js";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
+import { useCallback } from "react";
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(data);
-      }
-
-      setLoading(false);
-    };
-
-    getUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-        setProfile(data);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const { data: session, status } = useSession();
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-  }, [supabase]);
+    await nextAuthSignOut({ callbackUrl: "/auth/login" });
+  }, []);
 
-  return { user, profile, loading, signOut };
+  return {
+    user: session?.user ?? null,
+    profile: session?.user
+      ? {
+          id: session.user.id,
+          email: session.user.email,
+          full_name: session.user.name,
+          avatar_url: session.user.image,
+        }
+      : null,
+    loading: status === "loading",
+    signOut,
+  };
 }

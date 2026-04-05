@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { TopBar } from "@/components/layout/TopBar";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { PortfolioCard } from "@/components/dashboard/PortfolioCard";
@@ -11,27 +10,47 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
-import type { Entity } from "@/types/database.types";
+import { fetchEntities } from "@/server/actions";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
+import type { Entity } from "@/types/database.types";
 
 export default function DashboardPage() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data } = await supabase
-        .from("entities")
-        .select("*")
-        .eq("active", true)
-        .order("created_at", { ascending: false });
-      setEntities(data || []);
+    const load = async () => {
+      const data = await fetchEntities();
+      // Map Drizzle rows to Entity type
+      setEntities(
+        data.map((e) => ({
+          id: e.id,
+          tenant_id: e.tenantId,
+          jurisdiction_id: e.jurisdictionId || "",
+          legal_name: e.legalName,
+          trading_name: e.tradingName,
+          registration_number: e.registrationNumber,
+          lcs_certificate_id: e.lcsCertificateId,
+          lcs_certificate_expiry: e.lcsCertificateExpiry,
+          petroleum_agreement_ref: e.petroleumAgreementRef,
+          company_type: e.companyType as Entity["company_type"],
+          guyanese_ownership_pct: e.guyanaeseOwnershipPct
+            ? Number(e.guyanaeseOwnershipPct)
+            : null,
+          registered_address: e.registeredAddress,
+          contact_name: e.contactName,
+          contact_email: e.contactEmail,
+          contact_phone: e.contactPhone,
+          active: e.active ?? true,
+          created_at: e.createdAt?.toISOString() || "",
+          updated_at: e.updatedAt?.toISOString() || "",
+        }))
+      );
       setLoading(false);
     };
-    fetchData();
-  }, [supabase]);
+    load();
+  }, []);
 
   const currentYear = new Date().getFullYear();
   const deadlines: DeadlineWithStatus[] = entities.flatMap((entity) => {
@@ -67,7 +86,6 @@ export default function DashboardPage() {
           onClick: () => router.push("/dashboard/entities/new"),
         }}
       />
-
       <div className="p-8">
         <StatsBar
           totalEntities={entities.length}
@@ -75,7 +93,6 @@ export default function DashboardPage() {
           overdueReports={overdueCount}
           avgLocalContentRate={0}
         />
-
         {entities.length === 0 ? (
           <EmptyState
             icon={Building2}

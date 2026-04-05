@@ -3,33 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Building2, Plus, ArrowRight } from "lucide-react";
-import type { Entity } from "@/types/database.types";
+import { Building2, ArrowRight } from "lucide-react";
+import { fetchEntities } from "@/server/actions";
+
+type EntityRow = Awaited<ReturnType<typeof fetchEntities>>[number];
 
 export default function EntitiesPage() {
-  const [entities, setEntities] = useState<Entity[]>([]);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("entities")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setEntities(data || []);
+    fetchEntities().then((data) => {
+      setEntities(data);
       setLoading(false);
-    };
-    fetch();
-  }, [supabase]);
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -50,7 +45,6 @@ export default function EntitiesPage() {
           title="Entity Management"
           description="Manage companies and entities under your local content compliance portfolio."
         />
-
         {entities.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -76,32 +70,30 @@ export default function EntitiesPage() {
                 <TableRow key={entity.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{entity.legal_name}</p>
-                      {entity.trading_name && (
-                        <p className="text-xs text-text-muted">t/a {entity.trading_name}</p>
+                      <p className="font-medium">{entity.legalName}</p>
+                      {entity.tradingName && (
+                        <p className="text-xs text-text-muted">t/a {entity.tradingName}</p>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant={
-                        entity.company_type === "contractor"
+                        entity.companyType === "contractor"
                           ? "accent"
-                          : entity.company_type === "subcontractor"
+                          : entity.companyType === "subcontractor"
                           ? "warning"
                           : "gold"
                       }
                     >
-                      {entity.company_type || "—"}
+                      {entity.companyType || "—"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono text-xs">{entity.lcs_certificate_id || "—"}</span>
+                    <span className="font-mono text-xs">{entity.lcsCertificateId || "—"}</span>
                   </TableCell>
                   <TableCell>
-                    {entity.guyanese_ownership_pct !== null
-                      ? `${entity.guyanese_ownership_pct}%`
-                      : "—"}
+                    {entity.guyanaeseOwnershipPct !== null ? `${entity.guyanaeseOwnershipPct}%` : "—"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={entity.active ? "success" : "default"}>
