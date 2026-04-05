@@ -5,28 +5,65 @@ import { Send, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  let remaining = text;
+  let idx = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text**
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    if (boldMatch && boldMatch.index !== undefined) {
+      if (boldMatch.index > 0) {
+        result.push(remaining.slice(0, boldMatch.index));
+      }
+      result.push(<strong key={`${keyPrefix}-b-${idx++}`}>{boldMatch[1]}</strong>);
+      remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
+      continue;
+    }
+    // No more matches — push rest
+    result.push(remaining);
+    break;
+  }
+
+  return result;
+}
+
 function renderMarkdown(text: string): React.ReactNode {
-  // Split into lines and process
   const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
 
-  lines.forEach((line, lineIdx) => {
-    if (lineIdx > 0) elements.push(<br key={`br-${lineIdx}`} />);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
 
-    // Process inline formatting
-    const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-    const formatted = parts.map((part, partIdx) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={partIdx}>{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
-        return <em key={partIdx}>{part.slice(1, -1)}</em>;
-      }
-      return part;
-    });
+    // Skip table separator rows (|---|---|)
+    if (/^\|[-\s|]+\|$/.test(line.trim())) continue;
 
-    elements.push(<span key={`line-${lineIdx}`}>{formatted}</span>);
-  });
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      elements.push(<hr key={`hr-${i}`} className="my-2 border-border" />);
+      continue;
+    }
+
+    // Table rows — render as simple text without pipes
+    if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+      const cells = line.split("|").filter(c => c.trim()).map(c => c.trim());
+      elements.push(
+        <div key={`tr-${i}`} className="flex gap-4 py-0.5">
+          {cells.map((cell, ci) => (
+            <span key={ci} className={ci === 0 ? "font-medium min-w-[120px]" : "text-text-secondary"}>
+              {renderInline(cell, `tr-${i}-${ci}`)}
+            </span>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    // Regular line
+    if (i > 0) elements.push(<br key={`br-${i}`} />);
+    elements.push(<span key={`ln-${i}`}>{renderInline(line, `ln-${i}`)}</span>);
+  }
 
   return <>{elements}</>;
 }
