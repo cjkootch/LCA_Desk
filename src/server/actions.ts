@@ -93,6 +93,46 @@ export async function addEntity(data: {
   return entity;
 }
 
+export async function updateEntity(
+  entityId: string,
+  data: {
+    legal_name: string;
+    trading_name?: string;
+    registration_number?: string;
+    lcs_certificate_id?: string;
+    lcs_certificate_expiry?: string;
+    petroleum_agreement_ref?: string;
+    company_type: string;
+    guyanese_ownership_pct?: number;
+    registered_address?: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+  }
+) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(entities)
+    .set({
+      legalName: data.legal_name,
+      tradingName: data.trading_name || null,
+      registrationNumber: data.registration_number || null,
+      lcsCertificateId: data.lcs_certificate_id || null,
+      lcsCertificateExpiry: data.lcs_certificate_expiry || null,
+      petroleumAgreementRef: data.petroleum_agreement_ref || null,
+      companyType: data.company_type,
+      guyanaeseOwnershipPct: data.guyanese_ownership_pct?.toString() || null,
+      registeredAddress: data.registered_address || null,
+      contactName: data.contact_name || null,
+      contactEmail: data.contact_email || null,
+      contactPhone: data.contact_phone || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(entities.id, entityId), eq(entities.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
 // ─── REPORTING PERIODS ────────────────────────────────────────────
 export async function fetchPeriodsForEntity(entityId: string) {
   const { tenantId } = await getSessionTenant();
