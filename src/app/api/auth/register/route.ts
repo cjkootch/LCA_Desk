@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, jurisdictions } from "@/server/db/schema";
+import { users, tenants, tenantMembers, jurisdictions, entities } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -10,6 +10,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   companyName: z.string().min(1),
+  accountType: z.enum(["self", "others"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, email, password, companyName } = parsed.data;
+    const { name, email, password, companyName, accountType } = parsed.data;
 
     // Check if user exists
     const [existing] = await db
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
         name: companyName,
         slug,
         jurisdictionId: guyana?.id,
+        // Give "others" (consultants) a higher entity limit
+        planEntityLimit: accountType === "others" ? 5 : 1,
       })
       .returning();
 
@@ -77,6 +80,18 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       role: "owner",
     });
+
+    // If filing for self, auto-create the first entity from signup info
+    if (accountType === "self" && guyana) {
+      await db.insert(entities).values({
+        tenantId: tenant.id,
+        jurisdictionId: guyana.id,
+        legalName: companyName,
+        companyType: "contractor",
+        contactName: name,
+        contactEmail: email,
+      });
+    }
 
     return NextResponse.json({
       success: true,

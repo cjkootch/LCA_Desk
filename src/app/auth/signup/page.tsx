@@ -9,8 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Building2, Users, ArrowRight, ArrowLeft } from "lucide-react";
+
+type AccountType = "self" | "others" | null;
 
 export default function SignupPage() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [accountType, setAccountType] = useState<AccountType>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +37,7 @@ export default function SignupPage() {
           email,
           password,
           companyName,
+          accountType,
         }),
       });
 
@@ -70,55 +77,139 @@ export default function SignupPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-bg-card p-8 shadow-sm">
-          <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
-            Create your account
-          </h1>
-          <p className="text-sm text-text-secondary text-center mb-6">
-            Start managing your local content compliance
-          </p>
+          {step === 1 ? (
+            <>
+              <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
+                How will you use LCA Desk?
+              </h1>
+              <p className="text-sm text-text-secondary text-center mb-6">
+                This helps us set up your account correctly.
+              </p>
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            <Input
-              id="fullName"
-              label="Full Name"
-              placeholder="John Smith"
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              placeholder="you@company.com"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <PasswordInput
-              id="password"
-              label="Password"
-              placeholder="Min 8 characters"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              showStrength
-            />
-            <Input
-              id="companyName"
-              label="Company Name"
-              placeholder="Your company or organization"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              required
-            />
-            <Button type="submit" className="w-full" loading={loading}>
-              Create Account
-            </Button>
-          </form>
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={() => setAccountType("self")}
+                  className={cn(
+                    "w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                    accountType === "self"
+                      ? "border-accent bg-accent-light"
+                      : "border-border hover:border-accent/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-2.5 rounded-lg shrink-0",
+                    accountType === "self" ? "bg-accent text-white" : "bg-bg-primary text-text-muted"
+                  )}>
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">Filing for my own company</p>
+                    <p className="text-sm text-text-secondary mt-0.5">
+                      I&apos;m a Contractor, Sub-Contractor, or Licensee filing my own Local Content reports.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setAccountType("others")}
+                  className={cn(
+                    "w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                    accountType === "others"
+                      ? "border-accent bg-accent-light"
+                      : "border-border hover:border-accent/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-2.5 rounded-lg shrink-0",
+                    accountType === "others" ? "bg-accent text-white" : "bg-bg-primary text-text-muted"
+                  )}>
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">Filing on behalf of clients</p>
+                    <p className="text-sm text-text-secondary mt-0.5">
+                      I&apos;m a consultant, law firm, or compliance service provider managing reports for multiple companies.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <Button
+                className="w-full"
+                disabled={!accountType}
+                onClick={() => setStep(2)}
+              >
+                Continue
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary mb-4"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back
+              </button>
+
+              <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
+                Create your account
+              </h1>
+              <p className="text-sm text-text-secondary text-center mb-6">
+                {accountType === "self"
+                  ? "Set up your company's compliance account."
+                  : "Set up your consulting firm's account. You'll add client entities after."}
+              </p>
+
+              <form onSubmit={handleSignup} className="space-y-4">
+                <Input
+                  id="fullName"
+                  label="Full Name"
+                  placeholder="John Smith"
+                  autoComplete="name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+                <Input
+                  id="email"
+                  label="Email"
+                  type="email"
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <PasswordInput
+                  id="password"
+                  label="Password"
+                  placeholder="Min 8 characters"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  showStrength
+                />
+                <Input
+                  id="companyName"
+                  label={accountType === "self" ? "Company Name" : "Firm / Organization Name"}
+                  placeholder={
+                    accountType === "self"
+                      ? "Your company's legal name"
+                      : "Your consulting firm's name"
+                  }
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                />
+                <Button type="submit" className="w-full" loading={loading}>
+                  Create Account
+                </Button>
+              </form>
+            </>
+          )}
 
           <p className="text-sm text-text-secondary text-center mt-6">
             Already have an account?{" "}
