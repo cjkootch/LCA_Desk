@@ -83,6 +83,8 @@ export default function DashboardPage() {
           reportsDueThisMonth={dueSoonCount}
           overdueReports={overdueCount}
           avgLocalContentRate={0}
+          overdueDeadlines={deadlines.filter((d) => d.status === "overdue")}
+          dueSoonDeadlines={deadlines.filter((d) => d.status === "due_soon")}
         />
 
         {entities.length === 0 ? (
