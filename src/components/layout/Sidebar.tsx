@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles } from "lucide-react";
+import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserContext } from "@/server/actions";
+import { getPlan } from "@/lib/plans";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -22,9 +23,12 @@ export function Sidebar() {
   const { profile, signOut } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
+  const [planCode, setPlanCode] = useState("starter");
+
   useEffect(() => {
     fetchUserContext().then((ctx) => {
       if (ctx?.isSuperAdmin) setIsSuperAdmin(true);
+      if (ctx?.tenant?.plan) setPlanCode(ctx.tenant.plan as string);
     }).catch(() => {});
   }, []);
 
@@ -77,6 +81,23 @@ export function Sidebar() {
           </Link>
         )}
       </nav>
+
+      {/* Upgrade CTA */}
+      {getPlan(planCode).code !== "enterprise" && (
+        <div className="px-3 pb-2">
+          <Link
+            href="/dashboard/settings/billing"
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 bg-white/10 hover:bg-white/15 transition-colors"
+          >
+            <Crown className="h-4 w-4 text-gold" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-text">Upgrade to {getPlan(planCode).code === "starter" ? "Pro" : "Enterprise"}</p>
+              <p className="text-[10px] text-sidebar-text-muted">{getPlan(planCode).name} plan</p>
+            </div>
+            <Sparkles className="h-3.5 w-3.5 text-gold" />
+          </Link>
+        </div>
+      )}
 
       {/* User menu */}
       <div className="border-t border-white/10 px-3 py-4">
