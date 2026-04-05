@@ -17,7 +17,19 @@ import { Plus, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fetchEntity, fetchPeriodsForEntity, addPeriod } from "@/server/actions";
+import { calculateDeadlines } from "@/lib/compliance/deadlines";
 import type { Entity, PeriodStatus } from "@/types/database.types";
+
+function getAutoFillDates(reportType: string, year: number) {
+  const deadlines = calculateDeadlines("GY", year);
+  const match = deadlines.find((d) => d.type === reportType);
+  if (!match) return null;
+  return {
+    period_start: match.period_start.toISOString().slice(0, 10),
+    period_end: match.period_end.toISOString().slice(0, 10),
+    due_date: match.due_date.toISOString().slice(0, 10),
+  };
+}
 
 export default function EntityDetailPage() {
   const params = useParams();
@@ -26,13 +38,10 @@ export default function EntityDetailPage() {
   const [periods, setPeriods] = useState<Awaited<ReturnType<typeof fetchPeriodsForEntity>>>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [newPeriod, setNewPeriod] = useState({
-    report_type: "half_yearly_h1",
-    period_start: "",
-    period_end: "",
-    due_date: "",
-    fiscal_year: new Date().getFullYear().toString(),
-  });
+  const [creating, setCreating] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [reportType, setReportType] = useState("half_yearly_h1");
+  const [fiscalYear, setFiscalYear] = useState(currentYear.toString());
   const router = useRouter();
 
   useEffect(() => {
@@ -71,24 +80,27 @@ export default function EntityDetailPage() {
     load().catch(() => setLoading(false));
   }, [entityId]);
 
+  const autoFill = getAutoFillDates(reportType, parseInt(fiscalYear));
+
   const handleCreatePeriod = async () => {
-    if (!entity) return;
+    if (!entity || !autoFill) return;
+    setCreating(true);
     try {
-      await addPeriod({
+      const period = await addPeriod({
         entity_id: entity.id,
         jurisdiction_id: entity.jurisdiction_id,
-        report_type: newPeriod.report_type,
-        period_start: newPeriod.period_start,
-        period_end: newPeriod.period_end,
-        due_date: newPeriod.due_date,
-        fiscal_year: parseInt(newPeriod.fiscal_year),
+        report_type: reportType,
+        period_start: autoFill.period_start,
+        period_end: autoFill.period_end,
+        due_date: autoFill.due_date,
+        fiscal_year: parseInt(fiscalYear),
       });
-      toast.success("Reporting period created");
+      toast.success("Report created — starting filing workflow");
       setCreateOpen(false);
-      const refreshed = await fetchPeriodsForEntity(entityId);
-      setPeriods(refreshed);
+      router.push(`/dashboard/entities/${entityId}/periods/${period.id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create period");
+      setCreating(false);
     }
   };
 
@@ -114,30 +126,43 @@ export default function EntityDetailPage() {
         >
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="h-4 w-4 mr-1" />New Period</Button>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />Start New Report</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Create Reporting Period</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Start New Report</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-4">
-                <Select label="Report Type" id="report_type" value={newPeriod.report_type}
-                  onChange={(e) => setNewPeriod({ ...newPeriod, report_type: e.target.value })}
+                <Select label="Report Type" id="report_type" value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
                   options={[
-                    { value: "half_yearly_h1", label: "H1 Half-Yearly Report" },
-                    { value: "half_yearly_h2", label: "H2 Half-Yearly Report" },
+                    { value: "half_yearly_h1", label: "H1 Half-Yearly Report (Jan–Jun)" },
+                    { value: "half_yearly_h2", label: "H2 Half-Yearly Report (Jul–Dec)" },
                     { value: "annual_plan", label: "Annual Local Content Plan" },
-                    { value: "master_plan", label: "Local Content Master Plan" },
                     { value: "performance_report", label: "Annual Performance Report" },
                   ]}
                 />
-                <Input label="Period Start" id="period_start" type="date" value={newPeriod.period_start}
-                  onChange={(e) => setNewPeriod({ ...newPeriod, period_start: e.target.value })} />
-                <Input label="Period End" id="period_end" type="date" value={newPeriod.period_end}
-                  onChange={(e) => setNewPeriod({ ...newPeriod, period_end: e.target.value })} />
-                <Input label="Due Date" id="due_date" type="date" value={newPeriod.due_date}
-                  onChange={(e) => setNewPeriod({ ...newPeriod, due_date: e.target.value })} />
-                <Input label="Fiscal Year" id="fiscal_year" type="number" value={newPeriod.fiscal_year}
-                  onChange={(e) => setNewPeriod({ ...newPeriod, fiscal_year: e.target.value })} />
-                <Button onClick={handleCreatePeriod} className="w-full">Create Period</Button>
+                <Select label="Fiscal Year" id="fiscal_year" value={fiscalYear}
+                  onChange={(e) => setFiscalYear(e.target.value)}
+                  options={[
+                    { value: String(currentYear - 1), label: String(currentYear - 1) },
+                    { value: String(currentYear), label: String(currentYear) },
+                    { value: String(currentYear + 1), label: String(currentYear + 1) },
+                  ]}
+                />
+                {autoFill && (
+                  <div className="rounded-lg bg-bg-primary p-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Period</span>
+                      <span className="text-text-primary font-medium">{autoFill.period_start} to {autoFill.period_end}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Due Date</span>
+                      <span className="text-text-primary font-medium">{autoFill.due_date}</span>
+                    </div>
+                  </div>
+                )}
+                <Button onClick={handleCreatePeriod} className="w-full" loading={creating} disabled={!autoFill}>
+                  Start Filing
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

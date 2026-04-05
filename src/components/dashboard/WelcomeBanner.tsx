@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles, FileText } from "lucide-react";
+import { Plus, Sparkles, FileText, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface WelcomeBannerProps {
@@ -37,6 +37,15 @@ export function WelcomeBanner({ entityCount, overdueCount, dueSoonCount }: Welco
           <p className="text-white/80 text-sm">{summaryText}</p>
         </div>
         <div className="flex gap-2">
+          {entityCount > 0 && (
+            <Link href="/dashboard/entities">
+              <Button variant="secondary" size="sm" className="bg-white text-sidebar-bg hover:bg-white/90">
+                <FileText className="h-4 w-4 mr-1" />
+                Start New Report
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            </Link>
+          )}
           <Link href="/dashboard/entities/new">
             <Button variant="secondary" size="sm" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
               <Plus className="h-4 w-4 mr-1" />
