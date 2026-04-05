@@ -89,14 +89,15 @@ export default function SettingsPage() {
         />
 
         {/* Tab navigation */}
-        <div className="flex gap-1 mb-8 overflow-x-auto pb-2 -mx-2 px-2">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={cn(
-                "inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0",
-                activeTab === key
+        <div className="relative mb-8">
+          <div className="flex gap-1 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={cn(
+                  "inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0",
+                  activeTab === key
                   ? "bg-accent text-white"
                   : "bg-bg-primary text-text-secondary hover:text-text-primary"
               )}
@@ -105,6 +106,9 @@ export default function SettingsPage() {
               {label}
             </button>
           ))}
+          </div>
+          {/* Fade hint on right edge — mobile only */}
+          <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-bg-primary to-transparent pointer-events-none sm:hidden" />
         </div>
 
         {/* Tab content */}
