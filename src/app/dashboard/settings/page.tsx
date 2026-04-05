@@ -72,7 +72,7 @@ export default function SettingsPage() {
     return (
       <div>
         <TopBar title="Settings" />
-        <div className="p-8 max-w-4xl">
+        <div className="p-4 sm:p-8 max-w-4xl">
           <p className="text-text-muted text-sm">Loading settings...</p>
         </div>
       </div>
@@ -82,20 +82,20 @@ export default function SettingsPage() {
   return (
     <div>
       <TopBar title="Settings" />
-      <div className="p-8 max-w-4xl">
+      <div className="p-4 sm:p-8 max-w-4xl">
         <PageHeader
           title="Account Settings"
           description="Manage your account, organization, and team settings."
         />
 
         {/* Tab navigation */}
-        <div className="flex gap-1 mb-8">
+        <div className="flex gap-1 mb-8 overflow-x-auto pb-2 -mx-2 px-2">
           {tabs.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               className={cn(
-                "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                "inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0",
                 activeTab === key
                   ? "bg-accent text-white"
                   : "bg-bg-primary text-text-secondary hover:text-text-primary"
