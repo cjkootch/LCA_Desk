@@ -10,6 +10,7 @@ import {
   capacityDevelopmentRecords,
   narrativeDrafts,
   submissionLogs,
+  tenants,
   tenantMembers,
   sectorCategories,
   users,
@@ -428,4 +429,164 @@ export async function checkSuperAdmin(): Promise<boolean> {
     .limit(1);
 
   return user?.isSuperAdmin ?? false;
+}
+
+// ─── PROFILE ──────────────────────────────────────────────────────
+export async function updateProfile(data: { name: string; email: string }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [updated] = await db
+    .update(users)
+    .set({ name: data.name, email: data.email, updatedAt: new Date() })
+    .where(eq(users.id, session.user.id))
+    .returning();
+  return updated;
+}
+
+export async function updatePassword(data: { currentPassword: string; newPassword: string }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const bcrypt = await import("bcryptjs");
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  if (!user?.passwordHash) throw new Error("No password set");
+
+  const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+  if (!valid) throw new Error("Current password is incorrect");
+
+  const newHash = await bcrypt.hash(data.newPassword, 12);
+  await db
+    .update(users)
+    .set({ passwordHash: newHash, updatedAt: new Date() })
+    .where(eq(users.id, session.user.id));
+
+  return { success: true };
+}
+
+// ─── TENANT / COMPANY ─────────────────────────────────────────────
+export async function updateTenant(data: { name: string }) {
+  const { tenantId } = await getSessionTenant();
+  const slug = data.name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const [updated] = await db
+    .update(tenants)
+    .set({ name: data.name, slug })
+    .where(eq(tenants.id, tenantId))
+    .returning();
+  return updated;
+}
+
+// ─── TEAM MEMBERS ─────────────────────────────────────────────────
+export async function fetchTeamMembers() {
+  const { tenantId } = await getSessionTenant();
+  return db.query.tenantMembers.findMany({
+    where: eq(tenantMembers.tenantId, tenantId),
+    with: { user: true },
+  });
+}
+
+export async function inviteTeamMember(data: { email: string; role: string }) {
+  const { tenantId } = await getSessionTenant();
+
+  // Check if user exists
+  const [existingUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, data.email))
+    .limit(1);
+
+  if (!existingUser) {
+    throw new Error("No account found with that email. They must sign up first.");
+  }
+
+  // Check if already a member
+  const existing = await db.query.tenantMembers.findFirst({
+    where: and(
+      eq(tenantMembers.tenantId, tenantId),
+      eq(tenantMembers.userId, existingUser.id)
+    ),
+  });
+
+  if (existing) {
+    throw new Error("This user is already a team member.");
+  }
+
+  const [member] = await db
+    .insert(tenantMembers)
+    .values({
+      tenantId,
+      userId: existingUser.id,
+      role: data.role,
+    })
+    .returning();
+
+  return member;
+}
+
+export async function removeTeamMember(memberId: string) {
+  const { tenantId } = await getSessionTenant();
+  await db
+    .delete(tenantMembers)
+    .where(
+      and(
+        eq(tenantMembers.id, memberId),
+        eq(tenantMembers.tenantId, tenantId)
+      )
+    );
+}
+
+export async function updateTeamMemberRole(memberId: string, role: string) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(tenantMembers)
+    .set({ role })
+    .where(
+      and(
+        eq(tenantMembers.id, memberId),
+        eq(tenantMembers.tenantId, tenantId)
+      )
+    )
+    .returning();
+  return updated;
+}
+
+// ─── RECENT ACTIVITY ──────────────────────────────────────────────
+export async function fetchRecentActivity() {
+  const { tenantId } = await getSessionTenant();
+
+  // Get recent reporting period updates as activity
+  const recentPeriods = await db
+    .select({
+      id: reportingPeriods.id,
+      entityId: reportingPeriods.entityId,
+      reportType: reportingPeriods.reportType,
+      status: reportingPeriods.status,
+      updatedAt: reportingPeriods.updatedAt,
+      entityName: entities.legalName,
+    })
+    .from(reportingPeriods)
+    .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
+    .where(eq(reportingPeriods.tenantId, tenantId))
+    .orderBy(reportingPeriods.updatedAt)
+    .limit(5);
+
+  return recentPeriods.map((p) => ({
+    id: p.id,
+    type: "period_update" as const,
+    entityName: p.entityName,
+    reportType: p.reportType,
+    status: p.status,
+    timestamp: p.updatedAt,
+  }));
 }
