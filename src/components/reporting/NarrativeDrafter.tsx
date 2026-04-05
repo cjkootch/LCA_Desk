@@ -72,7 +72,7 @@ export function NarrativeDrafter({
 
   return (
     <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-surface">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-primary">
         <h3 className="text-sm font-semibold text-text-primary">{sectionLabel}</h3>
         <div className="flex items-center gap-2">
           <Button

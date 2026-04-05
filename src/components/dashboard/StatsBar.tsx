@@ -15,7 +15,7 @@ interface StatCardProps {
 function StatCard({ label, value, icon: Icon, color = "text-accent", valueColor }: StatCardProps) {
   return (
     <Card className="flex items-center gap-4 p-5">
-      <div className={cn("p-3 rounded-lg bg-bg-surface", color)}>
+      <div className={cn("p-3 rounded-lg bg-bg-primary", color)}>
         <Icon className="h-5 w-5" />
       </div>
       <div>

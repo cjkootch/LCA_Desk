@@ -98,11 +98,11 @@ export default function ExportPage() {
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={["company_info", "expenditure", "employment", "capacity", "narrative", "review"]} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
-            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success/10"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
+            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success-light"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
             <CardContent><Button onClick={() => handleExport("excel")} loading={exporting === "excel"} className="w-full"><FileSpreadsheet className="h-4 w-4 mr-2" />Download Excel Report</Button></CardContent>
           </Card>
           <Card>
-            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-danger/10"><FileText className="h-6 w-6 text-danger" /></div><div><CardTitle className="text-base">Narrative PDF</CardTitle><p className="text-sm text-text-muted mt-1">Comparative Analysis Report</p></div></div></CardHeader>
+            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-danger-light"><FileText className="h-6 w-6 text-danger" /></div><div><CardTitle className="text-base">Narrative PDF</CardTitle><p className="text-sm text-text-muted mt-1">Comparative Analysis Report</p></div></div></CardHeader>
             <CardContent><Button onClick={() => handleExport("pdf")} variant="secondary" loading={exporting === "pdf"} className="w-full"><FileText className="h-4 w-4 mr-2" />Download Narrative PDF</Button></CardContent>
           </Card>
         </div>

@@ -38,10 +38,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-bg-primary">
       <div className="w-full max-w-md p-8">
         <div className="flex justify-center mb-8">
-          <Image src="/logo-white.png" alt="LCA Desk" width={180} height={60} priority />
+          <Image src="/logo-full.png" alt="LCA Desk" width={200} height={60} priority />
         </div>
 
-        <div className="rounded-xl border border-border bg-bg-card p-8">
+        <div className="rounded-xl border border-border bg-bg-card p-8 shadow-sm">
           <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
             Welcome back
           </h1>
@@ -80,6 +80,10 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+
+        <p className="text-xs text-text-muted text-center mt-6">
+          Powered by Stabroek Advisory
+        </p>
       </div>
     </div>
   );

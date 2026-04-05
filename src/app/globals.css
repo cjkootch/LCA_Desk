@@ -2,19 +2,31 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #080E1A;
-  --bg-surface: #0D1526;
-  --bg-card: #111E35;
-  --border: #1A2D4A;
-  --accent: #00C896;
-  --accent-hover: #00E5AE;
-  --gold: #F0B429;
-  --text-primary: #E8EDF5;
-  --text-secondary: #8892A4;
-  --text-muted: #4A5568;
-  --danger: #EF4444;
-  --warning: #F59E0B;
-  --success: #10B981;
+  /* Light professional theme — Stabroek Advisory inspired */
+  --bg-primary: #FAFBFC;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --accent: #047857;
+  --accent-hover: #065F46;
+  --accent-light: #ECFDF5;
+  --gold: #D97706;
+  --gold-light: #FFFBEB;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --success: #047857;
+  --success-light: #ECFDF5;
+  --sidebar-bg: #064E3B;
+  --sidebar-text: #ECFDF5;
+  --sidebar-text-muted: rgba(255, 255, 255, 0.6);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(255, 255, 255, 0.15);
 }
 
 @theme inline {
@@ -22,15 +34,26 @@
   --color-bg-surface: var(--bg-surface);
   --color-bg-card: var(--bg-card);
   --color-border: var(--border);
+  --color-border-light: var(--border-light);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
   --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
   --color-danger: var(--danger);
+  --color-danger-light: var(--danger-light);
   --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
   --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-muted: var(--sidebar-text-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
   --font-heading: 'Playfair Display', serif;
   --font-body: 'DM Sans', sans-serif;
 }
