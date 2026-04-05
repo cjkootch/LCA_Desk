@@ -464,6 +464,119 @@ export const lcsContractors = pgTable(
   ]
 );
 
+// ─── JOB POSTINGS ────────────────────────────────────────────────
+export const jobPostings = pgTable(
+  "job_postings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    entityId: uuid("entity_id").references(() => entities.id),
+    jobTitle: text("job_title").notNull(),
+    employmentCategory: text("employment_category").notNull(),
+    employmentClassification: text("employment_classification"),
+    contractType: text("contract_type").notNull(),
+    location: text("location"),
+    description: text("description"),
+    qualifications: text("qualifications"),
+    vacancyCount: integer("vacancy_count").default(1),
+    applicationDeadline: date("application_deadline"),
+    startDate: date("start_date"),
+    status: text("status").default("open"),
+    isPublic: boolean("is_public").default(true),
+    guyaneseFirstStatement: text("guyanese_first_statement"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("job_postings_tenant_idx").on(table.tenantId),
+    index("job_postings_status_idx").on(table.status),
+  ]
+);
+
+// ─── JOB APPLICATIONS ────────────────────────────────────────────
+export const jobApplications = pgTable(
+  "job_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobPostingId: uuid("job_posting_id").notNull().references(() => jobPostings.id, { onDelete: "cascade" }),
+    applicantName: text("applicant_name").notNull(),
+    applicantEmail: text("applicant_email").notNull(),
+    applicantPhone: text("applicant_phone"),
+    isGuyanese: boolean("is_guyanese").default(true),
+    nationality: text("nationality"),
+    coverNote: text("cover_note"),
+    cvUrl: text("cv_url"),
+    status: text("status").default("received"),
+    reviewNotes: text("review_notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("job_applications_posting_idx").on(table.jobPostingId),
+    index("job_applications_email_idx").on(table.applicantEmail),
+  ]
+);
+
+// ─── JOB SEEKERS (Public auth — lcadesk.com) ─────────────────────
+export const jobSeekers = pgTable(
+  "job_seekers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").unique().notNull(),
+    passwordHash: text("password_hash"),
+    emailVerified: timestamp("email_verified"),
+    fullName: text("full_name").notNull(),
+    phone: text("phone"),
+    isGuyanese: boolean("is_guyanese").default(true),
+    nationality: text("nationality").default("Guyanese"),
+    currentJobTitle: text("current_job_title"),
+    employmentCategory: text("employment_category"),
+    employmentClassification: text("employment_classification"),
+    yearsExperience: integer("years_experience"),
+    skills: text("skills").array(),
+    cvUrl: text("cv_url"),
+    locationPreference: text("location_preference"),
+    contractTypePreference: text("contract_type_preference"),
+    alertsEnabled: boolean("alerts_enabled").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("job_seekers_email_idx").on(table.email),
+    index("job_seekers_category_idx").on(table.employmentCategory),
+  ]
+);
+
+// ─── SUPPLIER PROFILES (Public auth — lcadesk.com) ───────────────
+export const supplierProfiles = pgTable(
+  "supplier_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").unique().notNull(),
+    passwordHash: text("password_hash"),
+    emailVerified: timestamp("email_verified"),
+    legalName: text("legal_name").notNull(),
+    tradingName: text("trading_name"),
+    lcsCertId: text("lcs_cert_id"),
+    lcsVerified: boolean("lcs_verified").default(false),
+    lcsStatus: text("lcs_status"),
+    lcsExpirationDate: date("lcs_expiration_date"),
+    contactName: text("contact_name"),
+    phone: text("phone"),
+    address: text("address"),
+    website: text("website"),
+    serviceCategories: text("service_categories").array(),
+    tier: text("tier").default("free"),
+    featuredUntil: timestamp("featured_until"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("supplier_profiles_email_idx").on(table.email),
+    index("supplier_profiles_cert_idx").on(table.lcsCertId),
+  ]
+);
+
 // ─── USAGE TRACKING ──────────────────────────────────────────────
 export const usageTracking = pgTable(
   "usage_tracking",
