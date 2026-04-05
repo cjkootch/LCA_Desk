@@ -34,6 +34,7 @@ export default function BillingPage() {
     { label: "PDF Export", starter: false, pro: true, enterprise: true },
     { label: "AI Compliance Scan", starter: false, pro: true, enterprise: true },
     { label: "Deadline Alerts", starter: false, pro: true, enterprise: true },
+    { label: "QuickBooks Integration", starter: false, pro: true, enterprise: true },
     { label: "Data Extraction (AI)", starter: false, pro: false, enterprise: true },
     { label: "Priority Support", starter: false, pro: false, enterprise: true },
   ];

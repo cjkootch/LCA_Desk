@@ -13,6 +13,7 @@ export interface PlanConfig {
     pdfExport: boolean;
     complianceScan: boolean;
     deadlineAlerts: boolean;
+    qboIntegration: boolean;
     dataExtraction: boolean;
     prioritySupport: boolean;
   };
@@ -32,6 +33,7 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       pdfExport: false,
       complianceScan: false,
       deadlineAlerts: false,
+      qboIntegration: false,
       dataExtraction: false,
       prioritySupport: false,
     },
@@ -49,6 +51,7 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       pdfExport: true,
       complianceScan: true,
       deadlineAlerts: true,
+      qboIntegration: true,
       dataExtraction: false,
       prioritySupport: false,
     },
@@ -66,6 +69,7 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       pdfExport: true,
       complianceScan: true,
       deadlineAlerts: true,
+      qboIntegration: true,
       dataExtraction: true,
       prioritySupport: true,
     },
