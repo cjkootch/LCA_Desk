@@ -118,6 +118,10 @@ export const tenants = pgTable("tenants", {
   qboRefreshToken: text("qbo_refresh_token"),
   qboTokenExpiresAt: timestamp("qbo_token_expires_at"),
   qboConnectedAt: timestamp("qbo_connected_at"),
+  // Stripe
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripePriceId: text("stripe_price_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
