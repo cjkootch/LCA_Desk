@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { runFullValidation } from "@/lib/compliance/validators";
+import { ComplianceScan } from "@/components/ai/ComplianceScan";
 import { fetchEntity, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives } from "@/server/actions";
 import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord, NarrativeDraft } from "@/types/database.types";
 import type { ValidationResult } from "@/types/reporting.types";
@@ -20,6 +21,7 @@ export default function ReviewPage() {
   const periodId = params.periodId as string;
   const [entityName, setEntityName] = useState("");
   const [results, setResults] = useState<ValidationResult[]>([]);
+  const [scanData, setScanData] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +39,41 @@ export default function ReviewPage() {
       const narratives = rawNar.map((n) => ({ id: n.id, section: n.section, draft_content: n.draftContent })) as NarrativeDraft[];
 
       setResults(runFullValidation(entity, expenditures, employment, capacity, narratives, "GY"));
+
+      // Build scan data for AI compliance scan
+      setScanData({
+        company: entityData?.legalName,
+        expenditure_count: rawExp.length,
+        expenditures: rawExp.map((e) => ({
+          item: e.typeOfItemProcured,
+          sector: e.relatedSector,
+          supplier: e.supplierName,
+          certificate_id: e.supplierCertificateId,
+          sole_source_code: e.soleSourceCode,
+          payment: Number(e.actualPayment),
+          currency: e.currencyOfPayment,
+        })),
+        employment_count: rawEmp.length,
+        employment: rawEmp.map((e) => ({
+          job_title: e.jobTitle,
+          category: e.employmentCategory,
+          total: e.totalEmployees,
+          guyanese: e.guyanaeseEmployed,
+          remuneration: Number(e.totalRemunerationPaid || 0),
+        })),
+        capacity_count: rawCap.length,
+        capacity: rawCap.map((c) => ({
+          activity: c.activity,
+          participants: c.totalParticipants,
+          guyanese_participants: c.guyanaeseParticipantsOnly,
+          expenditure: Number(c.expenditureOnCapacity || 0),
+        })),
+        narratives: rawNar.map((n) => ({
+          section: n.section,
+          word_count: n.draftContent.split(/\s+/).length,
+        })),
+      });
+
       setLoading(false);
     };
     load();
@@ -83,6 +120,9 @@ export default function ReviewPage() {
             );
           })}
         </div>
+
+        {/* AI Compliance Scan */}
+        <ComplianceScan scanData={scanData} />
       </div>
     </div>
   );
