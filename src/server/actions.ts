@@ -3,6 +3,8 @@
 import { auth } from "@/auth";
 import { db } from "@/server/db";
 import {
+  chatConversations,
+  chatMessages,
   entities,
   reportingPeriods,
   expenditureRecords,
@@ -589,4 +591,98 @@ export async function fetchRecentActivity() {
     status: p.status,
     timestamp: p.updatedAt,
   }));
+}
+
+// ─── CHAT CONVERSATIONS ──────────────────────────────────────────
+export async function fetchChatConversations() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return db.query.chatConversations.findMany({
+    where: eq(chatConversations.userId, session.user.id),
+    orderBy: (c, { desc }) => [desc(c.updatedAt)],
+  });
+}
+
+export async function fetchChatMessages(conversationId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  // Verify ownership
+  const conv = await db.query.chatConversations.findFirst({
+    where: and(
+      eq(chatConversations.id, conversationId),
+      eq(chatConversations.userId, session.user.id)
+    ),
+  });
+  if (!conv) return [];
+
+  return db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.conversationId, conversationId))
+    .orderBy(chatMessages.createdAt);
+}
+
+export async function createChatConversation(title?: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [conv] = await db
+    .insert(chatConversations)
+    .values({
+      userId: session.user.id,
+      title: title || "New conversation",
+    })
+    .returning();
+  return conv;
+}
+
+export async function saveChatMessage(
+  conversationId: string,
+  role: string,
+  content: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [msg] = await db
+    .insert(chatMessages)
+    .values({ conversationId, role, content })
+    .returning();
+
+  // Update conversation title from first user message if still default
+  if (role === "user") {
+    const conv = await db.query.chatConversations.findFirst({
+      where: eq(chatConversations.id, conversationId),
+    });
+    if (conv?.title === "New conversation") {
+      const title = content.length > 50 ? content.slice(0, 50) + "..." : content;
+      await db
+        .update(chatConversations)
+        .set({ title, updatedAt: new Date() })
+        .where(eq(chatConversations.id, conversationId));
+    } else {
+      await db
+        .update(chatConversations)
+        .set({ updatedAt: new Date() })
+        .where(eq(chatConversations.id, conversationId));
+    }
+  }
+
+  return msg;
+}
+
+export async function deleteChatConversation(conversationId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await db
+    .delete(chatConversations)
+    .where(
+      and(
+        eq(chatConversations.id, conversationId),
+        eq(chatConversations.userId, session.user.id)
+      )
+    );
 }
