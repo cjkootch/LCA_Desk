@@ -48,7 +48,7 @@ export default function NarrativePage() {
       setNarrativeContents(contents);
       setLoading(false);
     };
-    load();
+    load().catch(() => setLoading(false));
   }, [entityId, periodId]);
 
   const handleSaveNarrative = async (section: string, content: string) => {

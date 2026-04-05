@@ -20,10 +20,14 @@ export default function EntitiesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchEntities().then((data) => {
-      setEntities(data);
-      setLoading(false);
-    });
+    fetchEntities()
+      .then((data) => {
+        setEntities(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {

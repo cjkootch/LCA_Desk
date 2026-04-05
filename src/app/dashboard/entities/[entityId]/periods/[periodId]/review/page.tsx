@@ -76,7 +76,7 @@ export default function ReviewPage() {
 
       setLoading(false);
     };
-    load();
+    load().catch(() => setLoading(false));
   }, [entityId, periodId]);
 
   if (loading) {

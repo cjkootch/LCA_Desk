@@ -55,7 +55,7 @@ export default function ExportPage() {
       });
       setLoading(false);
     };
-    load();
+    load().catch(() => setLoading(false));
   }, [entityId, periodId]);
 
   const handleExport = async (type: "excel" | "pdf") => {
