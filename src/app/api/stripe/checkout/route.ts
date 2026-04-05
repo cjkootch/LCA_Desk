@@ -5,9 +5,11 @@ import { db } from "@/server/db";
 import { tenants, tenantMembers } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-04-30.basil",
+  });
+}
 
 // Stripe Price IDs — create these in your Stripe Dashboard
 const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
   let customerId = tenant.stripeCustomerId;
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: session.user.email || undefined,
       name: tenant.name,
       metadata: {
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.lcadesk.com";
 
   // Create checkout session
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await getStripe().checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],

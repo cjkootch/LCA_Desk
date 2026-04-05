@@ -5,9 +5,11 @@ import { db } from "@/server/db";
 import { tenantMembers } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-04-30.basil",
+  });
+}
 
 export async function POST() {
   const session = await auth();
@@ -26,7 +28,7 @@ export async function POST() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.lcadesk.com";
 
-  const portalSession = await stripe.billingPortal.sessions.create({
+  const portalSession = await getStripe().billingPortal.sessions.create({
     customer: membership.tenant.stripeCustomerId,
     return_url: `${appUrl}/dashboard/settings/billing`,
   });

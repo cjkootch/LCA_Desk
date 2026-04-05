@@ -4,9 +4,11 @@ import { db } from "@/server/db";
 import { tenants } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-04-30.basil",
+  });
+}
 
 function getPlanFromPriceId(priceId: string): string {
   if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID) return "pro";
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET
