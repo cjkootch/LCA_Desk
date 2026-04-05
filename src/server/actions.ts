@@ -244,6 +244,32 @@ export async function removeExpenditure(id: string) {
     );
 }
 
+export async function updateExpenditure(id: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(expenditureRecords)
+    .set({
+      typeOfItemProcured: data.type_of_item_procured as string,
+      relatedSector: (data.related_sector as string) || null,
+      descriptionOfGoodService: (data.description_of_good_service as string) || null,
+      supplierName: data.supplier_name as string,
+      soleSourceCode: (data.sole_source_code as string) || null,
+      supplierCertificateId: (data.supplier_certificate_id as string) || null,
+      actualPayment: String(data.actual_payment),
+      outstandingPayment: data.outstanding_payment ? String(data.outstanding_payment) : null,
+      projectionNextPeriod: data.projection_next_period ? String(data.projection_next_period) : null,
+      paymentMethod: (data.payment_method as string) || null,
+      supplierBank: (data.supplier_bank as string) || null,
+      bankLocationCountry: (data.bank_location_country as string) || null,
+      currencyOfPayment: (data.currency_of_payment as string) || "GYD",
+      notes: (data.notes as string) || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(expenditureRecords.id, id), eq(expenditureRecords.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
 // ─── EMPLOYMENT ───────────────────────────────────────────────────
 export async function fetchEmployment(periodId: string) {
   const { tenantId } = await getSessionTenant();
@@ -297,6 +323,26 @@ export async function removeEmployment(id: string) {
     );
 }
 
+export async function updateEmploymentRecord(id: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(employmentRecords)
+    .set({
+      jobTitle: data.job_title as string,
+      employmentCategory: data.employment_category as string,
+      employmentClassification: (data.employment_classification as string) || null,
+      relatedCompany: (data.related_company as string) || null,
+      totalEmployees: Number(data.total_employees) || 1,
+      guyanaeseEmployed: Number(data.guyanese_employed) || 0,
+      totalRemunerationPaid: data.total_remuneration_paid ? String(data.total_remuneration_paid) : null,
+      remunerationGuyanaeseOnly: data.remuneration_guyanese_only ? String(data.remuneration_guyanese_only) : null,
+      notes: (data.notes as string) || null,
+    })
+    .where(and(eq(employmentRecords.id, id), eq(employmentRecords.tenantId, tenantId)))
+    .returning();
+  return updated;
+}
+
 // ─── CAPACITY DEVELOPMENT ─────────────────────────────────────────
 export async function fetchCapacity(periodId: string) {
   const { tenantId } = await getSessionTenant();
@@ -348,6 +394,27 @@ export async function removeCapacity(id: string) {
         eq(capacityDevelopmentRecords.tenantId, tenantId)
       )
     );
+}
+
+export async function updateCapacityRecord(id: string, data: Record<string, unknown>) {
+  const { tenantId } = await getSessionTenant();
+  const [updated] = await db
+    .update(capacityDevelopmentRecords)
+    .set({
+      activity: data.activity as string,
+      category: (data.category as string) || null,
+      participantType: (data.participant_type as string) || null,
+      guyanaeseParticipantsOnly: Number(data.guyanese_participants_only) || 0,
+      totalParticipants: Number(data.total_participants) || 0,
+      startDate: (data.start_date as string) || null,
+      durationDays: data.duration_days ? Number(data.duration_days) : null,
+      costToParticipants: data.cost_to_participants ? String(data.cost_to_participants) : null,
+      expenditureOnCapacity: data.expenditure_on_capacity ? String(data.expenditure_on_capacity) : null,
+      notes: (data.notes as string) || null,
+    })
+    .where(and(eq(capacityDevelopmentRecords.id, id), eq(capacityDevelopmentRecords.tenantId, tenantId)))
+    .returning();
+  return updated;
 }
 
 // ─── NARRATIVES ───────────────────────────────────────────────────

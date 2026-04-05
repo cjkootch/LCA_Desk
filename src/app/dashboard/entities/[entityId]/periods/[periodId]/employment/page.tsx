@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { calculateEmploymentMetrics } from "@/lib/compliance/calculators";
 import { getEmploymentMinimums } from "@/lib/compliance/jurisdiction-config";
 import { cn, formatPercentage } from "@/lib/utils";
-import { fetchEntity, fetchEmployment, addEmployment, removeEmployment } from "@/server/actions";
+import { fetchEntity, fetchEmployment, addEmployment, removeEmployment, updateEmploymentRecord } from "@/server/actions";
 import type { EmploymentRecord } from "@/types/database.types";
 
 function mapEmployment(e: Record<string, unknown>): EmploymentRecord {
@@ -46,6 +46,7 @@ export default function EmploymentPage() {
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<EmploymentRecord[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [editRecord, setEditRecord] = useState<EmploymentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -79,6 +80,20 @@ export default function EmploymentPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
+  };
+
+  const handleEdit = async (data: Record<string, unknown>) => {
+    if (!editRecord) return;
+    setSaving(true);
+    try {
+      await updateEmploymentRecord(editRecord.id, data);
+      toast.success("Record updated");
+      setEditRecord(null);
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update");
+    }
+    setSaving(false);
   };
 
   const metrics = calculateEmploymentMetrics(records);
@@ -118,7 +133,7 @@ export default function EmploymentPage() {
             {records.length === 0 ? (
               <EmptyState icon={Users} title="No employment records" description="Add employment data to track Guyanese employment rates by category." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
-              <EmploymentTable records={records} onDelete={handleDelete} />
+              <EmploymentTable records={records} onDelete={handleDelete} onEdit={(r) => setEditRecord(r)} />
             )}
           </div>
           <div>
@@ -134,6 +149,30 @@ export default function EmploymentPage() {
             </Card>
           </div>
         </div>
+
+        <Dialog open={!!editRecord} onOpenChange={(open) => { if (!open) setEditRecord(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Edit Employment Record</DialogTitle></DialogHeader>
+            {editRecord && (
+              <EmploymentForm
+                defaultValues={{
+                  job_title: editRecord.job_title,
+                  employment_category: editRecord.employment_category,
+                  employment_classification: editRecord.employment_classification || undefined,
+                  related_company: editRecord.related_company || undefined,
+                  total_employees: editRecord.total_employees,
+                  guyanese_employed: editRecord.guyanese_employed,
+                  total_remuneration_paid: editRecord.total_remuneration_paid || undefined,
+                  remuneration_guyanese_only: editRecord.remuneration_guyanese_only || undefined,
+                  notes: editRecord.notes || undefined,
+                }}
+                onSubmit={handleEdit}
+                onCancel={() => setEditRecord(null)}
+                loading={saving}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

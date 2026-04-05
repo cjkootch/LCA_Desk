@@ -2,16 +2,17 @@
 
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ExpenditureRecord } from "@/types/database.types";
 
 interface ExpenditureTableProps {
   records: ExpenditureRecord[];
   onDelete: (id: string) => void;
+  onEdit?: (record: ExpenditureRecord) => void;
 }
 
-export function ExpenditureTable({ records, onDelete }: ExpenditureTableProps) {
+export function ExpenditureTable({ records, onDelete, onEdit }: ExpenditureTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -39,9 +40,16 @@ export function ExpenditureTable({ records, onDelete }: ExpenditureTableProps) {
             <TableCell className="text-right font-mono">{r.outstanding_payment ? formatCurrency(r.outstanding_payment, r.currency_of_payment) : "—"}</TableCell>
             <TableCell className="text-xs">{r.currency_of_payment}</TableCell>
             <TableCell>
-              <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                {onEdit && (
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)} className="text-danger hover:text-danger">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}
