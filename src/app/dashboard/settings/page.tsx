@@ -105,7 +105,12 @@ export default function SettingsPage() {
         {activeTab === "profile" && <ProfileTab ctx={ctx} />}
         {activeTab === "company" && <CompanyTab ctx={ctx} />}
         {activeTab === "team" && <TeamTab />}
-        {activeTab === "notifications" && <NotificationsTab />}
+        {activeTab === "notifications" && (
+          <div className="space-y-6">
+            <NotificationsTab />
+            <RestartTour />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -481,6 +486,31 @@ const notificationOptions = [
   },
 ];
 
+function RestartTour() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Product Tour</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-text-secondary mb-3">
+          Replay the guided tour to learn about LCA Desk features.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            localStorage.removeItem("lca-desk-tour-completed");
+            window.location.href = "/dashboard";
+          }}
+        >
+          Restart Product Tour
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function NotificationsTab() {
   const [prefs, setPrefs] = useState<Record<string, boolean>>({
     deadline_reminders: true,
@@ -533,3 +563,6 @@ function NotificationsTab() {
     </Card>
   );
 }
+
+// Re-export RestartTourButton usage in notifications tab would go here
+// but we add it directly to the notifications tab above
