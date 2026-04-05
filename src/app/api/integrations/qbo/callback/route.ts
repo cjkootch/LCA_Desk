@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 const QBO_CLIENT_ID = process.env.QBO_CLIENT_ID!;
 const QBO_CLIENT_SECRET = process.env.QBO_CLIENT_SECRET!;
-const QBO_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "https://lcadesk.com"}/api/integrations/qbo/callback`;
+const QBO_REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "https://app.lcadesk.com"}/api/integrations/qbo/callback`;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://lcadesk.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.lcadesk.com";
 
   if (error || !code || !realmId) {
     return NextResponse.redirect(`${appUrl}/dashboard/settings?qbo=error`);
