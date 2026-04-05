@@ -68,7 +68,7 @@ export default function EntityDetailPage() {
       setPeriods(periodsData);
       setLoading(false);
     };
-    load();
+    load().catch(() => setLoading(false));
   }, [entityId]);
 
   const handleCreatePeriod = async () => {

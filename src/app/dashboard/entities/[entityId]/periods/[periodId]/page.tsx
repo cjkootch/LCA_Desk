@@ -20,13 +20,13 @@ export default function PeriodOverviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchEntity(entityId), fetchPeriod(periodId)]).then(
-      ([e, p]) => {
+    Promise.all([fetchEntity(entityId), fetchPeriod(periodId)])
+      .then(([e, p]) => {
         setEntityName(e?.legalName || "");
         setPeriod(p);
         setLoading(false);
-      }
-    );
+      })
+      .catch(() => setLoading(false));
   }, [entityId, periodId]);
 
   if (loading || !period) {
