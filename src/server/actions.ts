@@ -12,6 +12,7 @@ import {
   submissionLogs,
   tenantMembers,
   sectorCategories,
+  users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -398,6 +399,12 @@ export async function fetchUserContext() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
+  const [user] = await db
+    .select({ isSuperAdmin: users.isSuperAdmin })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
   const membership = await db.query.tenantMembers.findFirst({
     where: eq(tenantMembers.userId, session.user.id),
     with: { tenant: true },
@@ -407,5 +414,19 @@ export async function fetchUserContext() {
     user: session.user,
     tenant: membership?.tenant || null,
     role: membership?.role || null,
+    isSuperAdmin: user?.isSuperAdmin ?? false,
   };
+}
+
+export async function checkSuperAdmin(): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+
+  const [user] = await db
+    .select({ isSuperAdmin: users.isSuperAdmin })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  return user?.isSuperAdmin ?? false;
 }
