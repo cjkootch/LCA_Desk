@@ -13,10 +13,11 @@ import { EntityHeader } from "@/components/entity/EntityHeader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Plus, ArrowRight } from "lucide-react";
+import { Plus, ArrowRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { fetchEntity, fetchPeriodsForEntity, addPeriod } from "@/server/actions";
+import { fetchEntity, fetchPeriodsForEntity, addPeriod, updateEntity } from "@/server/actions";
+import { EntityForm } from "@/components/entity/EntityForm";
 import { calculateDeadlines } from "@/lib/compliance/deadlines";
 import type { Entity, PeriodStatus } from "@/types/database.types";
 
@@ -38,7 +39,9 @@ export default function EntityDetailPage() {
   const [periods, setPeriods] = useState<Awaited<ReturnType<typeof fetchPeriodsForEntity>>>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
   const currentYear = new Date().getFullYear();
   const [reportType, setReportType] = useState("half_yearly_h1");
   const [fiscalYear, setFiscalYear] = useState(currentYear.toString());
@@ -104,6 +107,44 @@ export default function EntityDetailPage() {
     }
   };
 
+  const handleEditEntity = async (data: Record<string, unknown>) => {
+    setEditSaving(true);
+    try {
+      await updateEntity(entityId, data as Parameters<typeof updateEntity>[1]);
+      toast.success("Entity updated");
+      setEditOpen(false);
+      // Reload entity data
+      const entityData = await fetchEntity(entityId);
+      if (entityData) {
+        setEntity({
+          id: entityData.id,
+          tenant_id: entityData.tenantId,
+          jurisdiction_id: entityData.jurisdictionId || "",
+          legal_name: entityData.legalName,
+          trading_name: entityData.tradingName,
+          registration_number: entityData.registrationNumber,
+          lcs_certificate_id: entityData.lcsCertificateId,
+          lcs_certificate_expiry: entityData.lcsCertificateExpiry,
+          petroleum_agreement_ref: entityData.petroleumAgreementRef,
+          company_type: entityData.companyType as Entity["company_type"],
+          guyanese_ownership_pct: entityData.guyanaeseOwnershipPct ? Number(entityData.guyanaeseOwnershipPct) : null,
+          registered_address: entityData.registeredAddress,
+          contact_name: entityData.contactName,
+          contact_email: entityData.contactEmail,
+          contact_phone: entityData.contactPhone,
+          authorized_rep_name: entityData.authorizedRepName,
+          authorized_rep_designation: entityData.authorizedRepDesignation,
+          active: entityData.active ?? true,
+          created_at: entityData.createdAt?.toISOString() || "",
+          updated_at: entityData.updatedAt?.toISOString() || "",
+        });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update entity");
+    }
+    setEditSaving(false);
+  };
+
   if (loading || !entity) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -124,6 +165,32 @@ export default function EntityDetailPage() {
             { label: entity.legal_name },
           ]}
         >
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline"><Pencil className="h-4 w-4 mr-1" />Edit</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Edit Entity</DialogTitle></DialogHeader>
+              <EntityForm
+                defaultValues={{
+                  legal_name: entity.legal_name,
+                  trading_name: entity.trading_name || undefined,
+                  registration_number: entity.registration_number || undefined,
+                  lcs_certificate_id: entity.lcs_certificate_id || undefined,
+                  lcs_certificate_expiry: entity.lcs_certificate_expiry || undefined,
+                  petroleum_agreement_ref: entity.petroleum_agreement_ref || undefined,
+                  company_type: (entity.company_type as "contractor" | "subcontractor" | "licensee") || "contractor",
+                  guyanese_ownership_pct: entity.guyanese_ownership_pct || undefined,
+                  registered_address: entity.registered_address || undefined,
+                  contact_name: entity.contact_name || undefined,
+                  contact_email: entity.contact_email || undefined,
+                  contact_phone: entity.contact_phone || undefined,
+                }}
+                onSubmit={handleEditEntity}
+                loading={editSaving}
+              />
+            </DialogContent>
+          </Dialog>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" />Start New Report</Button>
