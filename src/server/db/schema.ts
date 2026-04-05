@@ -381,6 +381,28 @@ export const capacityDevelopmentRecords = pgTable(
   ]
 );
 
+// ─── NOTIFICATIONS ───────────────────────────────────────────────
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // deadline_warning | deadline_overdue | cert_expiring | report_submitted | team_invite | plan_limit
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    link: text("link"), // URL to navigate to on click
+    read: boolean("read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("notifications_user_idx").on(table.userId),
+    index("notifications_read_idx").on(table.userId, table.read),
+  ]
+);
+
 // ─── USAGE TRACKING ──────────────────────────────────────────────
 export const usageTracking = pgTable(
   "usage_tracking",
