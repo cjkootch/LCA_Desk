@@ -30,10 +30,17 @@ function getStrength(password: string): { score: number; label: string; color: s
 const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ className, label, error, showStrength = false, id, value, onChange, ...props }, ref) => {
     const [visible, setVisible] = useState(false);
+    const [internalValue, setInternalValue] = useState(value || "");
     const strength = useMemo(
-      () => (showStrength ? getStrength(typeof value === "string" ? value : "") : null),
-      [value, showStrength]
+      () => (showStrength ? getStrength(typeof (value || internalValue) === "string" ? String(value || internalValue) : "") : null),
+      [value, internalValue, showStrength]
     );
+
+    // Handle both onChange and onInput to catch Chrome autofill
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInternalValue(e.target.value);
+      onChange?.(e);
+    };
 
     return (
       <div className="space-y-1.5">
@@ -48,7 +55,14 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             id={id}
             type={visible ? "text" : "password"}
             value={value}
-            onChange={onChange}
+            onChange={handleChange}
+            onInput={(e) => {
+              const target = e.target as HTMLInputElement;
+              if (target.value !== value) {
+                setInternalValue(target.value);
+                onChange?.({ target, currentTarget: target } as React.ChangeEvent<HTMLInputElement>);
+              }
+            }}
             className={cn(
               "w-full h-10 px-3 pr-10 rounded-lg bg-white border text-text-primary placeholder:text-text-muted text-sm transition-colors",
               "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
