@@ -82,6 +82,12 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+
+        <p className="text-xs text-text-muted text-center mt-6">
+          <a href="https://lcadesk.com" className="hover:text-text-secondary transition-colors">
+            Learn more about LCA Desk →
+          </a>
+        </p>
       </div>
     </div>
   );
