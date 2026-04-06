@@ -604,28 +604,8 @@ async function collectNoticeSlugsSupplier(): Promise<string[]> {
 }
 
 async function collectNoticeSlugsEmployment(): Promise<string[]> {
-  const slugs: string[] = [];
-  let page = 1;
-  while (true) {
-    const url = page === 1
-      ? EMPLOYMENT_BASE
-      : `${EMPLOYMENT_BASE}page/${page}/`;
-    const html = await fetchPage(url);
-    if (!html) break;
-
-    // Employment notices use /i-employment-notices/ URL pattern
-    const matches = [...html.matchAll(/\/i-employment-notices\/([^/"']+)\/?/gi)];
-    const pageSlugs = [...new Set(matches.map(m => m[1]))];
-    if (pageSlugs.length === 0) break;
-    slugs.push(...pageSlugs);
-    console.log(`  Employment page ${page}: ${pageSlugs.length} notices`);
-
-    if (!html.includes(`page/${page + 1}/`) && !html.includes('rel="next"')) break;
-    page++;
-    await sleep(DELAY_MS);
-  }
-
-  return [...new Set(slugs)];
+  // Employment notices are handled by the separate scraper (scrape-lcs-jobs.ts)
+  return [];
 }
 
 interface ScrapedNotice {
@@ -750,8 +730,7 @@ function normalizeDate(raw: string | null): string | null {
 }
 
 async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment"): Promise<ScrapedNotice | null> {
-  const urlPath = type === "employment" ? "i-employment-notices" : "supplier-notice";
-  const url = `https://lcregister.petroleum.gov.gy/${urlPath}/${slug}/`;
+  const url = `https://lcregister.petroleum.gov.gy/supplier-notice/${slug}/`;
   const html = await fetchPage(url);
   if (!html) return null;
 
