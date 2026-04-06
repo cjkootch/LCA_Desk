@@ -482,6 +482,8 @@ export const lcsOpportunities = pgTable(
     deadline: date("deadline"),
     sourceUrl: text("source_url"),
     sourceSlug: text("source_slug").unique(),
+    attachmentUrl: text("attachment_url"),
+    attachmentContent: text("attachment_content"), // extracted PDF text
     status: text("status").default("active"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
