@@ -14,8 +14,10 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import {
   LifeBuoy, Plus, MessageSquare, Clock, CheckCircle, AlertCircle,
-  Send, ImagePlus, ChevronDown, ChevronUp, ArrowRight,
+  Send, ImagePlus, ChevronDown, ChevronUp, ArrowRight, BookOpen,
+  Mail, Sparkles, FileText, HelpCircle,
 } from "lucide-react";
+import Link from "next/link";
 import {
   createSupportTicket, fetchMyTickets, fetchTicketWithReplies, addTicketReply,
 } from "@/server/actions";
@@ -276,6 +278,101 @@ export default function SupportPage() {
             })}
           </div>
         )}
+
+        {/* Quick Help + FAQ */}
+        <div className="grid lg:grid-cols-3 gap-6 mt-8">
+          {/* Quick Help Links */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen className="h-4 w-4 text-accent" />
+                <h3 className="text-sm font-semibold text-text-primary">Quick Help</h3>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { label: "How to file a report", href: "/dashboard/entities", icon: FileText },
+                  { label: "AI narrative drafting", href: "/dashboard/expert", icon: Sparkles },
+                  { label: "Billing & Plans", href: "/dashboard/settings/billing", icon: FileText },
+                  { label: "Notification settings", href: "/dashboard/settings", icon: Mail },
+                ].map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-bg-primary transition-colors cursor-pointer">
+                      <item.icon className="h-3.5 w-3.5 text-text-muted" />
+                      <span className="text-xs text-text-primary">{item.label}</span>
+                      <ArrowRight className="h-3 w-3 text-text-muted ml-auto" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* FAQ */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <HelpCircle className="h-4 w-4 text-accent" />
+                  <h3 className="text-sm font-semibold text-text-primary">Frequently Asked Questions</h3>
+                </div>
+                <div className="divide-y divide-border-light">
+                  {[
+                    {
+                      q: "What reports do I need to file?",
+                      a: "Under the Local Content Act 2021, contractors, sub-contractors, and licensees must file Half-Yearly Reports (H1 and H2) covering expenditure, employment, and capacity development. Annual Plans and Performance Reports are also required.",
+                    },
+                    {
+                      q: "When are reports due?",
+                      a: "H1 reports (Jan–Jun) are due by July 30. H2 reports (Jul–Dec) are due by January 30 of the following year. LCA Desk automatically tracks these deadlines and sends reminders.",
+                    },
+                    {
+                      q: "How do I submit my report to the Secretariat?",
+                      a: "Complete all sections (Expenditure, Employment, Capacity Development), review the compliance check, then export the Excel and PDF files. Email both to localcontent@nre.gov.gy using the pre-filled email template on the Export page.",
+                    },
+                    {
+                      q: "What is the LCS Certificate and do I need one?",
+                      a: "The Local Content Secretariat (LCS) Certificate is required for suppliers providing goods and services in Guyana's petroleum sector. You can verify your certificate status in the Supplier Directory.",
+                    },
+                    {
+                      q: "Can I edit a report after submission?",
+                      a: "Submitted reports are locked to maintain audit integrity. If you need to make amendments, contact the Secretariat to request a revision window. LCA Desk maintains a full audit trail of all changes.",
+                    },
+                    {
+                      q: "What are the penalties for non-compliance?",
+                      a: "Penalties range from GY$1,000,000 to GY$50,000,000 depending on the violation. False submissions are a criminal offense under the Local Content Act 2021.",
+                    },
+                  ].map((faq, i) => (
+                    <details key={i} className="group py-3 first:pt-0 last:pb-0">
+                      <summary className="flex items-center justify-between cursor-pointer text-sm font-medium text-text-primary list-none">
+                        {faq.q}
+                        <ChevronDown className="h-4 w-4 text-text-muted group-open:rotate-180 transition-transform shrink-0 ml-2" />
+                      </summary>
+                      <p className="text-xs text-text-secondary mt-2 leading-relaxed">{faq.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Contact info */}
+        <Card className="mt-6">
+          <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-accent" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">Need immediate help?</p>
+                <p className="text-xs text-text-muted">Email us at support@lcadesk.com — we typically respond within 24 hours.</p>
+              </div>
+            </div>
+            <a href="mailto:support@lcadesk.com">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Mail className="h-3.5 w-3.5" /> Email Support
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
 
         {/* Create dialog */}
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
