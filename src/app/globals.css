@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:opsz,wght@14..32,100..900&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -54,7 +54,7 @@
   --color-sidebar-text-muted: var(--sidebar-text-muted);
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
-  --font-heading: 'Playfair Display', serif;
+  --font-heading: 'Inter', sans-serif;
   --font-body: 'DM Sans', sans-serif;
 }
 
@@ -66,6 +66,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
+  letter-spacing: -0.025em;
 }
 
 /* Prevent iOS zoom on input focus — inputs must be 16px+ */
