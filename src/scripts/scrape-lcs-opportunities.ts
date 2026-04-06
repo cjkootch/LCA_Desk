@@ -604,10 +604,28 @@ async function collectNoticeSlugsSupplier(): Promise<string[]> {
 }
 
 async function collectNoticeSlugsEmployment(): Promise<string[]> {
-  const html = await fetchPage(EMPLOYMENT_BASE);
-  if (!html) return [];
-  const matches = [...html.matchAll(/\/supplier-notice\/([^/"']+)\/?/gi)];
-  return [...new Set(matches.map(m => m[1]))];
+  const slugs: string[] = [];
+  let page = 1;
+  while (true) {
+    const url = page === 1
+      ? EMPLOYMENT_BASE
+      : `${EMPLOYMENT_BASE}page/${page}/`;
+    const html = await fetchPage(url);
+    if (!html) break;
+
+    // Employment notices use /i-employment-notices/ URL pattern
+    const matches = [...html.matchAll(/\/i-employment-notices\/([^/"']+)\/?/gi)];
+    const pageSlugs = [...new Set(matches.map(m => m[1]))];
+    if (pageSlugs.length === 0) break;
+    slugs.push(...pageSlugs);
+    console.log(`  Employment page ${page}: ${pageSlugs.length} notices`);
+
+    if (!html.includes(`page/${page + 1}/`) && !html.includes('rel="next"')) break;
+    page++;
+    await sleep(DELAY_MS);
+  }
+
+  return [...new Set(slugs)];
 }
 
 interface ScrapedNotice {
@@ -618,6 +636,7 @@ interface ScrapedNotice {
   title: string;
   description: string | null;
   lcaCategory: string | null;
+  employmentCategory: string | null;
   postedDate: string | null;
   deadline: string | null;
   sourceUrl: string;
@@ -731,7 +750,8 @@ function normalizeDate(raw: string | null): string | null {
 }
 
 async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment"): Promise<ScrapedNotice | null> {
-  const url = `https://lcregister.petroleum.gov.gy/supplier-notice/${slug}/`;
+  const urlPath = type === "employment" ? "i-employment-notices" : "supplier-notice";
+  const url = `https://lcregister.petroleum.gov.gy/${urlPath}/${slug}/`;
   const html = await fetchPage(url);
   if (!html) return null;
 
@@ -781,16 +801,34 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   }
 
   let noticeType: string | null = null;
-  if (/EOI|Expression of Interest/i.test(html)) noticeType = "EOI";
-  else if (/RFQ|Request for Quotation/i.test(html)) noticeType = "RFQ";
-  else if (/RFP|Request for Proposal/i.test(html)) noticeType = "RFP";
-  else if (/RFI|Request for Information/i.test(html)) noticeType = "RFI";
+  if (type === "employment") {
+    if (/vacancy|position|hiring|job opening/i.test(html)) noticeType = "Vacancy";
+    else if (/internship|intern|graduate program/i.test(html)) noticeType = "Internship";
+    else if (/training|program|DEEP/i.test(html)) noticeType = "Training Program";
+    else noticeType = "Employment";
+  } else {
+    if (/EOI|Expression of Interest/i.test(html)) noticeType = "EOI";
+    else if (/RFQ|Request for Quotation/i.test(html)) noticeType = "RFQ";
+    else if (/RFP|Request for Proposal/i.test(html)) noticeType = "RFP";
+    else if (/RFI|Request for Information/i.test(html)) noticeType = "RFI";
+  }
 
   const contentMatch = html.match(/class="[^"]*entry-content[^"]*"[^>]*>([\s\S]{20,8000}?)<\/div>/i);
   const rawContent = contentMatch?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || null;
   const description = rawContent?.slice(0, 1000) || null;
-  // Store full page text for AI analysis (up to 5000 chars)
   const fullPageText = rawContent?.slice(0, 5000) || null;
+
+  // Extract employment category from title/content for job postings
+  let employmentCategory: string | null = null;
+  if (type === "employment") {
+    const searchStr = (title + " " + (rawContent || "")).toLowerCase();
+    if (/engineer|technical|technician|ndt/i.test(searchStr)) employmentCategory = "Technical";
+    else if (/manager|lead|supervisor|coordinator|superintendent/i.test(searchStr)) employmentCategory = "Management";
+    else if (/admin|clerk|accountant|analyst|officer|specialist|hr\b/i.test(searchStr)) employmentCategory = "Administrative";
+    else if (/welder|operator|mechanic|rigger|electrician|fitter/i.test(searchStr)) employmentCategory = "Skilled Labour";
+    else if (/warehouse|driver|helper|assistant|associate/i.test(searchStr)) employmentCategory = "Semi-Skilled Labour";
+    else if (/security|cleaner|labourer/i.test(searchStr)) employmentCategory = "Unskilled Labour";
+  }
 
   const catMatch = html.match(/supply_category\/([^/"']+)/i);
   const lcaCategory = catMatch?.[1]?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || null;
@@ -834,7 +872,7 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
 
   return {
     contractorName, contractorSlug, type, noticeType, title, description,
-    lcaCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
+    lcaCategory, employmentCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
     attachmentUrl, attachmentUrls: allAttachments.length > 0 ? JSON.stringify(allAttachments) : null,
     attachmentContent: fullPageText,
     noticeImages, externalLinks,
@@ -852,6 +890,7 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
       title: notice.title,
       description: notice.description,
       lcaCategory: notice.lcaCategory,
+      employmentCategory: notice.employmentCategory,
       postedDate: notice.postedDate ?? undefined,
       deadline: notice.deadline ?? undefined,
       sourceUrl: notice.sourceUrl,
@@ -869,6 +908,7 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
         title: notice.title,
         description: notice.description,
         lcaCategory: notice.lcaCategory,
+        employmentCategory: notice.employmentCategory,
         attachmentUrl: notice.attachmentUrl,
         attachmentUrls: notice.attachmentUrls,
         attachmentContent: notice.attachmentContent, // update full page text
