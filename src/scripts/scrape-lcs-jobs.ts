@@ -331,7 +331,7 @@ async function main() {
   const scrapedSlugs = new Set(slugs);
   let closed = 0;
   for (const row of allExisting) {
-    if (row.status === "open" && !scrapedSlugs.has(row.sourceSlug)) {
+    if (row.status === "open" && row.sourceSlug && !scrapedSlugs.has(row.sourceSlug)) {
       await db.update(lcsEmploymentNotices).set({ status: "closed", updatedAt: new Date() })
         .where(eq(lcsEmploymentNotices.id, row.id));
       closed++;
