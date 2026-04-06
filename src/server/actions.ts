@@ -23,6 +23,9 @@ import {
   jobApplications,
   lcsOpportunities,
   savedOpportunities,
+  jobSeekerProfiles,
+  supplierProfiles,
+  jurisdictions,
   users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -1538,4 +1541,163 @@ export async function unsaveOpportunity(opportunityId: string) {
         eq(savedOpportunities.opportunityId, opportunityId)
       )
     );
+}
+
+// ─── HIRE APPLICANT → EMPLOYEE ROSTER ─────────────────────────────
+export async function hireApplicant(applicationId: string, entityId: string) {
+  const { tenantId } = await getSessionTenant();
+
+  const [application] = await db
+    .select()
+    .from(jobApplications)
+    .where(eq(jobApplications.id, applicationId))
+    .limit(1);
+  if (!application) throw new Error("Application not found");
+
+  const [posting] = await db
+    .select()
+    .from(jobPostings)
+    .where(eq(jobPostings.id, application.jobPostingId))
+    .limit(1);
+
+  // Create employee record from application data
+  const [employee] = await db
+    .insert(employees)
+    .values({
+      tenantId,
+      entityId,
+      fullName: application.applicantName,
+      jobTitle: posting?.jobTitle || "",
+      employmentCategory: application.employmentCategory || posting?.employmentCategory || "Non-Technical",
+      employmentClassification: application.employmentClassification || null,
+      isGuyanese: application.isGuyanese ?? true,
+      nationality: application.nationality || "Guyanese",
+      contractType: posting?.contractType || "contract",
+      startDate: new Date().toISOString().slice(0, 10),
+      active: true,
+    })
+    .returning();
+
+  // Link application to employee
+  await db
+    .update(jobApplications)
+    .set({ status: "selected", employeeRecordId: employee.id, hiredAt: new Date(), updatedAt: new Date() })
+    .where(eq(jobApplications.id, applicationId));
+
+  // Update posting
+  await db
+    .update(jobPostings)
+    .set({ guyaneseHired: application.isGuyanese, status: "filled", filledAt: new Date(), updatedAt: new Date() })
+    .where(eq(jobPostings.id, application.jobPostingId));
+
+  return employee;
+}
+
+// ─── UPGRADE SUPPLIER TO FILER ────────────────────────────────────
+export async function upgradeSupplierToFiler(companyName: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [guyana] = await db
+    .select()
+    .from(jurisdictions)
+    .where(eq(jurisdictions.code, "GY"))
+    .limit(1);
+
+  const slug = companyName
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const [tenant] = await db
+    .insert(tenants)
+    .values({ name: companyName, slug, jurisdictionId: guyana?.id })
+    .returning();
+
+  await db.insert(tenantMembers).values({
+    tenantId: tenant.id,
+    userId: session.user.id,
+    role: "owner",
+  });
+
+  // Pre-create entity from supplier profile if they have LCS cert
+  const [profile] = await db
+    .select()
+    .from(supplierProfiles)
+    .where(eq(supplierProfiles.userId, session.user.id))
+    .limit(1);
+
+  if (profile?.lcsCertId && guyana) {
+    await db.insert(entities).values({
+      tenantId: tenant.id,
+      jurisdictionId: guyana.id,
+      legalName: profile.legalName || companyName,
+      lcsCertificateId: profile.lcsCertId,
+      lcsCertificateExpiry: profile.lcsExpirationDate || undefined,
+    });
+  }
+
+  // Update role to include filer
+  const [user] = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1);
+  const currentRole = user?.userRole || "supplier";
+  const newRole = currentRole.includes("filer") ? currentRole : `${currentRole},filer`;
+
+  await db
+    .update(users)
+    .set({ userRole: newRole, updatedAt: new Date() })
+    .where(eq(users.id, session.user.id));
+
+  return { tenantId: tenant.id };
+}
+
+// ─── JOB SEEKER PORTAL ────────────────────────────────────────────
+export async function fetchMyApplications() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return db
+    .select({
+      id: jobApplications.id,
+      jobTitle: jobPostings.jobTitle,
+      companyName: tenants.name,
+      status: jobApplications.status,
+      appliedAt: jobApplications.createdAt,
+      isGuyanese: jobApplications.isGuyanese,
+    })
+    .from(jobApplications)
+    .innerJoin(jobPostings, eq(jobApplications.jobPostingId, jobPostings.id))
+    .innerJoin(tenants, eq(jobPostings.tenantId, tenants.id))
+    .where(eq(jobApplications.applicantUserId, session.user.id))
+    .orderBy(jobApplications.createdAt);
+}
+
+// ─── SUPPLIER PORTAL ──────────────────────────────────────────────
+export async function fetchMySupplierProfile() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  return db.query.supplierProfiles.findFirst({
+    where: eq(supplierProfiles.userId, session.user.id),
+  });
+}
+
+export async function updateMySupplierProfile(data: Record<string, unknown>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [updated] = await db
+    .update(supplierProfiles)
+    .set({
+      legalName: (data.legal_name as string) || null,
+      tradingName: (data.trading_name as string) || null,
+      address: (data.address as string) || null,
+      website: (data.website as string) || null,
+      serviceCategories: (data.service_categories as string[]) || [],
+      profileVisible: data.profile_visible !== false,
+      updatedAt: new Date(),
+    })
+    .where(eq(supplierProfiles.userId, session.user.id))
+    .returning();
+  return updated;
 }
