@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       if (tenant && (subscription.status === "active" || subscription.status === "trialing")) {
         await db
           .update(tenants)
-          .set({ plan, stripeSubscriptionId: subscription.id, stripePriceId: priceId || null })
+          .set({ plan, stripeSubscriptionId: subscription.id, stripePriceId: priceId || null, trialEndsAt: null })
           .where(eq(tenants.id, tenant.id));
       }
       break;

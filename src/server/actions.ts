@@ -52,7 +52,7 @@ import {
   updateNotificationPreferences as updateNotifPrefs,
 } from "@/lib/email/unified-notify";
 
-async function getSessionTenant() {
+async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
@@ -63,12 +63,26 @@ async function getSessionTenant() {
 
   if (!membership) throw new Error("No tenant found");
 
+  // Enforce trial paywall at action level (when enabled)
+  // Blocks users whose trial expired but who haven't paid. Does NOT block
+  // free-tier users who never had a trial (trialEndsAt is null).
+  if (process.env.NEXT_PUBLIC_ENFORCE_PAYWALL === "true" && !opts?.skipTrialCheck) {
+    const tenant = membership.tenant;
+    const plan = (tenant.plan as string) || "free";
+    const hasPaid = plan === "lite" || plan === "pro" || plan === "enterprise";
+    const hadTrial = !!tenant.trialEndsAt;
+    const trialActive = isInTrial(tenant.trialEndsAt);
+    if (hadTrial && !trialActive && !hasPaid) {
+      throw new Error("TRIAL_EXPIRED");
+    }
+  }
+
   return {
     userId: session.user.id,
     tenantId: membership.tenantId,
     tenant: membership.tenant,
     role: membership.role,
-    plan: (membership.tenant.plan as string) || "lite",
+    plan: (membership.tenant.plan as string) || "free",
     trialEndsAt: membership.tenant.trialEndsAt ?? null,
   };
 }
@@ -1216,8 +1230,8 @@ export async function deleteChatConversation(conversationId: string) {
 
 // ─── PLAN & USAGE ────────────────────────────────────────────────
 export async function fetchPlanAndUsage() {
-  const { tenantId, tenant } = await getSessionTenant();
-  const plan = tenant.plan || "lite";
+  const { tenantId, tenant } = await getSessionTenant({ skipTrialCheck: true });
+  const plan = tenant.plan || "free";
   const trialEndsAt = tenant.trialEndsAt ?? null;
 
   const currentMonth = new Date().toISOString().slice(0, 7);

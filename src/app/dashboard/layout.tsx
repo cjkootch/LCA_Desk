@@ -30,10 +30,13 @@ export default async function DashboardLayout({
 
       if (membership?.tenant) {
         const plan = (membership.tenant.plan as string) || "free";
+        const hadTrial = !!membership.tenant.trialEndsAt;
         const trialActive = isInTrial(membership.tenant.trialEndsAt);
         const hasPaid = plan === "lite" || plan === "pro" || plan === "enterprise";
 
-        if (!trialActive && !hasPaid) {
+        // Only block users whose trial expired without paying.
+        // Free-tier users who never had a trial can still access their dashboard.
+        if (hadTrial && !trialActive && !hasPaid) {
           // Check current path — allow billing and trial-expired pages through
           const headersList = await headers();
           const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
