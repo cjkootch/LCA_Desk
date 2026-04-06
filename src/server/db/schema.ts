@@ -494,6 +494,23 @@ export const lcsOpportunities = pgTable(
   ]
 );
 
+// ─── SAVED OPPORTUNITIES ─────────────────────────────────────────
+export const savedOpportunities = pgTable(
+  "saved_opportunities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    opportunityId: uuid("opportunity_id").notNull().references(() => lcsOpportunities.id, { onDelete: "cascade" }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    unique("saved_opp_unique").on(table.userId, table.opportunityId),
+    index("saved_opp_tenant_idx").on(table.tenantId),
+  ]
+);
+
 // ─── JOB POSTINGS ────────────────────────────────────────────────
 export const jobPostings = pgTable(
   "job_postings",
