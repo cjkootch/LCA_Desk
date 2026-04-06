@@ -38,7 +38,7 @@ export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState("starter");
+  const [plan, setPlan] = useState("lite");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
   const [search, setSearch] = useState("");

@@ -62,7 +62,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
   const { profile, signOut } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  const [planCode, setPlanCode] = useState("starter");
+  const [planCode, setPlanCode] = useState("lite");
 
   useEffect(() => {
     fetchUserContext().then((ctx) => {

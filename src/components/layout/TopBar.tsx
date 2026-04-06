@@ -19,7 +19,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, description, action }: TopBarProps) {
-  const [plan, setPlan] = useState<string>("starter");
+  const [plan, setPlan] = useState<string>("lite");
 
   useEffect(() => {
     fetchPlanAndUsage()

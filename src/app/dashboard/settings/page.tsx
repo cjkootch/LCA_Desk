@@ -122,7 +122,7 @@ export default function SettingsPage() {
         {activeTab === "profile" && <ProfileTab ctx={ctx} />}
         {activeTab === "company" && <CompanyTab ctx={ctx} />}
         {activeTab === "team" && <TeamTab />}
-        {activeTab === "integrations" && <IntegrationsTab plan={ctx?.tenant?.plan as string || "starter"} />}
+        {activeTab === "integrations" && <IntegrationsTab plan={ctx?.tenant?.plan as string || "lite"} />}
         {activeTab === "notifications" && (
           <div className="space-y-6">
             <NotificationsTab />
@@ -255,7 +255,7 @@ function CompanyTab({ ctx }: { ctx: UserContext | null }) {
   const [saving, setSaving] = useState(false);
 
   const jurisdiction = ctx?.tenant?.jurisdiction ?? "Not set";
-  const plan = ctx?.tenant?.plan ?? "starter";
+  const plan = ctx?.tenant?.plan ?? "lite";
 
   async function handleSave() {
     if (!companyName.trim()) {

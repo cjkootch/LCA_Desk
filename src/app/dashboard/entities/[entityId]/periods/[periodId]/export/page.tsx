@@ -32,7 +32,7 @@ export default function ExportPage() {
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
-  const [currentPlan, setCurrentPlan] = useState("starter");
+  const [currentPlan, setCurrentPlan] = useState("lite");
   const [entityName, setEntityName] = useState("");
   const [entity, setEntity] = useState<Entity | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

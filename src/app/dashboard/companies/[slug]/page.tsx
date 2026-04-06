@@ -27,7 +27,7 @@ export default function CompanyProfilePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
-  const [plan, setPlan] = useState("starter");
+  const [plan, setPlan] = useState("lite");
 
   useEffect(() => {
     fetchCompanyProfile(slug).then(setData).catch(() => {}).finally(() => setLoading(false));
