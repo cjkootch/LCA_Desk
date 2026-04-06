@@ -13,7 +13,7 @@
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { lcsContractors } from "../server/db/schema";
+import { lcsContractors, lcsOpportunities } from "../server/db/schema";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
@@ -26,7 +26,7 @@ const DELAY_MS = 500;
 function getDb() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set in .env.local");
   const sql = neon(process.env.DATABASE_URL);
-  return drizzle(sql, { schema: { lcsContractors } });
+  return drizzle(sql, { schema: { lcsContractors, lcsOpportunities } });
 }
 
 interface ContractorRecord {
@@ -258,16 +258,182 @@ async function main() {
     } catch { skipped++; console.log(`  ⚠ Skipped: ${record.companyName}`); }
   }
 
+  // ── Phase 3: Scrape individual notice pages ──
+  console.log("\nPhase 3: Scraping individual notice pages...\n");
+
+  const [supplierSlugs, employmentSlugs] = await Promise.all([
+    collectNoticeSlugsSupplier(),
+    collectNoticeSlugsEmployment(),
+  ]);
+
+  console.log(`  Found ${supplierSlugs.length} supplier notice slugs`);
+  console.log(`  Found ${employmentSlugs.length} employment notice slugs\n`);
+
+  let noticesOk = 0;
+  let noticesSkipped = 0;
+
+  for (let i = 0; i < supplierSlugs.length; i++) {
+    const slug = supplierSlugs[i];
+    const tag = `[${String(i + 1).padStart(3, " ")}/${supplierSlugs.length}]`;
+    const notice = await scrapeNoticeDetail(slug, "supplier");
+    if (notice) {
+      await upsertNotice(db, notice);
+      noticesOk++;
+      console.log(`${tag} 📋 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
+    } else {
+      noticesSkipped++;
+      console.log(`${tag} ⚠  ${slug} — skipped`);
+    }
+    await sleep(DELAY_MS);
+  }
+
+  for (let i = 0; i < employmentSlugs.length; i++) {
+    const slug = employmentSlugs[i];
+    const tag = `[${String(i + 1).padStart(3, " ")}/${employmentSlugs.length}]`;
+    const notice = await scrapeNoticeDetail(slug, "employment");
+    if (notice) {
+      await upsertNotice(db, notice);
+      noticesOk++;
+      console.log(`${tag} 👤 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
+    } else {
+      noticesSkipped++;
+      console.log(`${tag} ⚠  ${slug} — skipped`);
+    }
+    await sleep(DELAY_MS);
+  }
+
   console.log("\n════════════════════════════════════════════");
   console.log("  Complete");
   console.log("════════════════════════════════════════════");
   console.log(`  ✓ Seeded from research:   ${seeded}`);
   console.log(`  + New from scrape:        ${added}`);
   console.log(`  ↑ Updated from scrape:    ${updated}`);
-  console.log(`  ⚠ Skipped:               ${skipped}`);
-  console.log(`  Total in database:        ${seeded + added}`);
+  console.log(`  ⚠ Companies skipped:     ${skipped}`);
+  console.log(`  📋 Notices scraped:       ${noticesOk}`);
+  console.log(`  ⚠ Notices skipped:       ${noticesSkipped}`);
   console.log();
   process.exit(0);
+}
+
+// ─── PHASE 3: INDIVIDUAL NOTICE SCRAPING ──────────────────────────
+
+async function collectNoticeSlugsSupplier(): Promise<string[]> {
+  const slugs: string[] = [];
+  let page = 1;
+  while (true) {
+    const url = page === 1 ? OPPORTUNITIES_BASE : `${OPPORTUNITIES_BASE}page/${page}/`;
+    const html = await fetchPage(url);
+    if (!html) break;
+    const matches = [...html.matchAll(/\/supplier-notice\/([^/"']+)\/?/gi)];
+    const pageSlugs = matches.map(m => m[1]).filter((v, i, arr) => arr.indexOf(v) === i);
+    if (pageSlugs.length === 0) break;
+    slugs.push(...pageSlugs);
+    if (!html.includes(`page/${page + 1}/`) && !html.includes('rel="next"')) break;
+    page++;
+    await sleep(DELAY_MS);
+  }
+  return [...new Set(slugs)];
+}
+
+async function collectNoticeSlugsEmployment(): Promise<string[]> {
+  const html = await fetchPage(EMPLOYMENT_BASE);
+  if (!html) return [];
+  const matches = [...html.matchAll(/\/supplier-notice\/([^/"']+)\/?/gi)];
+  return [...new Set(matches.map(m => m[1]))];
+}
+
+interface ScrapedNotice {
+  contractorName: string;
+  contractorSlug: string | null;
+  type: "supplier" | "employment";
+  noticeType: string | null;
+  title: string;
+  description: string | null;
+  lcaCategory: string | null;
+  postedDate: string | null;
+  deadline: string | null;
+  sourceUrl: string;
+  sourceSlug: string;
+}
+
+async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment"): Promise<ScrapedNotice | null> {
+  const url = `https://lcregister.petroleum.gov.gy/supplier-notice/${slug}/`;
+  const html = await fetchPage(url);
+  if (!html) return null;
+
+  const titleMatch = html.match(/<h1[^>]*>([^<]{5,200})<\/h1>/i) || html.match(/<title>([^<]{5,200})<\/title>/i);
+  const title = titleMatch?.[1]?.replace(/\s*[–|]\s*Local Content Register.*$/i, "").trim();
+  if (!title || title.length < 4) return null;
+
+  const contractorMatch =
+    html.match(/class="[^"]*author[^"]*"[^>]*>([^<]{3,80})</i) ||
+    html.match(/Posted by[:\s]*<[^>]+>([^<]{3,80})</i) ||
+    html.match(/class="[^"]*entry-author[^"]*"[^>]*>\s*<[^>]+>([^<]{3,80})</i);
+  const contractorName = contractorMatch?.[1]?.trim() || "Unknown";
+
+  const slugMatch = html.match(/\/identity\/([^/"']+)\/?/);
+  const contractorSlug = slugMatch?.[1] || null;
+
+  let noticeType: string | null = null;
+  if (/EOI|Expression of Interest/i.test(html)) noticeType = "EOI";
+  else if (/RFQ|Request for Quotation/i.test(html)) noticeType = "RFQ";
+  else if (/RFP|Request for Proposal/i.test(html)) noticeType = "RFP";
+  else if (/RFI|Request for Information/i.test(html)) noticeType = "RFI";
+
+  const contentMatch = html.match(/class="[^"]*entry-content[^"]*"[^>]*>([\s\S]{20,2000}?)<\/div>/i);
+  const description = contentMatch?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1000) || null;
+
+  const catMatch = html.match(/supply_category\/([^/"']+)/i);
+  const lcaCategory = catMatch?.[1]?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || null;
+
+  const dateMatch = html.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})|(\w+ \d{1,2},\s*\d{4})/);
+  const postedDate = dateMatch?.[0] || null;
+
+  const deadlineMatch = html.match(/(?:deadline|closing date|submit by|due date)[:\s]*([^\n<]{5,40})/i);
+  const deadline = deadlineMatch?.[1]?.trim() || null;
+
+  return {
+    contractorName, contractorSlug, type, noticeType, title, description,
+    lcaCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
+  };
+}
+
+async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice) {
+  const status = notice.deadline ? (new Date(notice.deadline) < new Date() ? "expired" : "active") : "active";
+  try {
+    await db.insert(lcsOpportunities).values({
+      contractorName: notice.contractorName,
+      contractorSlug: notice.contractorSlug,
+      type: notice.type,
+      noticeType: notice.noticeType,
+      title: notice.title,
+      description: notice.description,
+      lcaCategory: notice.lcaCategory,
+      postedDate: notice.postedDate ?? undefined,
+      deadline: notice.deadline ?? undefined,
+      sourceUrl: notice.sourceUrl,
+      sourceSlug: notice.sourceSlug,
+      status,
+      scrapedAt: new Date(),
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: lcsOpportunities.sourceSlug,
+      set: {
+        contractorName: notice.contractorName,
+        title: notice.title,
+        description: notice.description,
+        lcaCategory: notice.lcaCategory,
+        deadline: notice.deadline ?? undefined,
+        status,
+        scrapedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("duplicate key") || msg.includes("unique")) return;
+    throw err;
+  }
 }
 
 main().catch((err) => { console.error("\nFatal error:", err); process.exit(1); });

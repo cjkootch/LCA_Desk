@@ -464,6 +464,36 @@ export const lcsContractors = pgTable(
   ]
 );
 
+// ─── LCS OPPORTUNITIES (Individual Notices) ──────────────────────
+export const lcsOpportunities = pgTable(
+  "lcs_opportunities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractorName: text("contractor_name").notNull(),
+    contractorSlug: text("contractor_slug"),
+    type: text("type").notNull(),
+    noticeType: text("notice_type"),
+    title: text("title").notNull(),
+    description: text("description"),
+    lcaCategory: text("lca_category"),
+    employmentCategory: text("employment_category"),
+    postedDate: date("posted_date"),
+    deadline: date("deadline"),
+    sourceUrl: text("source_url"),
+    sourceSlug: text("source_slug").unique(),
+    status: text("status").default("active"),
+    scrapedAt: timestamp("scraped_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("lcs_opp_type_idx").on(table.type),
+    index("lcs_opp_status_idx").on(table.status),
+    index("lcs_opp_contractor_idx").on(table.contractorName),
+    index("lcs_opp_category_idx").on(table.lcaCategory),
+    index("lcs_opp_deadline_idx").on(table.deadline),
+  ]
+);
+
 // ─── JOB POSTINGS ────────────────────────────────────────────────
 export const jobPostings = pgTable(
   "job_postings",
