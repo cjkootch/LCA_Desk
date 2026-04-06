@@ -2914,25 +2914,49 @@ function slugify(name: string): string {
 }
 
 export async function aggregateCompanyProfiles() {
-  // Get all unique company names from opportunities + jobs
+  // Get all unique companies from ALL data sources
   const opps = await db.select({ name: lcsOpportunities.contractorName }).from(lcsOpportunities).limit(500);
   const jobs = await db.select({ name: lcsEmploymentNotices.companyName }).from(lcsEmploymentNotices).limit(500);
+  const register = await db.select().from(lcsRegister).limit(1000);
 
-  const allNames = new Set<string>();
-  for (const o of opps) if (o.name && o.name !== "Unknown") allNames.add(o.name);
-  for (const j of jobs) if (j.name && j.name !== "Unknown") allNames.add(j.name);
+  // Build unified company map: name → LCS register data (if any)
+  const companyMap = new Map<string, typeof register[number] | null>();
+
+  // Add from opportunities + jobs
+  for (const o of opps) if (o.name && o.name !== "Unknown") companyMap.set(o.name, null);
+  for (const j of jobs) if (j.name && j.name !== "Unknown") companyMap.set(j.name, null);
+
+  // Add ALL LCS register companies (this is the big one — 700+)
+  for (const r of register) {
+    companyMap.set(r.legalName, r);
+    // Also try trading name
+    if (r.tradingName && r.tradingName !== r.legalName) {
+      if (!companyMap.has(r.tradingName)) companyMap.set(r.tradingName, r);
+    }
+  }
+
+  // Cross-reference: link opportunity/job companies to LCS register
+  for (const [name] of companyMap) {
+    if (!companyMap.get(name)) {
+      const match = register.find(r =>
+        r.legalName.toLowerCase() === name.toLowerCase() ||
+        r.tradingName?.toLowerCase() === name.toLowerCase() ||
+        r.legalName.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(r.legalName.toLowerCase())
+      );
+      if (match) companyMap.set(name, match);
+    }
+  }
 
   let created = 0;
   let updated = 0;
 
-  for (const companyName of allNames) {
+  for (const [companyName, lcsData] of companyMap) {
     const slug = slugify(companyName);
 
-    // Count opportunities
+    // Count opportunities + jobs
     const companyOpps = opps.filter(o => o.name === companyName);
     const companyJobs = jobs.filter(j => j.name === companyName);
-
-    // Get active counts from full data
     const activeOpps = await db.select({ id: lcsOpportunities.id })
       .from(lcsOpportunities)
       .where(and(eq(lcsOpportunities.contractorName, companyName), eq(lcsOpportunities.status, "active")))
@@ -2972,21 +2996,22 @@ export async function aggregateCompanyProfiles() {
     for (const j of jobDetails) {
       if (j.employmentCategory) empCats.add(j.employmentCategory);
       if (j.aiSummary) {
-        try {
-          const s = JSON.parse(j.aiSummary);
-          if (s.contact_email) emailSet.add(s.contact_email);
-        } catch {}
+        try { const s = JSON.parse(j.aiSummary); if (s.contact_email) emailSet.add(s.contact_email); } catch {}
       }
     }
 
-    // Check LCS register
-    const lcsMatch = await db.select({ certId: lcsRegister.certId })
-      .from(lcsRegister)
-      .where(eq(lcsRegister.legalName, companyName))
-      .limit(1);
+    // Add LCS register contact info
+    if (lcsData) {
+      if (lcsData.email) emailSet.add(lcsData.email);
+      if (lcsData.phone) phoneSet.add(lcsData.phone);
+      if (lcsData.serviceCategories) lcsData.serviceCategories.forEach(c => procCats.add(c));
+    }
 
-    const profileData = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profileData: Record<string, any> = {
       companyName,
+      legalName: lcsData?.legalName || companyName,
+      website: lcsData?.website || null,
       totalOpportunities: companyOpps.length,
       activeOpportunities: activeOpps.length,
       totalJobPostings: companyJobs.length,
@@ -2996,26 +3021,40 @@ export async function aggregateCompanyProfiles() {
       contactNames: nameSet.size > 0 ? JSON.stringify([...nameSet]) : null,
       procurementCategories: [...procCats],
       employmentCategories: [...empCats],
-      lcsCertId: lcsMatch[0]?.certId || null,
-      lcsRegistered: !!lcsMatch[0],
+      // LCS register data
+      lcsCertId: lcsData?.certId || null,
+      lcsRegistered: !!lcsData,
+      lcsStatus: lcsData?.status || null,
+      lcsExpirationDate: lcsData?.expirationDate || null,
+      lcsEmail: lcsData?.email || null,
+      lcsPhone: lcsData?.phone || null,
+      lcsAddress: lcsData?.address || null,
+      lcsServiceCategories: lcsData?.serviceCategories || [],
       lastAggregatedAt: new Date(),
       updatedAt: new Date(),
     };
 
-    // Upsert
-    const [existing] = await db.select({ id: companyProfiles.id })
+    // Upsert — don't overwrite claimed profiles' manual edits
+    const [existing] = await db.select({ id: companyProfiles.id, claimed: companyProfiles.claimed })
       .from(companyProfiles).where(eq(companyProfiles.slug, slug)).limit(1);
 
     if (existing) {
+      // Don't overwrite contact info on claimed profiles
+      if (existing.claimed) {
+        delete profileData.contactEmails;
+        delete profileData.contactPhones;
+        delete profileData.contactNames;
+        delete profileData.website;
+      }
       await db.update(companyProfiles).set(profileData).where(eq(companyProfiles.id, existing.id));
       updated++;
     } else {
-      await db.insert(companyProfiles).values({ ...profileData, slug });
+      await db.insert(companyProfiles).values({ ...profileData, slug, companyName });
       created++;
     }
   }
 
-  return { created, updated, total: allNames.size };
+  return { created, updated, total: companyMap.size };
 }
 
 export async function fetchCompanyProfile(slug: string) {
@@ -3045,7 +3084,10 @@ export async function fetchAllCompanyProfiles() {
     .limit(100);
 }
 
-export async function claimCompanyProfile(profileId: string) {
+export async function claimCompanyProfile(profileId: string, verification?: {
+  method: "email_domain" | "lcs_cert" | "manual";
+  lcsCertId?: string;
+}) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
@@ -3054,16 +3096,87 @@ export async function claimCompanyProfile(profileId: string) {
   if (!profile) throw new Error("Profile not found");
   if (profile.claimed) throw new Error("This company has already been claimed");
 
+  const [user] = await db.select({ email: users.email }).from(users)
+    .where(eq(users.id, session.user.id)).limit(1);
+
   let tenantId: string | null = null;
   try { const ctx = await getSessionTenant(); tenantId = ctx.tenantId; } catch {}
+
+  // Verification logic
+  let verified = false;
+  let verificationMethod: string | null = null;
+  let verificationNotes: string | null = null;
+
+  if (verification?.method === "email_domain") {
+    // Auto-verify if user's email domain matches the company's known email domain
+    const userDomain = user?.email?.split("@")[1]?.toLowerCase();
+    const companyEmails = profile.contactEmails ? JSON.parse(profile.contactEmails) as string[] : [];
+    const lcsEmail = profile.lcsEmail;
+    const allDomains = new Set<string>();
+    for (const e of companyEmails) { const d = e.split("@")[1]?.toLowerCase(); if (d) allDomains.add(d); }
+    if (lcsEmail) { const d = lcsEmail.split("@")[1]?.toLowerCase(); if (d) allDomains.add(d); }
+
+    if (userDomain && allDomains.has(userDomain)) {
+      verified = true;
+      verificationMethod = "email_domain";
+      verificationNotes = `Verified: ${user?.email} matches company domain`;
+    } else {
+      verificationMethod = "email_domain";
+      verificationNotes = `Pending: ${user?.email} does not match known domains (${[...allDomains].join(", ") || "none on file"})`;
+    }
+  } else if (verification?.method === "lcs_cert" && verification.lcsCertId) {
+    // Verify by LCS certificate ID match
+    if (profile.lcsCertId && profile.lcsCertId === verification.lcsCertId) {
+      verified = true;
+      verificationMethod = "lcs_cert";
+      verificationNotes = `Verified: LCS Certificate ${verification.lcsCertId} matches`;
+    } else {
+      // Check the register directly
+      const [regMatch] = await db.select().from(lcsRegister)
+        .where(eq(lcsRegister.certId, verification.lcsCertId)).limit(1);
+      if (regMatch && regMatch.legalName.toLowerCase() === profile.companyName.toLowerCase()) {
+        verified = true;
+        verificationMethod = "lcs_cert";
+        verificationNotes = `Verified: LCS Certificate ${verification.lcsCertId} matches ${regMatch.legalName}`;
+      } else {
+        verificationMethod = "lcs_cert";
+        verificationNotes = `Pending review: Certificate ${verification.lcsCertId} provided but doesn't match records`;
+      }
+    }
+  } else {
+    verificationMethod = "manual";
+    verificationNotes = "Pending manual verification by LCA Desk team";
+  }
 
   const [updated] = await db.update(companyProfiles).set({
     claimed: true,
     claimedBy: session.user.id,
     claimedAt: new Date(),
     tenantId,
+    verified,
+    verifiedAt: verified ? new Date() : null,
+    verificationMethod,
+    verificationNotes,
     updatedAt: new Date(),
   }).where(eq(companyProfiles.id, profileId)).returning();
 
   return updated;
+}
+
+export async function searchLcsRegister(query: string) {
+  if (!query || query.length < 2) return [];
+  const results = await db.select({
+    certId: lcsRegister.certId,
+    legalName: lcsRegister.legalName,
+    tradingName: lcsRegister.tradingName,
+    status: lcsRegister.status,
+    serviceCategories: lcsRegister.serviceCategories,
+  }).from(lcsRegister).limit(500);
+
+  const q = query.toLowerCase();
+  return results.filter(r =>
+    r.legalName.toLowerCase().includes(q) ||
+    r.tradingName?.toLowerCase().includes(q) ||
+    r.certId?.toLowerCase().includes(q)
+  ).slice(0, 20);
 }

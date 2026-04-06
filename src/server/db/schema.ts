@@ -491,9 +491,18 @@ export const companyProfiles = pgTable(
     tenantId: uuid("tenant_id").references(() => tenants.id), // linked to filing tenant once claimed
     verified: boolean("verified").default(false),
     verifiedAt: timestamp("verified_at"),
+    verificationMethod: text("verification_method"), // email_domain | lcs_cert | manual
+    verificationNotes: text("verification_notes"),
     // LCS register link
     lcsCertId: text("lcs_cert_id"),
     lcsRegistered: boolean("lcs_registered").default(false),
+    lcsStatus: text("lcs_status"), // Active | Expired
+    lcsExpirationDate: date("lcs_expiration_date"),
+    // Contact from LCS register
+    lcsEmail: text("lcs_email"),
+    lcsPhone: text("lcs_phone"),
+    lcsAddress: text("lcs_address"),
+    lcsServiceCategories: text("lcs_service_categories").array(),
     // Data sources
     dataSource: text("data_source").default("scraped"), // scraped | claimed | manual
     lastAggregatedAt: timestamp("last_aggregated_at"),

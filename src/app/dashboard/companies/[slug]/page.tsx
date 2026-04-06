@@ -6,6 +6,8 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import {
   ArrowLeft, Building2, Megaphone, Briefcase, Mail, Phone, User,
@@ -34,13 +36,23 @@ export default function CompanyProfilePage() {
 
   const isPro = plan === "pro" || plan === "enterprise";
 
+  const [claimMethod, setClaimMethod] = useState<"email_domain" | "lcs_cert" | "manual">("email_domain");
+  const [claimCertId, setClaimCertId] = useState("");
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
+
   const handleClaim = async () => {
     if (!data?.profile) return;
     setClaiming(true);
     try {
-      await claimCompanyProfile(data.profile.id);
-      setData((prev: typeof data) => prev ? { ...prev, profile: { ...prev.profile, claimed: true, claimedAt: new Date() } } : prev);
-      toast.success("Company claimed! You can now manage this profile.");
+      const verification = claimMethod === "lcs_cert"
+        ? { method: "lcs_cert" as const, lcsCertId: claimCertId }
+        : { method: claimMethod };
+      const result = await claimCompanyProfile(data.profile.id, verification);
+      setData((prev: typeof data) => prev ? { ...prev, profile: { ...prev.profile, ...result } } : prev);
+      setShowClaimDialog(false);
+      toast.success(result.verified
+        ? "Company claimed and verified!"
+        : "Company claimed! Verification is pending review.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to claim");
     }
@@ -112,9 +124,12 @@ export default function CompanyProfilePage() {
           </div>
 
           {!profile.claimed && (
-            <Button onClick={handleClaim} loading={claiming} className="gap-1.5 shrink-0">
+            <Button onClick={() => setShowClaimDialog(true)} className="gap-1.5 shrink-0">
               <Flag className="h-4 w-4" /> Claim This Business
             </Button>
+          )}
+          {profile.claimed && !profile.verified && (
+            <Badge variant="warning" className="gap-1"><Clock className="h-3 w-3" /> Verification Pending</Badge>
           )}
         </div>
 
@@ -243,6 +258,39 @@ export default function CompanyProfilePage() {
             </CardContent>
           </Card>
 
+          {/* LCS Registration */}
+          {profile.lcsRegistered && (
+            <Card className="border-success/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-text-muted uppercase tracking-wider">LCS Registration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                {profile.lcsCertId && (
+                  <div className="flex justify-between"><span className="text-text-muted">Certificate</span><span className="font-mono text-text-primary">{profile.lcsCertId}</span></div>
+                )}
+                {profile.lcsStatus && (
+                  <div className="flex justify-between"><span className="text-text-muted">Status</span><Badge variant={profile.lcsStatus === "Active" ? "success" : "danger"} className="text-[9px]">{profile.lcsStatus}</Badge></div>
+                )}
+                {profile.lcsExpirationDate && (
+                  <div className="flex justify-between"><span className="text-text-muted">Expires</span><span className="text-text-primary">{profile.lcsExpirationDate}</span></div>
+                )}
+                {profile.lcsAddress && (
+                  <div className="flex justify-between"><span className="text-text-muted">Address</span><span className="text-text-primary text-right max-w-[150px]">{profile.lcsAddress}</span></div>
+                )}
+                {profile.lcsServiceCategories?.length > 0 && (
+                  <div className="pt-2 border-t border-border-light">
+                    <p className="text-[10px] text-text-muted mb-1">Service Categories</p>
+                    <div className="flex flex-wrap gap-1">
+                      {profile.lcsServiceCategories.map((c: string) => (
+                        <Badge key={c} variant="default" className="text-[9px]">{c}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Claim CTA */}
           {!profile.claimed && (
             <Card className="border-accent/20 bg-accent-light">
@@ -253,7 +301,7 @@ export default function CompanyProfilePage() {
                   Claim this profile to manage your company&apos;s presence on LCA Desk.
                   Update your info, respond to applicants, and manage your Local Content filings.
                 </p>
-                <Button onClick={handleClaim} loading={claiming} size="sm" className="w-full gap-1.5">
+                <Button onClick={() => setShowClaimDialog(true)} size="sm" className="w-full gap-1.5">
                   <Flag className="h-4 w-4" /> Claim This Business
                 </Button>
               </CardContent>
@@ -343,6 +391,73 @@ export default function CompanyProfilePage() {
           </Card>
         )}
       </div>
+
+      {/* Claim verification dialog */}
+      <Dialog open={showClaimDialog} onOpenChange={setShowClaimDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-accent" />
+              Claim {profile.companyName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-text-secondary">
+              Verify your connection to this company to claim the profile.
+            </p>
+
+            {/* Verification method selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-primary">Verification Method</label>
+              {[
+                { value: "email_domain" as const, label: "Email Domain Match", desc: "We'll check if your email matches the company's known domains" },
+                { value: "lcs_cert" as const, label: "LCS Certificate ID", desc: "Enter your company's LCS certificate number" },
+                { value: "manual" as const, label: "Manual Review", desc: "Our team will verify your claim within 24-48 hours" },
+              ].map((opt) => (
+                <label key={opt.value} className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                  claimMethod === opt.value ? "border-accent bg-accent-light" : "border-border hover:border-accent/30"
+                )}>
+                  <input
+                    type="radio" name="claimMethod"
+                    checked={claimMethod === opt.value}
+                    onChange={() => setClaimMethod(opt.value)}
+                    className="mt-1 accent-accent"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{opt.label}</p>
+                    <p className="text-xs text-text-muted">{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {claimMethod === "lcs_cert" && (
+              <div>
+                <label className="text-sm font-medium text-text-primary">LCS Certificate ID</label>
+                <Input
+                  value={claimCertId}
+                  onChange={(e) => setClaimCertId(e.target.value)}
+                  placeholder="e.g. LCSR-001234"
+                  className="mt-1"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowClaimDialog(false)}>Cancel</Button>
+              <Button
+                onClick={handleClaim}
+                loading={claiming}
+                disabled={claimMethod === "lcs_cert" && !claimCertId.trim()}
+              >
+                <Flag className="h-4 w-4 mr-2" />
+                {claimMethod === "manual" ? "Submit Claim" : "Verify & Claim"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
