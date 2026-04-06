@@ -51,7 +51,24 @@ export async function POST(req: NextRequest) {
   const cors = corsHeaders(origin);
 
   try {
-    const body = await req.json();
+    const raw = await req.json();
+    // Normalize snake_case keys from marketing site to camelCase
+    const body = {
+      ...raw,
+      companyName: raw.companyName ?? raw.company_name,
+      accountType: raw.accountType ?? raw.account_type,
+      currentJobTitle: raw.currentJobTitle ?? raw.current_job_title,
+      employmentCategory: raw.employmentCategory ?? raw.employment_category,
+      locationPreference: raw.locationPreference ?? raw.location_preference,
+      isGuyanese: raw.isGuyanese ?? raw.is_guyanese,
+      alertsEnabled: raw.alertsEnabled ?? raw.alerts_enabled,
+      lcsCertId: raw.lcsCertId ?? raw.lcs_cert_id,
+      lcsVerified: raw.lcsVerified ?? raw.lcs_verified,
+      lcsStatus: raw.lcsStatus ?? raw.lcs_status,
+      lcsExpirationDate: raw.lcsExpirationDate ?? raw.lcs_expiration_date,
+      lcsLegalName: raw.lcsLegalName ?? raw.lcs_legal_name,
+      serviceCategories: raw.serviceCategories ?? raw.service_categories,
+    };
     const parsed = registerSchema.safeParse(body);
 
     if (!parsed.success) {
