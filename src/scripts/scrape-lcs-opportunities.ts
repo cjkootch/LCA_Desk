@@ -366,6 +366,41 @@ interface ScrapedNotice {
   sourceSlug: string;
 }
 
+// ─── COMPANY NAME EXTRACTION ──────────────────────────────────────
+// Match company names from notice titles, slugs, and content
+const COMPANY_PATTERNS: [RegExp, string, string][] = [
+  [/halliburton/i, "Halliburton Guyana Inc.", "halliburton_guyana"],
+  [/GDO[\s-]SCM|guyana deepwater|GDO-/i, "Guyana Deepwater Operations Inc.", "sbm_offshore"],
+  [/GYSBI|guyana shore base|GSB\d/i, "Guyana Shore Base Inc. (GYSBI)", "gysbi"],
+  [/G[\s-]?BOATS|g-boats/i, "G-Boats Inc.", "g_boats"],
+  [/STENA|stena[\s-]?gu/i, "Stena Drilling Ltd", "stena_drilling"],
+  [/exxon|EMGL|esso/i, "ExxonMobil Guyana Limited", "exxonmobil_guyana"],
+  [/baker[\s-]?hughes/i, "Baker Hughes Guyana", "baker_hughes_guyana"],
+  [/schlumberger|SLB[\s-]/i, "SLB Guyana (Schlumberger)", "slb_guyana"],
+  [/technip|FMC/i, "TechnipFMC Guyana", "technipfmc_guyana"],
+  [/saipem/i, "Saipem Guyana Inc.", "saipem_guyana"],
+  [/MODEC/i, "MODEC Guyana Inc.", "modec_guyana"],
+  [/weatherford/i, "Weatherford Guyana", "weatherford_guyana"],
+  [/tenaris/i, "Tenaris Guyana", "tenaris_guyana"],
+  [/seacor/i, "Seacor Marine LLC", "seacor_marine"],
+  [/international[\s-]?sos/i, "International SOS Incorporated", "international_sos"],
+  [/leader[\s-]?eng/i, "Leader Engineering Guyana Incorporated", "leader_engineering"],
+  [/cataleya/i, "Cataleya Energy Limited", "cataleya_energy"],
+  [/total[\s-]?energies/i, "TotalEnergies Guyana", "totalenergies_guyana"],
+  [/new[\s-]?fortress/i, "New Fortress Energy Guyana", "new_fortress_energy"],
+  [/hess[\s-]?guyana/i, "Hess Guyana Exploration Ltd", "hess_guyana"],
+  [/CNOOC/i, "CNOOC Petroleum Guyana Limited", "cnooc_guyana"],
+  [/SES[\s-]guyana|sustainable[\s-]?env/i, "Sustainable Environmental Solutions", "ses_guyana"],
+  [/vanuatu/i, "Guyana Deepwater Operations Inc.", "sbm_offshore"],
+];
+
+function matchContractor(text: string): { name: string; slug: string } | null {
+  for (const [pattern, name, slug] of COMPANY_PATTERNS) {
+    if (pattern.test(text)) return { name, slug };
+  }
+  return null;
+}
+
 function normalizeDate(raw: string | null): string | null {
   if (!raw) return null;
   // DD-MM-YYYY or DD/MM/YYYY → YYYY-MM-DD
@@ -393,14 +428,25 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const title = titleMatch?.[1]?.replace(/\s*[–|]\s*Local Content Register.*$/i, "").trim();
   if (!title || title.length < 4) return null;
 
-  const contractorMatch =
-    html.match(/class="[^"]*author[^"]*"[^>]*>([^<]{3,80})</i) ||
-    html.match(/Posted by[:\s]*<[^>]+>([^<]{3,80})</i) ||
-    html.match(/class="[^"]*entry-author[^"]*"[^>]*>\s*<[^>]+>([^<]{3,80})</i);
-  const contractorName = contractorMatch?.[1]?.trim() || "Unknown";
+  // Try pattern matching on title + slug + HTML content
+  const searchText = `${title} ${slug} ${html.slice(0, 3000)}`;
+  const matched = matchContractor(searchText);
 
-  const slugMatch = html.match(/\/identity\/([^/"']+)\/?/);
-  const contractorSlug = slugMatch?.[1] || null;
+  // Fallback: try HTML author/posted-by patterns
+  let contractorName = matched?.name || "Unknown";
+  let contractorSlug = matched?.slug || null;
+
+  if (contractorName === "Unknown") {
+    const authorMatch =
+      html.match(/class="[^"]*author[^"]*"[^>]*>([^<]{3,80})</i) ||
+      html.match(/Posted by[:\s]*<[^>]+>([^<]{3,80})</i) ||
+      html.match(/\/identity\/([^/"']+)\/?/);
+    if (authorMatch?.[1] && authorMatch[1].length > 3) {
+      contractorName = authorMatch[1].trim();
+      const slugFromIdentity = html.match(/\/identity\/([^/"']+)\/?/);
+      contractorSlug = slugFromIdentity?.[1] || null;
+    }
+  }
 
   let noticeType: string | null = null;
   if (/EOI|Expression of Interest/i.test(html)) noticeType = "EOI";
