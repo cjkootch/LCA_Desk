@@ -1,5 +1,4 @@
 // Map contractor names to their website domains for logo fetching
-// Uses Clearbit Logo API: https://logo.clearbit.com/{domain}
 
 const COMPANY_DOMAINS: Record<string, string> = {
   "ExxonMobil Guyana Limited": "exxonmobil.com",
@@ -10,7 +9,7 @@ const COMPANY_DOMAINS: Record<string, string> = {
   "Baker Hughes Guyana": "bakerhughes.com",
   "TechnipFMC Guyana": "technipfmc.com",
   "Saipem Guyana Inc.": "saipem.com",
-  "Guyana Shore Base Inc. (GYSBI)": "gaborone.com", // no direct domain, fallback
+  "Guyana Shore Base Inc. (GYSBI)": "guyshorebase.com",
   "Guyana Deepwater Operations Inc.": "sbmoffshore.com",
   "MODEC Guyana Inc.": "modec.com",
   "Stena Drilling Ltd": "stenadrilling.com",
@@ -35,7 +34,7 @@ const COMPANY_DOMAINS: Record<string, string> = {
   "Baker Hughes": "bakerhughes.com",
   "TechnipFMC": "technipfmc.com",
   "Saipem": "saipem.com",
-  "GYSBI": "gaborone.com",
+  "GYSBI": "guyshorebase.com",
   "MODEC": "modec.com",
   "Stena Drilling": "stenadrilling.com",
   "Weatherford": "weatherford.com",
@@ -51,15 +50,28 @@ const COMPANY_DOMAINS: Record<string, string> = {
   "Newpark Resources": "newpark.com",
   "CGX Energy": "cgxenergy.com",
   "Repsol": "repsol.com",
+  "Expro": "expro.com",
+  "Worley": "worley.com",
+  "McDermott": "mcdermott.com",
+  "Subsea 7": "subsea7.com",
+  "Borr Drilling": "borrdrilling.com",
+  "Valaris": "valaris.com",
+  "Tidewater": "tdw.com",
+  "Bristow Group": "bristowgroup.com",
+  "PHX Energy": "phxenergy.com",
+  "Fugro": "fugro.com",
+  "Wood": "woodplc.com",
+  "Dril-Quip": "dril-quip.com",
+  "National Oilwell Varco": "nov.com",
+  "NOV": "nov.com",
+  "Oceaneering": "oceaneering.com",
 };
 
 export function getCompanyLogoUrl(companyName: string, size: number = 64): string | null {
   const domain = getCompanyDomain(companyName);
   if (!domain) return null;
-  // Use Google's favicon service (reliable, free, no auth needed)
-  // sz parameter controls size: 16, 32, 64, 128, 256
-  const sz = size <= 32 ? 32 : size <= 64 ? 64 : 128;
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=${sz}`;
+  // Use favicon.im — returns high-res favicons/touch-icons reliably
+  return `https://favicon.im/${domain}?larger=true`;
 }
 
 export function getCompanyDomain(companyName: string): string | null {

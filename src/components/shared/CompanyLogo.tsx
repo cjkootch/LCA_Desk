@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Factory } from "lucide-react";
-import { getCompanyLogoUrl } from "@/lib/company-logos";
+import { getCompanyDomain } from "@/lib/company-logos";
 
 interface CompanyLogoProps {
   companyName: string;
@@ -10,13 +10,24 @@ interface CompanyLogoProps {
   className?: string;
 }
 
+// Try multiple favicon services in order
+function getLogoUrls(domain: string): string[] {
+  return [
+    `https://img.logo.dev/${domain}?token=pk_anonymous&size=64`,
+    `https://favicon.im/${domain}?larger=true`,
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ];
+}
+
 export function CompanyLogo({ companyName, size = 32, className }: CompanyLogoProps) {
-  const [failed, setFailed] = useState(false);
-  const logoUrl = getCompanyLogoUrl(companyName, size * 2);
+  const [srcIndex, setSrcIndex] = useState(0);
+  const [allFailed, setAllFailed] = useState(false);
 
-  if (!logoUrl || failed) {
-    const isUnknown = companyName === "Unknown" || !companyName;
+  const domain = getCompanyDomain(companyName);
+  const urls = domain ? getLogoUrls(domain) : [];
+  const isUnknown = companyName === "Unknown" || !companyName;
 
+  if (!domain || allFailed || isUnknown) {
     if (isUnknown) {
       return (
         <div
@@ -28,7 +39,7 @@ export function CompanyLogo({ companyName, size = 32, className }: CompanyLogoPr
       );
     }
 
-    // Known company but no domain match — show colored initial
+    // Known company but no domain / all sources failed — colored initial
     const colors = ["#047857", "#2563EB", "#D97706", "#7C3AED", "#0891B2", "#4F46E5", "#059669", "#0D9488"];
     const hash = companyName.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
     const bg = colors[hash % colors.length];
@@ -48,13 +59,19 @@ export function CompanyLogo({ companyName, size = 32, className }: CompanyLogoPr
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
-      src={logoUrl}
+      src={urls[srcIndex]}
       alt={companyName}
       width={size}
       height={size}
       className={`rounded-md border border-border-light bg-white object-contain shrink-0 ${className || ""}`}
       style={{ width: size, height: size }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (srcIndex < urls.length - 1) {
+          setSrcIndex(srcIndex + 1);
+        } else {
+          setAllFailed(true);
+        }
+      }}
     />
   );
 }
