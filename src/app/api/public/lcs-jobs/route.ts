@@ -57,9 +57,14 @@ export async function GET() {
       } catch {}
     }
 
+    // Use AI-extracted company name when DB has "Unknown"
+    const companyName = j.companyName === "Unknown" && aiData
+      ? (aiData as Record<string, unknown>).company_name as string || j.companyName
+      : j.companyName;
+
     return {
       id: j.id,
-      companyName: j.companyName,
+      companyName,
       jobTitle: j.jobTitle,
       employmentCategory: j.employmentCategory,
       noticeType: j.noticeType,
