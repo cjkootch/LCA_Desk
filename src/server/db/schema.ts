@@ -444,6 +444,7 @@ export const lcsRegister = pgTable(
     website: text("website"),
     phone: text("phone"),
     serviceCategories: text("service_categories").array(),
+    country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     scrapeError: text("scrape_error"),
     createdAt: timestamp("created_at").defaultNow(),
@@ -496,6 +497,7 @@ export const companyProfiles = pgTable(
     // Data sources
     dataSource: text("data_source").default("scraped"), // scraped | claimed | manual
     lastAggregatedAt: timestamp("last_aggregated_at"),
+    country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -521,6 +523,7 @@ export const lcsContractors = pgTable(
     procurementCategories: text("procurement_categories").array(),
     sampleNotices: text("sample_notices").array(),
     outreachStatus: text("outreach_status").default("not_contacted"),
+    country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     scrapeError: text("scrape_error"),
     createdAt: timestamp("created_at").defaultNow(),
@@ -554,6 +557,7 @@ export const lcsOpportunities = pgTable(
     attachmentContent: text("attachment_content"), // extracted PDF text (legacy)
     aiSummary: text("ai_summary"), // JSON structured summary from Claude
     status: text("status").default("active"),
+    country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -588,6 +592,7 @@ export const lcsEmploymentNotices = pgTable(
     pageContent: text("page_content"), // full page text for AI
     aiSummary: text("ai_summary"), // JSON structured summary
     status: text("status").default("open"), // open | closed
+    country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -638,6 +643,7 @@ export const jobPostings = pgTable(
     guyaneseFirstStatement: text("guyanese_first_statement"),
     guyaneseHired: boolean("guyanese_hired"),
     filledAt: timestamp("filled_at"),
+    country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -667,6 +673,7 @@ export const jobApplications = pgTable(
     reviewNotes: text("review_notes"),
     employeeRecordId: uuid("employee_record_id").references(() => employees.id, { onDelete: "set null" }),
     hiredAt: timestamp("hired_at"),
+    country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -694,6 +701,7 @@ export const jobSeekerProfiles = pgTable(
     locationPreference: text("location_preference").default("Any"),
     contractTypePreference: text("contract_type_preference"),
     alertsEnabled: boolean("alerts_enabled").default(true),
+    country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -722,6 +730,7 @@ export const supplierProfiles = pgTable(
     tier: text("tier").default("free"),
     featuredUntil: timestamp("featured_until"),
     profileVisible: boolean("profile_visible").default(true),
+    country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
