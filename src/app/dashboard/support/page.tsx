@@ -59,7 +59,7 @@ export default function SupportPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
   const [priority, setPriority] = useState("normal");
-  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -76,17 +76,16 @@ export default function SupportPage() {
     }
     setCreating(true);
     try {
-      const screenshots = screenshotUrl.trim() ? [screenshotUrl.trim()] : [];
       const ticket = await createSupportTicket({
         subject, description, category, priority,
-        screenshotUrls: screenshots.length > 0 ? screenshots : undefined,
+        screenshotUrls: screenshotPreviews.length > 0 ? screenshotPreviews : undefined,
         pageUrl: window.location.href,
       });
       setTickets(prev => [ticket, ...prev]);
       toast.success("Support ticket created! We'll get back to you soon.");
       setCreateOpen(false);
       setSubject(""); setDescription(""); setCategory("general");
-      setPriority("normal"); setScreenshotUrl("");
+      setPriority("normal"); setScreenshotPreviews([]);
     } catch {
       toast.error("Failed to create ticket");
     }
@@ -334,16 +333,55 @@ export default function SupportPage() {
               <div>
                 <label className="text-sm font-medium text-text-primary flex items-center gap-2">
                   <ImagePlus className="h-4 w-4 text-text-muted" />
-                  Screenshot URL (optional)
+                  Screenshots (optional)
                 </label>
-                <Input
-                  value={screenshotUrl}
-                  onChange={(e) => setScreenshotUrl(e.target.value)}
-                  placeholder="Paste a link to a screenshot (e.g. from imgur, snipboard)"
+                <div
+                  className="mt-1 border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-accent/40 transition-colors"
+                  onClick={() => document.getElementById("screenshot-upload")?.click()}
+                >
+                  <ImagePlus className="h-6 w-6 text-text-muted mx-auto mb-1" />
+                  <p className="text-xs text-text-muted">Click to upload or drag & drop</p>
+                  <p className="text-[10px] text-text-muted">PNG, JPG up to 5MB each</p>
+                </div>
+                <input
+                  id="screenshot-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (!files) return;
+                    Array.from(files).forEach(file => {
+                      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} is too large (max 5MB)`); return; }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          setScreenshotPreviews(prev => [...prev, reader.result as string]);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    e.target.value = "";
+                  }}
                 />
-                <p className="text-[11px] text-text-muted mt-1">
-                  Take a screenshot, upload to any image host, and paste the URL here.
-                </p>
+                {screenshotPreviews.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {screenshotPreviews.map((src, i) => (
+                      <div key={i} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`Screenshot ${i + 1}`} className="h-16 w-auto rounded-lg border border-border object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setScreenshotPreviews(prev => prev.filter((_, j) => j !== i))}
+                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-danger text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
