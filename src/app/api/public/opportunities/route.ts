@@ -33,14 +33,27 @@ export async function GET() {
         deadline: lcsOpportunities.deadline,
         sourceUrl: lcsOpportunities.sourceUrl,
         status: lcsOpportunities.status,
+        aiSummary: lcsOpportunities.aiSummary,
       })
       .from(lcsOpportunities)
       .orderBy(lcsOpportunities.postedDate),
   ]);
 
+  // Extract teaser from AI summary for public consumption
+  const noticesWithTeaser = notices.map(n => {
+    let aiTeaser: string | null = null;
+    if (n.aiSummary) {
+      try {
+        const parsed = JSON.parse(n.aiSummary);
+        aiTeaser = parsed.scope_of_work || null;
+      } catch {}
+    }
+    return { ...n, aiSummary: undefined, aiTeaser };
+  });
+
   return NextResponse.json({
     contractors,
-    notices,
+    notices: noticesWithTeaser,
     summary: {
       totalContractors: contractors.length,
       totalNotices: notices.length,
