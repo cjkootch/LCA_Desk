@@ -28,6 +28,8 @@ import {
   jurisdictions,
   users,
   auditLogs,
+  supportTickets,
+  ticketReplies,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import {
@@ -2542,4 +2544,113 @@ export async function fetchContractorProfile(contractorName: string) {
     latestNotice: notices[0]?.postedDate,
     notices: notices.slice(0, 20), // Latest 20
   };
+}
+
+// ─── SUPPORT TICKETS ─────────────────────────────────────────────
+
+export async function createSupportTicket(data: {
+  subject: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  screenshotUrls?: string[];
+  pageUrl?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  let tenantId: string | null = null;
+  try { const ctx = await getSessionTenant(); tenantId = ctx.tenantId; } catch {}
+
+  const [ticket] = await db
+    .insert(supportTickets)
+    .values({
+      userId: session.user.id,
+      tenantId,
+      subject: data.subject,
+      description: data.description,
+      category: data.category || "general",
+      priority: data.priority || "normal",
+      screenshotUrls: data.screenshotUrls?.length ? JSON.stringify(data.screenshotUrls) : null,
+      pageUrl: data.pageUrl || null,
+    })
+    .returning();
+
+  return ticket;
+}
+
+export async function fetchMyTickets() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return db
+    .select()
+    .from(supportTickets)
+    .where(eq(supportTickets.userId, session.user.id))
+    .orderBy(desc(supportTickets.createdAt))
+    .limit(50);
+}
+
+export async function fetchTicketWithReplies(ticketId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [ticket] = await db
+    .select()
+    .from(supportTickets)
+    .where(and(eq(supportTickets.id, ticketId), eq(supportTickets.userId, session.user.id)))
+    .limit(1);
+
+  if (!ticket) return null;
+
+  const replies = await db
+    .select({
+      id: ticketReplies.id,
+      message: ticketReplies.message,
+      isAdmin: ticketReplies.isAdmin,
+      createdAt: ticketReplies.createdAt,
+      userName: users.name,
+    })
+    .from(ticketReplies)
+    .innerJoin(users, eq(ticketReplies.userId, users.id))
+    .where(eq(ticketReplies.ticketId, ticketId))
+    .orderBy(ticketReplies.createdAt);
+
+  return { ticket, replies };
+}
+
+export async function addTicketReply(ticketId: string, message: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Verify ticket belongs to user (or user is admin)
+  const [ticket] = await db
+    .select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  if (!ticket) throw new Error("Ticket not found");
+
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  const isAdmin = !!user?.isSuperAdmin;
+
+  if (ticket.userId !== session.user.id && !isAdmin) throw new Error("Not authorized");
+
+  const [reply] = await db
+    .insert(ticketReplies)
+    .values({
+      ticketId,
+      userId: session.user.id,
+      message,
+      isAdmin,
+    })
+    .returning();
+
+  // Reopen ticket if user replies to a resolved ticket
+  if (ticket.status === "resolved" || ticket.status === "closed") {
+    await db.update(supportTickets).set({ status: "open", updatedAt: new Date() }).where(eq(supportTickets.id, ticketId));
+  }
+
+  return reply;
 }

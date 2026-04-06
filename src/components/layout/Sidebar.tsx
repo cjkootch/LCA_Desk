@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2, X, Briefcase, Megaphone } from "lucide-react";
+import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2, X, Briefcase, Megaphone, LifeBuoy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserContext } from "@/server/actions";
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: "Opportunities", href: "/dashboard/opportunities", icon: Megaphone },
   { label: "LCA Expert", href: "/dashboard/expert", icon: Sparkles },
   { label: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
