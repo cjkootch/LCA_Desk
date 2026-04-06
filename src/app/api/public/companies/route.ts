@@ -21,7 +21,7 @@ export async function GET() {
   })
     .from(companyProfiles)
     .orderBy(desc(companyProfiles.totalOpportunities))
-    .limit(100);
+    .limit(1000);
 
   return NextResponse.json({
     companies: profiles,

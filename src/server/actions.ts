@@ -2917,7 +2917,7 @@ export async function aggregateCompanyProfiles() {
   // Get all unique companies from ALL data sources
   const opps = await db.select({ name: lcsOpportunities.contractorName }).from(lcsOpportunities).limit(500);
   const jobs = await db.select({ name: lcsEmploymentNotices.companyName }).from(lcsEmploymentNotices).limit(500);
-  const register = await db.select().from(lcsRegister).limit(1000);
+  const register = await db.select().from(lcsRegister).limit(2000);
 
   // Build unified company map: name → LCS register data (if any)
   const companyMap = new Map<string, typeof register[number] | null>();
@@ -3081,7 +3081,7 @@ export async function fetchCompanyProfile(slug: string) {
 export async function fetchAllCompanyProfiles() {
   return db.select().from(companyProfiles)
     .orderBy(desc(companyProfiles.totalOpportunities))
-    .limit(100);
+    .limit(1000);
 }
 
 export async function claimCompanyProfile(profileId: string, verification?: {
