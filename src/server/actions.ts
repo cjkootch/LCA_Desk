@@ -236,7 +236,7 @@ export async function addPeriod(data: {
     .values({
       entityId: data.entity_id,
       tenantId,
-      jurisdictionId: data.jurisdiction_id || null,
+      jurisdictionId: data.jurisdiction_id,
       reportType: data.report_type,
       periodStart: data.period_start,
       periodEnd: data.period_end,
@@ -297,6 +297,7 @@ export async function updatePeriodStatus(periodId: string, newStatus: string) {
 export async function attestAndSubmit(periodId: string, attestationText: string) {
   const { tenantId, userId } = await getSessionTenant();
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new Error("User not found");
 
   const [current] = await db
     .select()
@@ -305,15 +306,27 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     .limit(1);
   if (!current) throw new Error("Period not found");
 
+  // Bug #5 fix: prevent double-submission race condition
+  if (current.status === "submitted" || current.lockedAt) {
+    throw new Error("This period has already been submitted.");
+  }
+
   // Create data snapshot at time of submission
-  const expenditures = await db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, periodId));
-  const employment = await db.select().from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, periodId));
-  const capacity = await db.select().from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.reportingPeriodId, periodId));
-  const narratives = await db.select().from(narrativeDrafts).where(eq(narrativeDrafts.reportingPeriodId, periodId));
+  let expenditures, employment, capacity, narratives;
+  try {
+    [expenditures, employment, capacity, narratives] = await Promise.all([
+      db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, periodId)),
+      db.select().from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, periodId)),
+      db.select().from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.reportingPeriodId, periodId)),
+      db.select().from(narrativeDrafts).where(eq(narrativeDrafts.reportingPeriodId, periodId)),
+    ]);
+  } catch (err) {
+    throw new Error("Failed to create data snapshot. Submission aborted — no data was changed.");
+  }
 
   const snapshot = JSON.stringify({
     submittedAt: new Date().toISOString(),
-    submittedBy: { id: userId, name: user?.name },
+    submittedBy: { id: userId, name: user.name },
     attestation: attestationText,
     recordCounts: {
       expenditures: expenditures.length,
@@ -419,8 +432,17 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
         }
       }
     }
-  } catch {
-    // Non-critical — don't fail the submission
+  } catch (nextPeriodErr) {
+    console.error("Failed to auto-create next period:", nextPeriodErr);
+    // Log to audit trail so admins can see it failed
+    try {
+      await logAudit({
+        tenantId, userId, userName: user.name || undefined,
+        action: "create", entityType: "reporting_period", entityId: periodId,
+        reportingPeriodId: periodId,
+        newValue: "Auto-creation of next period failed — manual creation required",
+      });
+    } catch {}
   }
 
   return updated;

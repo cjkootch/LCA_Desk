@@ -112,6 +112,13 @@ export async function POST(req: NextRequest) {
         .where(eq(jurisdictions.code, "GY"))
         .limit(1);
 
+      if (!guyana) {
+        return NextResponse.json(
+          { error: "System configuration error — jurisdiction not found. Please contact support." },
+          { status: 500, headers: cors }
+        );
+      }
+
       const slug = (companyName || name)
         .toLowerCase()
         .replace(/[^\w\s-]/g, "")
