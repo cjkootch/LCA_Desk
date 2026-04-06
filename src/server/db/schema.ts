@@ -707,7 +707,19 @@ export const jobSeekerProfiles = pgTable(
     employmentClassification: text("employment_classification"),
     yearsExperience: integer("years_experience"),
     isGuyanese: boolean("is_guyanese").default(true),
+    guyaneseStatus: text("guyanese_status"), // citizen | permanent_resident | work_permit | non_resident
     nationality: text("nationality").default("Guyanese"),
+    nationalIdNumber: text("national_id_number"), // for employer verification (not scanned)
+    // LCA compliance fields
+    iscoCode: text("isco_code"), // ISCO-08 classification code
+    educationLevel: text("education_level"), // secondary | diploma | bachelors | masters | doctorate | trade_cert
+    educationField: text("education_field"), // e.g. "Mechanical Engineering"
+    certifications: text("certifications").array(), // NEBOSH, BOSIET, HUET, H2S, etc.
+    workPermitStatus: text("work_permit_status"), // valid | expired | not_required | pending
+    lcsCertId: text("lcs_cert_id"), // if seeker is also a registered supplier
+    // Attestation
+    lcaAttestationDate: timestamp("lca_attestation_date"), // when they attested their status
+    lcaAttestationText: text("lca_attestation_text"), // stored attestation
     cvUrl: text("cv_url"),
     skills: text("skills").array(),
     locationPreference: text("location_preference").default("Any"),

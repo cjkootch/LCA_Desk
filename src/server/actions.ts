@@ -2140,7 +2140,15 @@ export async function updateMyProfile(data: {
   employmentClassification?: string;
   yearsExperience?: number;
   isGuyanese?: boolean;
+  guyaneseStatus?: string;
   nationality?: string;
+  nationalIdNumber?: string;
+  iscoCode?: string;
+  educationLevel?: string;
+  educationField?: string;
+  certifications?: string[];
+  workPermitStatus?: string;
+  lcaAttestation?: boolean;
   cvUrl?: string;
   skills?: string[];
   locationPreference?: string;
@@ -2155,22 +2163,37 @@ export async function updateMyProfile(data: {
     await db.update(users).set({ name: data.name, updatedAt: new Date() }).where(eq(users.id, session.user.id));
   }
 
-  const [updated] = await db
-    .update(jobSeekerProfiles)
-    .set({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: Record<string, any> = {
       currentJobTitle: data.currentJobTitle ?? undefined,
       employmentCategory: data.employmentCategory ?? undefined,
       employmentClassification: data.employmentClassification ?? undefined,
       yearsExperience: data.yearsExperience ?? undefined,
       isGuyanese: data.isGuyanese ?? undefined,
+      guyaneseStatus: data.guyaneseStatus ?? undefined,
       nationality: data.nationality ?? undefined,
+      nationalIdNumber: data.nationalIdNumber ?? undefined,
+      iscoCode: data.iscoCode ?? undefined,
+      educationLevel: data.educationLevel ?? undefined,
+      educationField: data.educationField ?? undefined,
+      certifications: data.certifications ?? undefined,
+      workPermitStatus: data.workPermitStatus ?? undefined,
       cvUrl: data.cvUrl ?? undefined,
       skills: data.skills ?? undefined,
       locationPreference: data.locationPreference ?? undefined,
       contractTypePreference: data.contractTypePreference ?? undefined,
-      alertsEnabled: data.alertsEnabled ?? undefined,
       updatedAt: new Date(),
-    })
+  };
+
+  // Handle attestation
+  if (data.lcaAttestation) {
+    updates.lcaAttestationDate = new Date();
+    updates.lcaAttestationText = "I certify that the information provided regarding my nationality, residency status, and qualifications is true and accurate. I understand this information may be used for Local Content Act compliance reporting.";
+  }
+
+  const [updated] = await db
+    .update(jobSeekerProfiles)
+    .set(updates)
     .where(eq(jobSeekerProfiles.userId, session.user.id))
     .returning();
 

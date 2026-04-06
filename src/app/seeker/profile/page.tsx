@@ -32,7 +32,16 @@ export default function SeekerProfilePage() {
   const [classification, setClassification] = useState("");
   const [yearsExp, setYearsExp] = useState("");
   const [isGuyanese, setIsGuyanese] = useState(true);
+  const [guyaneseStatus, setGuyaneseStatus] = useState("");
   const [nationality, setNationality] = useState("Guyanese");
+  const [nationalIdNumber, setNationalIdNumber] = useState("");
+  const [iscoCode, setIscoCode] = useState("");
+  const [educationLevel, setEducationLevel] = useState("");
+  const [educationField, setEducationField] = useState("");
+  const [certifications, setCertifications] = useState<string[]>([]);
+  const [newCert, setNewCert] = useState("");
+  const [workPermitStatus, setWorkPermitStatus] = useState("");
+  const [lcaAttested, setLcaAttested] = useState(false);
   const [location, setLocation] = useState("Any");
   const [contractPref, setContractPref] = useState("Any");
   const [skills, setSkills] = useState<string[]>([]);
@@ -50,7 +59,15 @@ export default function SeekerProfilePage() {
           setClassification(p.employmentClassification || "");
           setYearsExp(p.yearsExperience?.toString() || "");
           setIsGuyanese(p.isGuyanese ?? true);
+          setGuyaneseStatus(p.guyaneseStatus || "");
           setNationality(p.nationality || "Guyanese");
+          setNationalIdNumber(p.nationalIdNumber || "");
+          setIscoCode(p.iscoCode || "");
+          setEducationLevel(p.educationLevel || "");
+          setEducationField(p.educationField || "");
+          setCertifications(p.certifications || []);
+          setWorkPermitStatus(p.workPermitStatus || "");
+          setLcaAttested(!!p.lcaAttestationDate);
           setLocation(p.locationPreference || "Any");
           setContractPref(p.contractTypePreference || "Any");
           setSkills(p.skills || []);
@@ -83,7 +100,15 @@ export default function SeekerProfilePage() {
         employmentClassification: classification || undefined,
         yearsExperience: yearsExp ? parseInt(yearsExp) : undefined,
         isGuyanese,
+        guyaneseStatus: guyaneseStatus || undefined,
         nationality,
+        nationalIdNumber: nationalIdNumber || undefined,
+        iscoCode: iscoCode || undefined,
+        educationLevel: educationLevel || undefined,
+        educationField: educationField || undefined,
+        certifications: certifications.length > 0 ? certifications : undefined,
+        workPermitStatus: workPermitStatus || undefined,
+        lcaAttestation: lcaAttested ? true : undefined,
         locationPreference: location,
         contractTypePreference: contractPref,
         skills,
@@ -102,7 +127,9 @@ export default function SeekerProfilePage() {
     { label: "Employment category", done: !!category },
     { label: "Skills", done: skills.length > 0 },
     { label: "Experience", done: !!yearsExp },
-    { label: "Location preference", done: !!location && location !== "Any" },
+    { label: "Guyanese status", done: !!guyaneseStatus },
+    { label: "Education", done: !!educationLevel },
+    { label: "LCA attestation", done: lcaAttested },
   ];
   const completionPct = Math.round((completionItems.filter((i) => i.done).length / completionItems.length) * 100);
 
@@ -320,6 +347,149 @@ export default function SeekerProfilePage() {
             </CardContent>
           </Card>
 
+          {/* LCA Compliance */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-accent" />
+                <CardTitle className="text-sm">LCA Compliance Info</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-xs text-text-muted">Guyanese Status</label>
+                {editing ? (
+                  <select
+                    value={guyaneseStatus}
+                    onChange={(e) => {
+                      setGuyaneseStatus(e.target.value);
+                      setIsGuyanese(e.target.value === "citizen" || e.target.value === "permanent_resident");
+                    }}
+                    className="mt-1 w-full rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary"
+                  >
+                    <option value="">Select status</option>
+                    <option value="citizen">Guyanese Citizen</option>
+                    <option value="permanent_resident">Permanent Resident of Guyana</option>
+                    <option value="work_permit">Work Permit Holder</option>
+                    <option value="non_resident">Non-Resident</option>
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium text-text-primary mt-0.5">
+                    {guyaneseStatus === "citizen" ? "Guyanese Citizen" :
+                     guyaneseStatus === "permanent_resident" ? "Permanent Resident" :
+                     guyaneseStatus === "work_permit" ? "Work Permit Holder" :
+                     guyaneseStatus === "non_resident" ? "Non-Resident" : "—"}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">National ID Number (optional)</label>
+                {editing ? (
+                  <Input value={nationalIdNumber} onChange={(e) => setNationalIdNumber(e.target.value)} className="mt-1" placeholder="For employer verification" />
+                ) : (
+                  <p className="text-sm font-medium text-text-primary mt-0.5">{nationalIdNumber ? "••••" + nationalIdNumber.slice(-4) : "—"}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">ISCO-08 Classification Code</label>
+                {editing ? (
+                  <Input value={iscoCode} onChange={(e) => setIscoCode(e.target.value)} className="mt-1" placeholder="e.g. 2145 (Chemical Engineer)" />
+                ) : (
+                  <p className="text-sm font-medium text-text-primary mt-0.5">{iscoCode || "—"}</p>
+                )}
+              </div>
+              {!isGuyanese && (
+                <div>
+                  <label className="text-xs text-text-muted">Work Permit Status</label>
+                  {editing ? (
+                    <select
+                      value={workPermitStatus}
+                      onChange={(e) => setWorkPermitStatus(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary"
+                    >
+                      <option value="">Select status</option>
+                      <option value="valid">Valid Work Permit</option>
+                      <option value="pending">Pending</option>
+                      <option value="expired">Expired</option>
+                      <option value="not_required">Not Required</option>
+                    </select>
+                  ) : (
+                    <p className="text-sm font-medium text-text-primary mt-0.5">{workPermitStatus || "—"}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Education & Certifications */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-accent" />
+                <CardTitle className="text-sm">Education & Certifications</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-xs text-text-muted">Education Level</label>
+                {editing ? (
+                  <select
+                    value={educationLevel}
+                    onChange={(e) => setEducationLevel(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary"
+                  >
+                    <option value="">Select level</option>
+                    <option value="secondary">Secondary / High School</option>
+                    <option value="trade_cert">Trade Certificate / Vocational</option>
+                    <option value="diploma">Diploma / Associate</option>
+                    <option value="bachelors">Bachelor&apos;s Degree</option>
+                    <option value="masters">Master&apos;s Degree</option>
+                    <option value="doctorate">Doctorate / PhD</option>
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium text-text-primary mt-0.5">
+                    {educationLevel ? educationLevel.charAt(0).toUpperCase() + educationLevel.slice(1).replace(/_/g, " ") : "—"}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">Field of Study</label>
+                {editing ? (
+                  <Input value={educationField} onChange={(e) => setEducationField(e.target.value)} className="mt-1" placeholder="e.g. Mechanical Engineering" />
+                ) : (
+                  <p className="text-sm font-medium text-text-primary mt-0.5">{educationField || "—"}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">Professional Certifications</label>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {certifications.length === 0 && !editing && <p className="text-sm text-text-muted">None added</p>}
+                  {certifications.map((cert) => (
+                    <Badge key={cert} variant="accent" className="text-xs">
+                      {cert}
+                      {editing && (
+                        <button onClick={() => setCertifications(certifications.filter(c => c !== cert))} className="ml-1 hover:text-danger">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+                {editing && (
+                  <div className="flex gap-2 mt-2">
+                    <Input placeholder="e.g. NEBOSH, BOSIET, HUET" value={newCert}
+                      onChange={(e) => setNewCert(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const t = newCert.trim(); if (t && !certifications.includes(t)) { setCertifications([...certifications, t]); setNewCert(""); } } }}
+                      className="flex-1" />
+                    <Button size="sm" variant="outline" onClick={() => { const t = newCert.trim(); if (t && !certifications.includes(t)) { setCertifications([...certifications, t]); setNewCert(""); } }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Preferences */}
           <Card>
             <CardHeader>
@@ -364,6 +534,54 @@ export default function SeekerProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* LCA Attestation */}
+        {!lcaAttested && guyaneseStatus && (
+          <Card className="mt-6 border-accent/20 bg-accent-light">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-text-primary">Verify Your LCA Status</h3>
+                  <p className="text-xs text-text-secondary mt-1 mb-3">
+                    By attesting, you confirm that the nationality and residency information you&apos;ve
+                    provided is accurate. This helps employers verify Guyanese First Consideration
+                    compliance under Section 12 of the Local Content Act 2021.
+                  </p>
+                  <div className="bg-white rounded-lg p-3 border border-border mb-3">
+                    <p className="text-xs text-text-secondary italic">
+                      &ldquo;I certify that the information provided regarding my nationality, residency status,
+                      and qualifications is true and accurate. I understand this information may be used
+                      for Local Content Act compliance reporting.&rdquo;
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={async () => {
+                    try {
+                      await updateMyProfile({ lcaAttestation: true });
+                      setLcaAttested(true);
+                      toast.success("LCA status attested successfully");
+                    } catch { toast.error("Failed to attest"); }
+                  }}>
+                    <CheckCircle className="h-4 w-4 mr-1" /> I Attest This Is Accurate
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {lcaAttested && (
+          <Card className="mt-6 border-success/20">
+            <CardContent className="p-4 flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-success" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">LCA Status Verified</p>
+                <p className="text-xs text-text-muted">You have attested to the accuracy of your nationality and residency information.</p>
+              </div>
+              <Badge variant="success" className="ml-auto">Attested</Badge>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Talent Pool Opt-In */}
         <Card className="mt-6">
