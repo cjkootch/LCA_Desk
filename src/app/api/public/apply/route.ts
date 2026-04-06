@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { jobApplications, jobPostings, tenants, tenantMembers, users } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { notifyApplicationReceived } from "@/lib/email/unified-notify";
 
@@ -44,7 +44,19 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (!posting || posting.status !== "open") {
-      return NextResponse.json({ error: "Position not found or closed" }, { status: 404 });
+      return NextResponse.json({ error: "Position not found or closed" }, { status: 404, headers: CORS_HEADERS });
+    }
+
+    // Prevent duplicate applications by email
+    const [existing] = await db.select({ id: jobApplications.id })
+      .from(jobApplications)
+      .where(and(
+        eq(jobApplications.jobPostingId, data.job_posting_id),
+        eq(jobApplications.applicantEmail, data.applicant_email)
+      ))
+      .limit(1);
+    if (existing) {
+      return NextResponse.json({ error: "You have already applied to this position" }, { status: 409, headers: CORS_HEADERS });
     }
 
     const [application] = await db

@@ -1797,18 +1797,38 @@ export async function updateApplicationStatus(applicationId: string, status: str
     .where(eq(jobApplications.id, applicationId))
     .returning();
 
-  // Notify applicant of status change (in-app + email)
-  if (updated?.applicantUserId) {
+  // Notify applicant of status change
+  if (updated) {
     const [posting] = await db.select({ jobTitle: jobPostings.jobTitle, tenantId: jobPostings.tenantId }).from(jobPostings).where(eq(jobPostings.id, updated.jobPostingId)).limit(1);
     if (posting) {
       const [tenant] = await db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, posting.tenantId)).limit(1);
-      unifiedNotifyAppStatus({
-        userId: updated.applicantUserId,
-        applicantName: updated.applicantName,
-        jobTitle: posting.jobTitle,
-        companyName: tenant?.name || "",
-        newStatus: status,
-      });
+      if (updated.applicantUserId) {
+        // In-app + email for registered users
+        unifiedNotifyAppStatus({
+          userId: updated.applicantUserId,
+          applicantName: updated.applicantName,
+          jobTitle: posting.jobTitle,
+          companyName: tenant?.name || "",
+          newStatus: status,
+        });
+      } else if (updated.applicantEmail) {
+        // Email-only for public applicants (no userId for in-app notification)
+        const { sendEmail } = await import("@/lib/email/client");
+        const { applicationStatusEmail } = await import("@/lib/email/templates");
+        const notifyStatuses = ["reviewing", "shortlisted", "interviewed", "selected", "rejected"];
+        if (notifyStatuses.includes(status)) {
+          sendEmail({
+            to: updated.applicantEmail,
+            subject: `Application update: ${posting.jobTitle}`,
+            html: applicationStatusEmail({
+              applicantName: updated.applicantName,
+              jobTitle: posting.jobTitle,
+              companyName: tenant?.name || "",
+              newStatus: status,
+            }),
+          }).catch(() => {});
+        }
+      }
     }
   }
 
@@ -1934,6 +1954,11 @@ export async function unsaveOpportunity(opportunityId: string) {
 export async function hireApplicant(applicationId: string, entityId: string) {
   const { tenantId } = await getSessionTenant();
 
+  // Validate entity belongs to this tenant
+  const [entityCheck] = await db.select({ id: entities.id }).from(entities)
+    .where(and(eq(entities.id, entityId), eq(entities.tenantId, tenantId))).limit(1);
+  if (!entityCheck) throw new Error("Entity not found or doesn't belong to your organization");
+
   const [application] = await db
     .select()
     .from(jobApplications)
@@ -1944,8 +1969,9 @@ export async function hireApplicant(applicationId: string, entityId: string) {
   const [posting] = await db
     .select()
     .from(jobPostings)
-    .where(eq(jobPostings.id, application.jobPostingId))
+    .where(and(eq(jobPostings.id, application.jobPostingId), eq(jobPostings.tenantId, tenantId)))
     .limit(1);
+  if (!posting) throw new Error("Posting not found or doesn't belong to your organization");
 
   // Create employee record from application data
   const [employee] = await db
@@ -3471,6 +3497,14 @@ export async function fetchTalentPool(filters?: {
   guyaneseOnly?: boolean;
   location?: string;
 }) {
+  // Check caller's plan to gate contact info server-side
+  let callerIsPro = false;
+  try {
+    const { plan, trialEndsAt } = await getSessionTenant();
+    const effective = getEffectivePlan(plan, trialEndsAt);
+    callerIsPro = effective.code === "pro" || effective.code === "enterprise";
+  } catch {}
+
   const profiles = await db
     .select({
       id: jobSeekerProfiles.id,
@@ -3493,7 +3527,14 @@ export async function fetchTalentPool(filters?: {
     .where(eq(jobSeekerProfiles.profileVisible, true))
     .limit(200);
 
-  let filtered = profiles;
+  // Strip contact info for non-Pro callers
+  const sanitized = profiles.map(p => ({
+    ...p,
+    userEmail: callerIsPro ? p.userEmail : null,
+    cvUrl: callerIsPro ? p.cvUrl : null,
+  }));
+
+  let filtered = sanitized;
 
   if (filters?.guyaneseOnly) filtered = filtered.filter(p => p.isGuyanese);
   if (filters?.category) filtered = filtered.filter(p => p.employmentCategory === filters.category);
