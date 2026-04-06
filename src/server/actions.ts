@@ -21,6 +21,8 @@ import {
   notifications,
   jobPostings,
   jobApplications,
+  lcsOpportunities,
+  savedOpportunities,
   users,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -1467,4 +1469,73 @@ export async function generateFirstConsiderationRecord(postingId: string) {
       generatedAt: new Date().toISOString(),
     },
   };
+}
+
+// ─── OPPORTUNITIES FEED ──────────────────────────────────────────
+export async function fetchOpportunitiesFeed(filters?: {
+  type?: string;
+  category?: string;
+  status?: string;
+}) {
+  let query = db.select().from(lcsOpportunities).$dynamic();
+  
+  // Apply filters using raw where conditions
+  const conditions = [];
+  if (filters?.type) conditions.push(eq(lcsOpportunities.type, filters.type));
+  if (filters?.category) conditions.push(eq(lcsOpportunities.lcaCategory, filters.category));
+  if (filters?.status) conditions.push(eq(lcsOpportunities.status, filters.status));
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+  
+  return query.orderBy(lcsOpportunities.postedDate).limit(200);
+}
+
+export async function fetchSavedOpportunities() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+  
+  const { tenantId } = await getSessionTenant();
+  return db
+    .select({
+      id: savedOpportunities.id,
+      opportunityId: savedOpportunities.opportunityId,
+      notes: savedOpportunities.notes,
+      savedAt: savedOpportunities.createdAt,
+    })
+    .from(savedOpportunities)
+    .where(eq(savedOpportunities.tenantId, tenantId));
+}
+
+export async function saveOpportunity(opportunityId: string, notes?: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const { tenantId } = await getSessionTenant();
+  
+  const [saved] = await db
+    .insert(savedOpportunities)
+    .values({
+      tenantId,
+      userId: session.user.id,
+      opportunityId,
+      notes: notes || null,
+    })
+    .onConflictDoNothing()
+    .returning();
+  return saved;
+}
+
+export async function unsaveOpportunity(opportunityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  
+  await db
+    .delete(savedOpportunities)
+    .where(
+      and(
+        eq(savedOpportunities.userId, session.user.id),
+        eq(savedOpportunities.opportunityId, opportunityId)
+      )
+    );
 }
