@@ -516,6 +516,39 @@ export const lcsOpportunities = pgTable(
   ]
 );
 
+// ─── LCS EMPLOYMENT NOTICES (Scraped Job Postings) ──────────────
+export const lcsEmploymentNotices = pgTable(
+  "lcs_employment_notices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyName: text("company_name").notNull(),
+    companySlug: text("company_slug"),
+    jobTitle: text("job_title").notNull(),
+    employmentCategory: text("employment_category"), // Technical | Management | Administrative | Skilled Labour | etc.
+    noticeType: text("notice_type"), // Vacancy | Internship | Training Program
+    description: text("description"),
+    qualifications: text("qualifications"),
+    location: text("location"),
+    closingDate: date("closing_date"),
+    postedDate: date("posted_date"),
+    sourceUrl: text("source_url"),
+    sourceSlug: text("source_slug").unique(),
+    attachmentUrl: text("attachment_url"),
+    attachmentUrls: text("attachment_urls"), // JSON array
+    pageContent: text("page_content"), // full page text for AI
+    aiSummary: text("ai_summary"), // JSON structured summary
+    status: text("status").default("open"), // open | closed
+    scrapedAt: timestamp("scraped_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("lcs_emp_company_idx").on(table.companyName),
+    index("lcs_emp_status_idx").on(table.status),
+    index("lcs_emp_category_idx").on(table.employmentCategory),
+    index("lcs_emp_closing_idx").on(table.closingDate),
+  ]
+);
+
 // ─── SAVED OPPORTUNITIES ─────────────────────────────────────────
 export const savedOpportunities = pgTable(
   "saved_opportunities",

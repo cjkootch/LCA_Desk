@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/server/db/seed.ts",
     "scrape:lcs": "tsx src/scripts/scrape-lcs-register.ts",
-    "scrape:opportunities": "tsx src/scripts/scrape-lcs-opportunities.ts"
+    "scrape:opportunities": "tsx src/scripts/scrape-lcs-opportunities.ts",
+    "scrape:jobs": "tsx src/scripts/scrape-lcs-jobs.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
