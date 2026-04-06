@@ -571,6 +571,10 @@ export const lcsOpportunities = pgTable(
     attachmentContent: text("attachment_content"), // extracted PDF text (legacy)
     aiSummary: text("ai_summary"), // JSON structured summary from Claude
     status: text("status").default("active"),
+    pinned: boolean("pinned").default(false),
+    secretariatNote: text("secretariat_note"),
+    moderatedBy: uuid("moderated_by").references(() => users.id),
+    moderatedAt: timestamp("moderated_at"),
     country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -606,6 +610,10 @@ export const lcsEmploymentNotices = pgTable(
     pageContent: text("page_content"), // full page text for AI
     aiSummary: text("ai_summary"), // JSON structured summary
     status: text("status").default("open"), // open | closed
+    pinned: boolean("pinned").default(false),
+    secretariatNote: text("secretariat_note"),
+    moderatedBy: uuid("moderated_by").references(() => users.id),
+    moderatedAt: timestamp("moderated_at"),
     country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),

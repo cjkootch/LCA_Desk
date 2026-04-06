@@ -4727,3 +4727,187 @@ export async function fetchAmendmentRequests(periodId: string) {
     .orderBy(desc(amendmentRequests.createdAt))
     .limit(10);
 }
+
+// ─── SECRETARIAT: MARKET INTELLIGENCE ───────────────────────────
+
+export async function fetchSecretariatMarketIntel() {
+  await getSecretariatContext();
+
+  // Opportunities data
+  const opportunities = await db.select().from(lcsOpportunities)
+    .orderBy(desc(lcsOpportunities.postedDate)).limit(500);
+
+  // Employment notices
+  const empNotices = await db.select().from(lcsEmploymentNotices)
+    .orderBy(desc(lcsEmploymentNotices.postedDate)).limit(500);
+
+  // Saved opportunities (engagement metric)
+  const saves = await db.select({
+    opportunityId: savedOpportunities.opportunityId,
+  }).from(savedOpportunities).limit(2000);
+
+  // Job seeker stats
+  const seekers = await db.select({
+    id: jobSeekerProfiles.id,
+    employmentCategory: jobSeekerProfiles.employmentCategory,
+    isGuyanese: jobSeekerProfiles.isGuyanese,
+    educationLevel: jobSeekerProfiles.educationLevel,
+    profileVisible: jobSeekerProfiles.profileVisible,
+    yearsExperience: jobSeekerProfiles.yearsExperience,
+    locationPreference: jobSeekerProfiles.locationPreference,
+  }).from(jobSeekerProfiles).limit(1000);
+
+  // Job applications
+  const applications = await db.select({
+    id: jobApplications.id,
+    isGuyanese: jobApplications.isGuyanese,
+    status: jobApplications.status,
+    employmentCategory: jobApplications.employmentCategory,
+  }).from(jobApplications).limit(2000);
+
+  // ── Opportunity analytics ──
+  const now = new Date();
+  const activeOpps = opportunities.filter(o => o.status === "active");
+  const expiredOpps = opportunities.filter(o => o.deadline && new Date(o.deadline) < now);
+
+  const oppByType: Record<string, number> = {};
+  const oppByCompany: Record<string, number> = {};
+  const oppByMonth: Record<string, number> = {};
+  const oppByCategory: Record<string, number> = {};
+
+  for (const opp of opportunities) {
+    oppByType[opp.noticeType || "Unknown"] = (oppByType[opp.noticeType || "Unknown"] || 0) + 1;
+    oppByCompany[opp.contractorName] = (oppByCompany[opp.contractorName] || 0) + 1;
+    if (opp.postedDate) {
+      const month = opp.postedDate.slice(0, 7); // YYYY-MM
+      oppByMonth[month] = (oppByMonth[month] || 0) + 1;
+    }
+    if (opp.lcaCategory) {
+      oppByCategory[opp.lcaCategory] = (oppByCategory[opp.lcaCategory] || 0) + 1;
+    }
+  }
+
+  // Save counts per opportunity
+  const saveCounts: Record<string, number> = {};
+  for (const s of saves) {
+    if (s.opportunityId) saveCounts[s.opportunityId] = (saveCounts[s.opportunityId] || 0) + 1;
+  }
+  const mostSaved = Object.entries(saveCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id, count]) => {
+      const opp = opportunities.find(o => o.id === id);
+      return { id, title: opp?.title || "", company: opp?.contractorName || "", saves: count };
+    });
+
+  // ── Employment notice analytics ──
+  const jobsByCompany: Record<string, number> = {};
+  const jobsByCategory: Record<string, number> = {};
+  const jobsByMonth: Record<string, number> = {};
+
+  for (const job of empNotices) {
+    jobsByCompany[job.companyName] = (jobsByCompany[job.companyName] || 0) + 1;
+    if (job.employmentCategory) {
+      jobsByCategory[job.employmentCategory] = (jobsByCategory[job.employmentCategory] || 0) + 1;
+    }
+    if (job.postedDate) {
+      const month = job.postedDate.slice(0, 7);
+      jobsByMonth[month] = (jobsByMonth[month] || 0) + 1;
+    }
+  }
+
+  // ── Job seeker analytics ──
+  const seekersByCategory: Record<string, number> = {};
+  const seekersByEducation: Record<string, number> = {};
+  for (const s of seekers) {
+    if (s.employmentCategory) seekersByCategory[s.employmentCategory] = (seekersByCategory[s.employmentCategory] || 0) + 1;
+    if (s.educationLevel) seekersByEducation[s.educationLevel] = (seekersByEducation[s.educationLevel] || 0) + 1;
+  }
+
+  const topOppCompanies = Object.entries(oppByCompany).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const topJobCompanies = Object.entries(jobsByCompany).sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+  return {
+    opportunities: {
+      total: opportunities.length,
+      active: activeOpps.length,
+      expired: expiredOpps.length,
+      pinned: opportunities.filter(o => o.pinned).length,
+      withAiSummary: opportunities.filter(o => !!o.aiSummary).length,
+      byType: oppByType,
+      byMonth: Object.entries(oppByMonth).sort((a, b) => a[0].localeCompare(b[0])),
+      byCategory: oppByCategory,
+      topCompanies: topOppCompanies,
+      mostSaved,
+      totalSaves: saves.length,
+    },
+    jobs: {
+      total: empNotices.length,
+      open: empNotices.filter(j => j.status === "open").length,
+      closed: empNotices.filter(j => j.status === "closed").length,
+      pinned: empNotices.filter(j => j.pinned).length,
+      byCategory: jobsByCategory,
+      byMonth: Object.entries(jobsByMonth).sort((a, b) => a[0].localeCompare(b[0])),
+      topCompanies: topJobCompanies,
+    },
+    seekers: {
+      total: seekers.length,
+      guyanese: seekers.filter(s => s.isGuyanese).length,
+      inTalentPool: seekers.filter(s => s.profileVisible).length,
+      byCategory: seekersByCategory,
+      byEducation: seekersByEducation,
+      avgExperience: seekers.length > 0 ? Math.round(seekers.reduce((s, sk) => s + (sk.yearsExperience || 0), 0) / seekers.length) : 0,
+    },
+    applications: {
+      total: applications.length,
+      guyanese: applications.filter(a => a.isGuyanese).length,
+      byStatus: applications.reduce((acc, a) => { acc[a.status || "unknown"] = (acc[a.status || "unknown"] || 0) + 1; return acc; }, {} as Record<string, number>),
+      byCategory: applications.reduce((acc, a) => { if (a.employmentCategory) acc[a.employmentCategory] = (acc[a.employmentCategory] || 0) + 1; return acc; }, {} as Record<string, number>),
+    },
+    // Raw lists for moderation tab
+    recentOpportunities: opportunities.slice(0, 30).map(o => ({
+      id: o.id, title: o.title, company: o.contractorName, type: o.noticeType,
+      status: o.status, pinned: o.pinned, deadline: o.deadline, postedDate: o.postedDate,
+      note: o.secretariatNote, saves: saveCounts[o.id] || 0,
+    })),
+    recentJobs: empNotices.slice(0, 30).map(j => ({
+      id: j.id, title: j.jobTitle, company: j.companyName, category: j.employmentCategory,
+      status: j.status, pinned: j.pinned, closingDate: j.closingDate, postedDate: j.postedDate,
+      note: j.secretariatNote,
+    })),
+  };
+}
+
+// ─── SECRETARIAT: MODERATION ACTIONS ────────────────────────────
+
+export async function moderateOpportunity(id: string, data: {
+  status?: string;
+  pinned?: boolean;
+  note?: string;
+}) {
+  const { userId } = await getSecretariatContext();
+  await db.update(lcsOpportunities).set({
+    ...(data.status !== undefined ? { status: data.status } : {}),
+    ...(data.pinned !== undefined ? { pinned: data.pinned } : {}),
+    ...(data.note !== undefined ? { secretariatNote: data.note } : {}),
+    moderatedBy: userId,
+    moderatedAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(lcsOpportunities.id, id));
+}
+
+export async function moderateEmploymentNotice(id: string, data: {
+  status?: string;
+  pinned?: boolean;
+  note?: string;
+}) {
+  const { userId } = await getSecretariatContext();
+  await db.update(lcsEmploymentNotices).set({
+    ...(data.status !== undefined ? { status: data.status } : {}),
+    ...(data.pinned !== undefined ? { pinned: data.pinned } : {}),
+    ...(data.note !== undefined ? { secretariatNote: data.note } : {}),
+    moderatedBy: userId,
+    moderatedAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(lcsEmploymentNotices.id, id));
+}
