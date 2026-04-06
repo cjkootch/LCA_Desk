@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { jobApplications, jobPostings, tenants, tenantMembers, users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { notifyApplicationReceived } from "@/lib/email/notify";
+import { notifyApplicationReceived } from "@/lib/email/unified-notify";
 
 const applySchema = z.object({
   job_posting_id: z.string().uuid(),
@@ -62,14 +62,18 @@ export async function POST(req: NextRequest) {
 
     for (const member of members) {
       if (member.email) {
-        notifyApplicationReceived({
-          employerEmail: member.email,
-          employerName: tenant?.name || "",
-          applicantName: data.applicant_name,
-          jobTitle: posting.jobTitle,
-          isGuyanese: data.is_guyanese,
-          postingId: posting.id,
-        });
+        const [memberUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, member.email)).limit(1);
+        if (memberUser) {
+          notifyApplicationReceived({
+            userId: memberUser.id,
+            tenantId: posting.tenantId,
+            employerName: tenant?.name || "",
+            applicantName: data.applicant_name,
+            jobTitle: posting.jobTitle,
+            isGuyanese: data.is_guyanese,
+            postingId: posting.id,
+          });
+        }
       }
     }
 

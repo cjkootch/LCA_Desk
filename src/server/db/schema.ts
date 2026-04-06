@@ -57,6 +57,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   isSuperAdmin: boolean("is_super_admin").default(false),
   userRole: text("user_role").default("filer"), // filer | job_seeker | supplier | comma-separated for multi-role
+  notificationPreferences: text("notification_preferences"), // JSON: { deadline_reminders, filing_completion, application_updates, opportunity_alerts, weekly_digest }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -409,11 +410,13 @@ export const notifications = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
-    type: text("type").notNull(), // deadline_warning | deadline_overdue | cert_expiring | report_submitted | team_invite | plan_limit
+    type: text("type").notNull(), // deadline_warning | deadline_overdue | cert_expiring | report_submitted | team_invite | plan_limit | application_received | application_status | welcome
     title: text("title").notNull(),
     message: text("message").notNull(),
-    link: text("link"), // URL to navigate to on click
+    link: text("link"),
     read: boolean("read").default(false),
+    emailSent: boolean("email_sent").default(false),
+    emailSentAt: timestamp("email_sent_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },
   (table) => [

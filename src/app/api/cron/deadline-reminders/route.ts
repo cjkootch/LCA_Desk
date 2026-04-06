@@ -1,9 +1,8 @@
 import { db } from "@/server/db";
-import { reportingPeriods, entities, tenants, tenantMembers, users, expenditureRecords, employmentRecords, capacityDevelopmentRecords, narrativeDrafts } from "@/server/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { reportingPeriods, entities, tenantMembers, users, expenditureRecords, employmentRecords, capacityDevelopmentRecords, narrativeDrafts } from "@/server/db/schema";
+import { eq, gte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail } from "@/lib/email/client";
-import { deadlineReminderEmail } from "@/lib/email/templates";
+import { notifyDeadlineReminder } from "@/lib/email/unified-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +33,7 @@ export async function GET(req: NextRequest) {
       .from(reportingPeriods)
       .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
       .where(
-        and(
-          gte(reportingPeriods.dueDate, now.toISOString().slice(0, 10)),
-        )
+        gte(reportingPeriods.dueDate, now.toISOString().slice(0, 10))
       )
       .limit(200);
 
@@ -97,22 +94,21 @@ export async function GET(req: NextRequest) {
         } catch {}
       }
 
-      // Send to all team members
+      // Send to all team members (in-app + email via unified dispatcher)
       for (const member of members) {
-        if (!member.email) continue;
-        await sendEmail({
-          to: member.email,
-          subject: `${daysRemaining <= 7 ? "URGENT: " : ""}Filing deadline in ${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} — ${period.entityName}`,
-          html: deadlineReminderEmail({
-            userName: member.name || "Team Member",
-            entityName: period.entityName || "",
-            reportType: reportTypeNames[period.reportType] || period.reportType,
-            periodLabel: `${period.periodStart} to ${period.periodEnd}`,
-            dueDate: dueDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-            daysRemaining,
-            missingItems,
-            aiSuggestion,
-          }),
+        if (!member.userId) continue;
+        await notifyDeadlineReminder({
+          userId: member.userId,
+          tenantId: period.tenantId,
+          userName: member.name || "Team Member",
+          entityName: period.entityName || "",
+          reportType: reportTypeNames[period.reportType] || period.reportType,
+          periodLabel: `${period.periodStart} to ${period.periodEnd}`,
+          dueDate: dueDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+          daysRemaining,
+          missingItems,
+          aiSuggestion,
+          link: `/dashboard/entities/${period.entityId}`,
         });
         sent++;
       }

@@ -36,6 +36,8 @@ import {
   disconnectQbo,
   fetchFeaturePreferences,
   updateFeaturePreferences,
+  fetchUserNotificationPreferences,
+  updateUserNotificationPreferences,
 } from "@/server/actions";
 import type { FeaturePreferences } from "@/server/actions";
 
@@ -688,22 +690,48 @@ function NotificationsTab() {
   const [prefs, setPrefs] = useState<Record<string, boolean>>({
     deadline_reminders: true,
     filing_completion: true,
-    certificate_expiry: false,
+    application_updates: true,
+    opportunity_alerts: true,
+    certificate_expiry: true,
     weekly_digest: false,
   });
+  const [loaded, setLoaded] = useState(false);
 
-  function toggle(id: string) {
-    setPrefs((prev) => ({ ...prev, [id]: !prev[id] }));
+  useEffect(() => {
+    fetchUserNotificationPreferences()
+      .then((p) => { if (p) setPrefs(prev => ({ ...prev, ...p })); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  async function toggle(id: string) {
+    const newPrefs = { ...prefs, [id]: !prefs[id] };
+    setPrefs(newPrefs);
+    try {
+      await updateUserNotificationPreferences({ [id]: newPrefs[id] });
+      toast.success("Notification preference updated");
+    } catch { toast.error("Failed to update"); }
   }
+
+  const options = [
+    { id: "deadline_reminders", label: "Deadline Reminders", description: "Email alerts when filing deadlines are approaching (30, 14, 7, 3, 1 days)" },
+    { id: "filing_completion", label: "Filing Completion", description: "Confirmation when reports are submitted and locked" },
+    { id: "application_updates", label: "Application Updates", description: "Notifications when job applications are received or status changes" },
+    { id: "opportunity_alerts", label: "Opportunity Alerts", description: "Alerts when new opportunities match your profile" },
+    { id: "certificate_expiry", label: "Certificate Expiry", description: "Warnings when LCS certificates are about to expire" },
+    { id: "weekly_digest", label: "Weekly Digest", description: "Weekly summary of activity, deadlines, and opportunities" },
+  ];
+
+  if (!loaded) return <p className="text-text-muted text-sm">Loading...</p>;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Notification Preferences</CardTitle>
+        <p className="text-xs text-text-muted mt-1">Controls both in-app notifications and email alerts.</p>
       </CardHeader>
       <CardContent>
         <div className="divide-y divide-border">
-          {notificationOptions.map((opt) => (
+          {options.map((opt) => (
             <div
               key={opt.id}
               className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
