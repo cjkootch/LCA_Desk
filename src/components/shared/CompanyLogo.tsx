@@ -10,11 +10,9 @@ interface CompanyLogoProps {
   className?: string;
 }
 
-// Try multiple favicon services in order
 function getLogoUrls(domain: string): string[] {
   return [
-    `https://img.logo.dev/${domain}?token=pk_anonymous&size=64`,
-    `https://favicon.im/${domain}?larger=true`,
+    `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=128`,
     `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
   ];
 }
