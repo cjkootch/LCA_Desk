@@ -332,14 +332,16 @@ async function main() {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const claude = new Anthropic({ apiKey: anthropicKey });
 
-    // Get all notices that have attachments
+    // Get ALL notices (not just ones with attachments)
     const allNoticesWithDocs = await db
       .select({
         id: lcsOpportunities.id,
         attachmentUrl: lcsOpportunities.attachmentUrl,
         attachmentUrls: lcsOpportunities.attachmentUrls,
+        attachmentContent: lcsOpportunities.attachmentContent, // full page text
         aiSummary: lcsOpportunities.aiSummary,
         sourceSlug: lcsOpportunities.sourceSlug,
+        sourceUrl: lcsOpportunities.sourceUrl,
         contractorName: lcsOpportunities.contractorName,
         title: lcsOpportunities.title,
         description: lcsOpportunities.description,
@@ -349,23 +351,20 @@ async function main() {
 
     // Filter: needs analysis if:
     // 1. No aiSummary at all
-    // 2. Contractor is still "Unknown" (AI might find it in docs)
-    // 3. Has aiSummary but issuing_company is missing/null
+    // 2. Contractor is still "Unknown"
+    // 3. Has aiSummary but incomplete (missing issuing_company + scope)
     const toAnalyze = allNoticesWithDocs.filter(n => {
-      const hasAttachments = n.attachmentUrl || n.attachmentUrls;
-      if (!hasAttachments) return false;
-
       // No summary at all
       if (!n.aiSummary) return true;
 
-      // Still "Unknown" contractor — re-analyze to find company name
+      // Still "Unknown" contractor
       if (n.contractorName === "Unknown") return true;
 
-      // Has summary but check if it's incomplete (missing issuing_company)
+      // Has summary but check if it's incomplete
       try {
         const parsed = JSON.parse(n.aiSummary);
-        if (!parsed.issuing_company && !parsed.scope_of_work) return true; // very incomplete
-      } catch { return true; } // bad JSON, redo
+        if (!parsed.issuing_company && !parsed.scope_of_work) return true;
+      } catch { return true; }
 
       return false;
     });
@@ -416,19 +415,57 @@ async function main() {
           } catch { /* skip failed downloads */ }
         }
 
+        // If no PDFs, try to fetch notice page images for visual analysis
         if (documentBlocks.length === 0) {
+          // Re-fetch the notice page to get images
+          const pageHtml = await fetchPage(notice.sourceUrl || `https://lcregister.petroleum.gov.gy/supplier-notice/${notice.sourceSlug}/`);
+          if (pageHtml) {
+            const imgUrls = [...pageHtml.matchAll(/src="(https?:\/\/[^"]+\.(?:png|jpg|jpeg|webp))/gi)]
+              .map(m => m[1])
+              .filter(u => !u.includes("gravatar") && !u.includes("wp-content/themes") && !u.includes("favicon") && !u.includes("icon"))
+              .slice(0, 2);
+
+            for (const imgUrl of imgUrls) {
+              try {
+                const imgRes = await fetch(imgUrl, {
+                  headers: { "User-Agent": "Mozilla/5.0 (compatible; LCADesk/1.0)" },
+                  signal: AbortSignal.timeout(15_000),
+                });
+                if (!imgRes.ok) continue;
+                const imgBuf = await imgRes.arrayBuffer();
+                if (imgBuf.byteLength > 5_000_000) continue;
+                const ext = imgUrl.toLowerCase().split(".").pop() || "png";
+                const mediaType = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
+                documentBlocks.push({
+                  type: "image",
+                  source: { type: "base64", media_type: mediaType, data: Buffer.from(imgBuf).toString("base64") },
+                });
+              } catch { /* skip */ }
+            }
+          }
+        }
+
+        // Must have either documents or page text to analyze
+        if (documentBlocks.length === 0 && !notice.attachmentContent && !notice.description) {
           aiSkipped++;
-          console.log(`${tag} ⚠  No downloadable PDFs — ${notice.sourceSlug}`);
+          console.log(`${tag} ⚠  No content to analyze — ${notice.sourceSlug}`);
           continue;
         }
 
-        // Build context about the notice and non-PDF attachments
+        // Build rich context from everything we have
         const otherDocsContext = otherDocs.length > 0
-          ? `\n\nAdditional non-PDF attachments available on this notice (not included but listed for reference):\n${otherDocs.map(u => `- ${decodeURIComponent(u.split("/").pop() || u)}`).join("\n")}`
+          ? `\n\nAdditional non-PDF attachments on this notice:\n${otherDocs.map(u => `- ${decodeURIComponent(u.split("/").pop() || u)}`).join("\n")}`
           : "";
 
-        const noticeContext = notice.description
-          ? `\n\nNotice page description: "${notice.description}"`
+        const pageTextContext = notice.attachmentContent
+          ? `\n\nFull notice page text:\n${notice.attachmentContent}`
+          : notice.description
+            ? `\n\nNotice description: "${notice.description}"`
+            : "";
+
+        const titleContext = `\nNotice title: "${notice.title}"`;
+        const contractorContext = notice.contractorName !== "Unknown"
+          ? `\nKnown contractor: ${notice.contractorName}`
           : "";
 
         const response = await claude.messages.create({
@@ -440,7 +477,7 @@ async function main() {
               ...documentBlocks,
               {
                 type: "text",
-                text: `You are analyzing ${documentBlocks.length > 1 ? documentBlocks.length + " documents from" : "a document from"} a procurement/employment opportunity notice from Guyana's petroleum sector. Extract ALL available information — check letterheads, headers, footers, signature blocks, tables, and body text thoroughly across all documents provided.${otherDocsContext}${noticeContext}
+                text: `You are analyzing a procurement/employment opportunity notice from Guyana's petroleum sector.${titleContext}${contractorContext}${documentBlocks.length > 0 ? `\n\n${documentBlocks.length} document(s)/image(s) are attached.` : ""} Extract ALL available information — check letterheads, headers, footers, signature blocks, tables, body text, and any images for company branding/logos.${otherDocsContext}${pageTextContext}
 
 Return a JSON object with these fields. Be thorough — extract every field you can find. Use null ONLY if truly not present.
 
@@ -588,6 +625,8 @@ interface ScrapedNotice {
   attachmentUrl: string | null;
   attachmentUrls: string | null; // JSON array
   attachmentContent: string | null;
+  noticeImages: string[]; // image URLs from the notice page
+  externalLinks: string[]; // registration links, portals, etc.
 }
 
 async function extractPdfText(url: string): Promise<string | null> {
@@ -738,8 +777,11 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   else if (/RFP|Request for Proposal/i.test(html)) noticeType = "RFP";
   else if (/RFI|Request for Information/i.test(html)) noticeType = "RFI";
 
-  const contentMatch = html.match(/class="[^"]*entry-content[^"]*"[^>]*>([\s\S]{20,2000}?)<\/div>/i);
-  const description = contentMatch?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1000) || null;
+  const contentMatch = html.match(/class="[^"]*entry-content[^"]*"[^>]*>([\s\S]{20,8000}?)<\/div>/i);
+  const rawContent = contentMatch?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || null;
+  const description = rawContent?.slice(0, 1000) || null;
+  // Store full page text for AI analysis (up to 5000 chars)
+  const fullPageText = rawContent?.slice(0, 5000) || null;
 
   const catMatch = html.match(/supply_category\/([^/"']+)/i);
   const lcaCategory = catMatch?.[1]?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || null;
@@ -753,15 +795,31 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   // Extract ALL attachment URLs (pdf, docx, xlsx, etc.)
   const allAttachments = [...html.matchAll(/href="(https?:\/\/[^"]+\.(?:pdf|docx?|xlsx?|csv|pptx?))/gi)]
     .map(m => m[1])
-    .filter((v, i, arr) => arr.indexOf(v) === i); // deduplicate
+    .filter((v, i, arr) => arr.indexOf(v) === i);
 
   const attachmentUrl = allAttachments.find(u => u.endsWith(".pdf")) || allAttachments[0] || null;
+
+  // Extract notice images (often contain company branding/details)
+  const noticeImages = [...html.matchAll(/src="(https?:\/\/[^"]+\.(?:png|jpg|jpeg|webp))/gi)]
+    .map(m => m[1])
+    .filter(u => !u.includes("gravatar") && !u.includes("wp-content/themes") && !u.includes("favicon"))
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+    .slice(0, 3); // max 3 images
+
+  // Extract external links (registration forms, portals, etc.)
+  const externalLinks = [...html.matchAll(/href="(https?:\/\/(?!lcregister\.petroleum)[^"]+)"/gi)]
+    .map(m => m[1])
+    .filter(u => !u.includes(".pdf") && !u.includes(".docx") && !u.includes(".xlsx"))
+    .filter(u => !u.includes("wordpress") && !u.includes("wp-content"))
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+    .slice(0, 5);
 
   return {
     contractorName, contractorSlug, type, noticeType, title, description,
     lcaCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
     attachmentUrl, attachmentUrls: allAttachments.length > 0 ? JSON.stringify(allAttachments) : null,
-    attachmentContent: null,
+    attachmentContent: fullPageText,
+    noticeImages, externalLinks,
   };
 }
 
