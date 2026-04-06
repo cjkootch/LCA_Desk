@@ -1609,21 +1609,27 @@ export async function generateDeadlineNotifications() {
 export async function fetchStepCompletion(periodId: string) {
   const { tenantId } = await getSessionTenant();
 
-  const [exps, emps, caps, nars] = await Promise.all([
+  const [exps, emps, caps, nars, period] = await Promise.all([
     db.select().from(expenditureRecords).where(and(eq(expenditureRecords.reportingPeriodId, periodId), eq(expenditureRecords.tenantId, tenantId))).limit(1),
     db.select().from(employmentRecords).where(and(eq(employmentRecords.reportingPeriodId, periodId), eq(employmentRecords.tenantId, tenantId))).limit(1),
     db.select().from(capacityDevelopmentRecords).where(and(eq(capacityDevelopmentRecords.reportingPeriodId, periodId), eq(capacityDevelopmentRecords.tenantId, tenantId))).limit(1),
-    db.select().from(narrativeDrafts).where(and(eq(narrativeDrafts.reportingPeriodId, periodId), eq(narrativeDrafts.tenantId, tenantId))).limit(1),
+    db.select({ section: narrativeDrafts.section }).from(narrativeDrafts).where(and(eq(narrativeDrafts.reportingPeriodId, periodId), eq(narrativeDrafts.tenantId, tenantId))),
+    db.select({ status: reportingPeriods.status }).from(reportingPeriods).where(eq(reportingPeriods.id, periodId)).limit(1),
   ]);
 
-  const completed: string[] = ["company_info"]; // always complete — entity exists
+  const completed: string[] = ["company_info"];
   if (exps.length > 0) completed.push("expenditure");
   if (emps.length > 0) completed.push("employment");
   if (caps.length > 0) completed.push("capacity");
-  if (nars.length > 0) completed.push("narrative");
-  // review is "complete" if all data steps have data
-  if (exps.length > 0 && emps.length > 0) completed.push("review");
-  // export is complete only after submission
+  // Narrative complete only if all 3 sections have drafts
+  const narSections = new Set(nars.map(n => n.section));
+  if (narSections.has("expenditure_narrative") && narSections.has("employment_narrative") && narSections.has("capacity_narrative")) {
+    completed.push("narrative");
+  }
+  // Review complete if all 3 data steps + narrative done
+  if (exps.length > 0 && emps.length > 0 && caps.length > 0) completed.push("review");
+  // Export complete after submission
+  if (period[0]?.status === "submitted" || period[0]?.status === "acknowledged") completed.push("export");
   return completed;
 }
 

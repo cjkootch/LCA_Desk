@@ -316,11 +316,44 @@ export default function ExportPage() {
                 </div>
               </div>
               {period.attestation && (
-                <div className="bg-bg-primary rounded-lg p-3 text-xs text-text-secondary">
+                <div className="bg-bg-primary rounded-lg p-3 text-xs text-text-secondary mb-3">
                   <p className="font-medium text-text-primary mb-1">Attestation:</p>
                   <p>{period.attestation}</p>
                 </div>
               )}
+              <Button
+                variant="outline" size="sm" className="gap-1.5"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/export/receipt", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        entityName,
+                        reportType: period.reportType?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                        periodLabel: `${period.periodStart} to ${period.periodEnd}`,
+                        submittedAt: period.submittedAt ? new Date(period.submittedAt).toLocaleString() : "",
+                        attestation: period.attestation,
+                        userName: "", // filled server-side if needed
+                        recordCounts: exportData ? {
+                          expenditures: (exportData.expenditures as unknown[])?.length || 0,
+                          employment: (exportData.employment as unknown[])?.length || 0,
+                          capacity: 0,
+                        } : {},
+                      }),
+                    });
+                    if (!res.ok) throw new Error();
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = `Submission_Receipt_${entityName}.pdf`; a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Receipt downloaded");
+                  } catch { toast.error("Failed to generate receipt"); }
+                }}
+              >
+                <FileText className="h-3.5 w-3.5" /> Download Submission Receipt
+              </Button>
             </CardContent>
           </Card>
         )}

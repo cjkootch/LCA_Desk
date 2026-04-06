@@ -12,11 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Plus, GraduationCap } from "lucide-react";
+import { Plus, GraduationCap, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatCurrency } from "@/lib/utils";
-import { fetchEntity, fetchCapacity, addCapacity, removeCapacity, updateCapacityRecord } from "@/server/actions";
+import { fetchEntity, fetchCapacity, addCapacity, removeCapacity, updateCapacityRecord, checkPeriodLocked } from "@/server/actions";
+import { CsvImport } from "@/components/reporting/CsvImport";
 import type { CapacityDevelopmentRecord } from "@/types/database.types";
 
 function mapCapacity(c: Record<string, unknown>): CapacityDevelopmentRecord {
@@ -49,11 +50,14 @@ export default function CapacityPage() {
   const [editRecord, setEditRecord] = useState<CapacityDevelopmentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const loadData = async () => {
     const [entity, raw] = await Promise.all([fetchEntity(entityId), fetchCapacity(periodId)]);
     setEntityName(entity?.legalName || "");
     setRecords(raw.map((r) => mapCapacity(r as unknown as Record<string, unknown>)));
+    checkPeriodLocked(periodId).then(setLocked).catch(() => {});
     setLoading(false);
   };
 
@@ -70,12 +74,16 @@ export default function CapacityPage() {
     setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => { setDeleteTarget(id); };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await removeCapacity(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      await removeCapacity(deleteTarget);
+      setRecords((prev) => prev.filter((r) => r.id !== deleteTarget));
       toast.success("Record deleted");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to delete"); }
+    setDeleteTarget(null);
   };
 
   const handleEdit = async (data: Record<string, unknown>) => {
@@ -99,9 +107,17 @@ export default function CapacityPage() {
   return (
     <div>
       <TopBar title={`${entityName} — Capacity Development`} />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
+        {locked && (
+          <div className="rounded-lg border border-warning/30 bg-warning-light p-3 mb-4 flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+            <span className="text-text-secondary">This report has been submitted and is read-only.</span>
+          </div>
+        )}
         <PageHeader title="Capacity Development Sub-Report" description="Record all capacity development activities undertaken during the reporting period."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Capacity Development" }]}>
+          {!locked && (
+          <>
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Activity</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -109,6 +125,9 @@ export default function CapacityPage() {
               <CapacityForm onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
             </DialogContent>
           </Dialog>
+          <CsvImport type="expenditure" periodId={periodId} entityId={entityId} onImported={loadData} />
+          </>
+          )}
         </PageHeader>
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="capacity" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -116,7 +135,9 @@ export default function CapacityPage() {
             {records.length === 0 ? (
               <EmptyState icon={GraduationCap} title="No capacity development activities" description="Record training, scholarships, and other capacity building activities." actionLabel="Add Activity" onAction={() => setFormOpen(true)} />
             ) : (
-              <CapacityTable records={records} onDelete={handleDelete} onEdit={(r) => setEditRecord(r)} />
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <CapacityTable records={records} onDelete={locked ? () => {} : handleDelete} onEdit={locked ? () => {} : (r) => setEditRecord(r)} />
+              </div>
             )}
           </div>
           <div>
@@ -154,6 +175,22 @@ export default function CapacityPage() {
                 loading={saving}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Delete Activity
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-text-secondary">Are you sure you want to delete this capacity development record? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

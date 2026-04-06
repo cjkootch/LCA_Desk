@@ -13,6 +13,7 @@ import { ArrowRight, Receipt, Users, GraduationCap, FileText, Send } from "lucid
 import { format } from "date-fns";
 import { fetchEntity, fetchPeriod } from "@/server/actions";
 import Link from "next/link";
+import { PlanWarningBanner } from "@/components/billing/PlanWarningBanner";
 import type { PeriodStatus } from "@/types/database.types";
 
 export default function PeriodOverviewPage() {
@@ -48,6 +49,7 @@ export default function PeriodOverviewPage() {
           { label: entityName, href: `/dashboard/entities/${entityId}` },
           { label: "Filing" },
         ]} />
+        <PlanWarningBanner />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="company_info" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card>
