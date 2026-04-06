@@ -324,6 +324,21 @@ async function main() {
   }
 
   // ── Phase 2.5: Backfill company names from existing AI summaries ──
+  // Also mark jobs that are no longer on the site as closed
+  const allExisting = await db.select({ id: lcsEmploymentNotices.id, sourceSlug: lcsEmploymentNotices.sourceSlug, status: lcsEmploymentNotices.status })
+    .from(lcsEmploymentNotices).limit(500);
+
+  const scrapedSlugs = new Set(slugs);
+  let closed = 0;
+  for (const row of allExisting) {
+    if (row.status === "open" && !scrapedSlugs.has(row.sourceSlug)) {
+      await db.update(lcsEmploymentNotices).set({ status: "closed", updatedAt: new Date() })
+        .where(eq(lcsEmploymentNotices.id, row.id));
+      closed++;
+    }
+  }
+  if (closed > 0) console.log(`  ✓ Marked ${closed} removed jobs as closed\n`);
+
   const unknowns = await db.select({ id: lcsEmploymentNotices.id, aiSummary: lcsEmploymentNotices.aiSummary })
     .from(lcsEmploymentNotices)
     .where(eq(lcsEmploymentNotices.companyName, "Unknown"))
