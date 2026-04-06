@@ -13,13 +13,14 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
-import { fetchEntities } from "@/server/actions";
+import { fetchEntities, fetchComplianceHealth } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
 import type { Entity } from "@/types/database.types";
 
 export default function DashboardPage() {
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [avgLcRate, setAvgLcRate] = useState(0);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -34,6 +35,8 @@ export default function DashboardPage() {
       }
       setEntities(data.map(mapDrizzleEntity));
       setLoading(false);
+      // Load LC rate in background (non-blocking)
+      fetchComplianceHealth().then(h => setAvgLcRate(h.lcRate)).catch(() => {});
     };
     load();
   }, []);
@@ -83,7 +86,7 @@ export default function DashboardPage() {
           totalEntities={entities.length}
           reportsDueThisMonth={dueSoonCount}
           overdueReports={overdueCount}
-          avgLocalContentRate={0}
+          avgLocalContentRate={avgLcRate}
           overdueDeadlines={deadlines.filter((d) => d.status === "overdue")}
           dueSoonDeadlines={deadlines.filter((d) => d.status === "due_soon")}
         />
@@ -95,6 +98,8 @@ export default function DashboardPage() {
             description="Add your first company or entity to start tracking local content compliance."
             actionLabel="Add Entity"
             onAction={() => router.push("/dashboard/entities/new")}
+            secondaryLabel="Take the Onboarding Course"
+            secondaryOnAction={() => router.push("/dashboard/training")}
           />
         ) : (
           <>

@@ -85,7 +85,9 @@ export function PortfolioCard({ entity }: PortfolioCardProps) {
               </Badge>
             </div>
           ) : (
-            <span className="text-text-muted text-xs">Not set</span>
+            <Link href={`/dashboard/entities/${entity.id}`} className="text-accent text-xs hover:text-accent-hover font-medium">
+              Add certificate &rarr;
+            </Link>
           )}
         </div>
 

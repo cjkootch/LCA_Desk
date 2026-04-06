@@ -37,8 +37,25 @@ export default auth((req) => {
     }
   }
 
-  if (isSecretariatRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/auth/login?role=secretariat", nextUrl));
+  // Protect secretariat portal — requires secretariat role
+  if (isSecretariatRoute) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/auth/login?role=secretariat", nextUrl));
+    }
+    const canAccess =
+      roles.includes("secretariat") ||
+      roles.includes("super_admin") ||
+      (session?.user as any)?.isSuperAdmin;
+    if (!canAccess) {
+      // Redirect unauthorized users back to their proper portal
+      if (roles.includes("filer")) {
+        return NextResponse.redirect(new URL("/dashboard", nextUrl));
+      }
+      if (roles.includes("job_seeker")) {
+        return NextResponse.redirect(new URL("/seeker/dashboard", nextUrl));
+      }
+      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    }
   }
 
   if (isSeekerRoute && !isLoggedIn) {
@@ -49,7 +66,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/auth/login?role=supplier", nextUrl));
   }
 
-  return NextResponse.next();
+  // Pass pathname to server components (for paywall check in layout)
+  const response = NextResponse.next();
+  response.headers.set("x-pathname", nextUrl.pathname);
+  return response;
 });
 
 export const config = {
