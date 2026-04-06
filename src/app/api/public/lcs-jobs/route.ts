@@ -37,7 +37,9 @@ export async function GET() {
       education_required?: string;
       employment_type?: string;
       how_to_apply?: string;
+      contact_email?: string;
       guyanese_first_consideration?: boolean;
+      salary_range?: string;
     } | null = null;
 
     if (j.aiSummary) {
@@ -52,7 +54,9 @@ export async function GET() {
           education_required: parsed.education_required,
           employment_type: parsed.employment_type,
           how_to_apply: parsed.how_to_apply,
+          contact_email: parsed.contact_email,
           guyanese_first_consideration: parsed.guyanese_first_consideration,
+          salary_range: parsed.salary_range,
         };
       } catch {}
     }

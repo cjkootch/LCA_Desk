@@ -16,6 +16,16 @@ const applySchema = z.object({
   cv_url: z.string().optional(),
 });
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -80,9 +90,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       applicationId: application.id,
-    });
+    }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error("Application error:", error);
-    return NextResponse.json({ error: "Application failed" }, { status: 500 });
+    return NextResponse.json({ error: "Application failed" }, { status: 500, headers: CORS_HEADERS });
   }
 }
