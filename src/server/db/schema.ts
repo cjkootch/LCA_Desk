@@ -921,6 +921,33 @@ export const submissionAcknowledgments = pgTable(
   ]
 );
 
+// ─── AMENDMENT REQUESTS ──────────────────────────────────────────
+export const amendmentRequests = pgTable(
+  "amendment_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reportingPeriodId: uuid("reporting_period_id").notNull().references(() => reportingPeriods.id),
+    officeId: uuid("office_id").notNull().references(() => secretariatOffices.id),
+    requestedBy: uuid("requested_by").references(() => users.id),
+    // What needs to change
+    items: text("items").notNull(), // JSON: [{ section, recordId?, description, severity }]
+    summary: text("summary").notNull(),
+    responseDeadline: date("response_deadline"),
+    // Status tracking
+    status: text("status").default("pending"), // pending | responded | accepted | escalated
+    filerResponse: text("filer_response"),
+    respondedAt: timestamp("responded_at"),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedBy: uuid("resolved_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("amendment_period_idx").on(table.reportingPeriodId),
+    index("amendment_status_idx").on(table.status),
+  ]
+);
+
 // ─── LEARNING / TRAINING ────────────────────────────────────────
 export const courses = pgTable(
   "courses",

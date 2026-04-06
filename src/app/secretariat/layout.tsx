@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Users, Settings, LogOut, X, Menu, Shield } from "lucide-react";
+import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
 
 const NAV_ITEMS = [
   { label: "Submissions", href: "/secretariat/dashboard", icon: FileText },
+  { label: "Filing Compliance", href: "/secretariat/compliance", icon: ClipboardCheck },
   { label: "Team", href: "/secretariat/team", icon: Users },
 ];
 

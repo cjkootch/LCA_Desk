@@ -39,6 +39,7 @@ import {
   userCourseProgress,
   secretariatMembers,
   submissionAcknowledgments,
+  amendmentRequests,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -4448,4 +4449,172 @@ export async function fetchSecretariatAnalytics() {
     guyaneseEmployees: guyEmp,
     employmentPct: totalEmp > 0 ? Math.round((guyEmp / totalEmp) * 1000) / 10 : 0,
   };
+}
+
+// ─── SECRETARIAT: MISSING FILERS ─────────────────────────────────
+
+export async function fetchFilingCompliance(fiscalYear: number, reportType: string) {
+  await getSecretariatContext();
+
+  // Get ALL entities that should file (all active entities across all tenants)
+  const allEntities = await db.select({
+    id: entities.id,
+    legalName: entities.legalName,
+    companyType: entities.companyType,
+    tenantName: tenants.name,
+    tenantId: entities.tenantId,
+  }).from(entities)
+    .innerJoin(tenants, eq(entities.tenantId, tenants.id))
+    .where(eq(entities.active, true))
+    .limit(500);
+
+  // Get all periods for this report type + year
+  const periods = await db.select({
+    id: reportingPeriods.id,
+    entityId: reportingPeriods.entityId,
+    status: reportingPeriods.status,
+    submittedAt: reportingPeriods.submittedAt,
+    dueDate: reportingPeriods.dueDate,
+  }).from(reportingPeriods)
+    .where(and(eq(reportingPeriods.reportType, reportType), eq(reportingPeriods.fiscalYear, fiscalYear)))
+    .limit(500);
+
+  const now = new Date();
+  const filingStatus = allEntities.map(entity => {
+    const period = periods.find(p => p.entityId === entity.id);
+    let status: "submitted" | "in_progress" | "not_started" | "overdue" = "not_started";
+    if (period) {
+      if (period.status === "submitted" || period.status === "acknowledged") status = "submitted";
+      else if (period.dueDate && new Date(period.dueDate) < now) status = "overdue";
+      else status = "in_progress";
+    } else {
+      // No period created — check if deadline has passed
+      const { calculateDeadlines } = require("@/lib/compliance/deadlines");
+      const deadlines = calculateDeadlines("GY", fiscalYear);
+      const deadline = deadlines.find((d: { type: string }) => d.type === reportType);
+      if (deadline && deadline.due_date < now) status = "overdue";
+    }
+
+    return {
+      entityId: entity.id,
+      entityName: entity.legalName,
+      companyType: entity.companyType,
+      tenantName: entity.tenantName,
+      status,
+      periodId: period?.id || null,
+      submittedAt: period?.submittedAt || null,
+    };
+  });
+
+  const submitted = filingStatus.filter(f => f.status === "submitted").length;
+  const overdue = filingStatus.filter(f => f.status === "overdue").length;
+  const inProgress = filingStatus.filter(f => f.status === "in_progress").length;
+  const notStarted = filingStatus.filter(f => f.status === "not_started").length;
+
+  return {
+    filingStatus: filingStatus.sort((a, b) => {
+      const order = { overdue: 0, not_started: 1, in_progress: 2, submitted: 3 };
+      return (order[a.status] ?? 4) - (order[b.status] ?? 4);
+    }),
+    stats: { total: filingStatus.length, submitted, overdue, inProgress, notStarted },
+  };
+}
+
+// ─── SECRETARIAT: PERIOD COMPARISON ──────────────────────────────
+
+export async function fetchPeriodComparison(entityId: string) {
+  await getSecretariatContext();
+
+  const periods = await db.select().from(reportingPeriods)
+    .where(eq(reportingPeriods.entityId, entityId))
+    .orderBy(desc(reportingPeriods.periodEnd))
+    .limit(6);
+
+  const comparisons = [];
+  for (const period of periods) {
+    const exps = await db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, period.id));
+    const emps = await db.select().from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, period.id));
+
+    const totalSpend = exps.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const guySpend = exps.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const totalEmp = emps.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const guyEmp = emps.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+
+    const label = period.reportType === "half_yearly_h1" ? `H1 ${period.fiscalYear}` :
+      period.reportType === "half_yearly_h2" ? `H2 ${period.fiscalYear}` : `${period.fiscalYear}`;
+
+    comparisons.push({
+      periodId: period.id,
+      label,
+      status: period.status,
+      lcRate: totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0,
+      totalExpenditure: totalSpend,
+      guyaneseExpenditure: guySpend,
+      totalEmployees: totalEmp,
+      guyaneseEmployees: guyEmp,
+      employmentPct: totalEmp > 0 ? Math.round((guyEmp / totalEmp) * 1000) / 10 : 0,
+      expenditureRecords: exps.length,
+      employmentRecords: emps.length,
+    });
+  }
+
+  return comparisons;
+}
+
+// ─── SECRETARIAT: AMENDMENT REQUESTS ─────────────────────────────
+
+export async function createAmendmentRequest(data: {
+  periodId: string;
+  items: Array<{ section: string; description: string; severity: "critical" | "major" | "minor" }>;
+  summary: string;
+  responseDeadline: string;
+}) {
+  const { officeId, userId } = await getSecretariatContext();
+
+  const [request] = await db.insert(amendmentRequests).values({
+    reportingPeriodId: data.periodId,
+    officeId,
+    requestedBy: userId,
+    items: JSON.stringify(data.items),
+    summary: data.summary,
+    responseDeadline: data.responseDeadline,
+    status: "pending",
+  }).returning();
+
+  // Update submission status
+  await acknowledgeSubmission(data.periodId, {
+    status: "amendment_required",
+    notes: `Amendment requested: ${data.summary}`,
+  });
+
+  // Notify the filer
+  const [period] = await db.select({ tenantId: reportingPeriods.tenantId, entityId: reportingPeriods.entityId })
+    .from(reportingPeriods).where(eq(reportingPeriods.id, data.periodId)).limit(1);
+  if (period) {
+    const members = await db.select({ userId: tenantMembers.userId })
+      .from(tenantMembers).where(eq(tenantMembers.tenantId, period.tenantId));
+    const { sendEmail } = await import("@/lib/email/client");
+    const [entity] = await db.select({ legalName: entities.legalName }).from(entities).where(eq(entities.id, period.entityId)).limit(1);
+
+    for (const member of members) {
+      const [user] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, member.userId)).limit(1);
+      if (user?.email) {
+        sendEmail({
+          to: user.email,
+          subject: `Amendment Required: ${entity?.legalName || "Your Report"} — Action Needed by ${data.responseDeadline}`,
+          html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;"><div style="background:#047857;padding:24px 32px;border-radius:12px 12px 0 0;"><img src="https://app.lcadesk.com/logo-white-lca.png" alt="LCA Desk" width="120"/></div><div style="background:#fff;padding:32px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px;"><h2 style="margin:0 0 8px;color:#0F172A;">Amendment Required</h2><p style="color:#475569;font-size:14px;">The Local Content Secretariat has reviewed your submission for <strong>${entity?.legalName}</strong> and requires the following amendments:</p><div style="background:#FEF2F2;border:1px solid #FCA5A520;border-radius:8px;padding:16px;margin:16px 0;"><p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#DC2626;">Required Changes:</p><p style="margin:0;font-size:13px;color:#475569;">${data.summary}</p><ul style="margin:8px 0 0;padding-left:20px;font-size:13px;color:#475569;">${data.items.map(i => `<li><strong>[${i.severity}]</strong> ${i.section}: ${i.description}</li>`).join("")}</ul></div><p style="color:#475569;font-size:14px;"><strong>Response Deadline: ${data.responseDeadline}</strong></p><a href="https://app.lcadesk.com/dashboard" style="display:inline-block;background:#047857;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Open Dashboard</a></div></div>`,
+        }).catch(() => {});
+      }
+    }
+  }
+
+  return request;
+}
+
+export async function fetchAmendmentRequests(periodId: string) {
+  await getSecretariatContext();
+  return db.select().from(amendmentRequests)
+    .where(eq(amendmentRequests.reportingPeriodId, periodId))
+    .orderBy(desc(amendmentRequests.createdAt))
+    .limit(10);
 }

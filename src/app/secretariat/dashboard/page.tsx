@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   FileText, CheckCircle, Search, Shield, Eye,
-  AlertTriangle,
+  AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock,
 } from "lucide-react";
-import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission } from "@/server/actions";
+import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +46,20 @@ export default function SecretariatDashboardPage() {
   const [ackNotes, setAckNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Period comparison
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [comparison, setComparison] = useState<any[] | null>(null);
+
+  // Amendment requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [amendments, setAmendments] = useState<any[]>([]);
+  const [showAmendmentForm, setShowAmendmentForm] = useState(false);
+  const [amendmentItems, setAmendmentItems] = useState<Array<{ section: string; description: string; severity: "critical" | "major" | "minor" }>>([{ section: "", description: "", severity: "major" }]);
+  const [amendmentSummary, setAmendmentSummary] = useState("");
+  const [amendmentDeadline, setAmendmentDeadline] = useState("");
+  const [amendmentSubmitting, setAmendmentSubmitting] = useState(false);
+  const [detailTab, setDetailTab] = useState<"review" | "trend" | "amendments">("review");
+
   useEffect(() => {
     Promise.all([fetchSecretariatDashboard(), fetchSecretariatAnalytics()])
       .then(([d, a]) => { setData(d); setAnalytics(a); })
@@ -55,14 +69,51 @@ export default function SecretariatDashboardPage() {
 
   const openDetail = async (periodId: string) => {
     setDetailLoading(true);
+    setDetailTab("review");
+    setComparison(null);
+    setAmendments([]);
+    setShowAmendmentForm(false);
     try {
       const detail = await fetchSubmissionDetail(periodId);
       setDetailData(detail);
       setAckStatus("under_review");
       setAckRef(""); setAckNotes("");
+      // Load comparison and amendments in parallel
+      Promise.all([
+        fetchPeriodComparison(detail.entity.id).then(setComparison).catch(() => {}),
+        fetchAmendmentRequests(periodId).then(setAmendments).catch(() => {}),
+      ]);
     } catch { toast.error("Failed to load submission"); }
     setDetailLoading(false);
   };
+
+  const handleAmendmentSubmit = async () => {
+    if (!detailData) return;
+    const validItems = amendmentItems.filter(i => i.section.trim() && i.description.trim());
+    if (validItems.length === 0) { toast.error("Add at least one amendment item"); return; }
+    if (!amendmentSummary.trim()) { toast.error("Summary required"); return; }
+    if (!amendmentDeadline) { toast.error("Deadline required"); return; }
+    setAmendmentSubmitting(true);
+    try {
+      await createAmendmentRequest({
+        periodId: detailData.period.id,
+        items: validItems,
+        summary: amendmentSummary.trim(),
+        responseDeadline: amendmentDeadline,
+      });
+      toast.success("Amendment request sent to filer");
+      setShowAmendmentForm(false);
+      setAmendmentItems([{ section: "", description: "", severity: "major" }]);
+      setAmendmentSummary(""); setAmendmentDeadline("");
+      const fresh = await fetchAmendmentRequests(detailData.period.id);
+      setAmendments(fresh);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to send"); }
+    setAmendmentSubmitting(false);
+  };
+
+  const addAmendmentItem = () => setAmendmentItems(prev => [...prev, { section: "", description: "", severity: "major" }]);
+  const removeAmendmentItem = (idx: number) => setAmendmentItems(prev => prev.filter((_, i) => i !== idx));
+  const updateAmendmentItem = (idx: number, field: string, value: string) => setAmendmentItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
 
   const handleAcknowledge = async () => {
     if (!detailData) return;
@@ -257,21 +308,232 @@ export default function SecretariatDashboardPage() {
                   </div>
                 )}
 
-                {/* Review */}
-                <div className="border-t border-border pt-4 space-y-3">
-                  <p className="text-sm font-semibold text-text-primary">Review Decision</p>
-                  <Select value={ackStatus} onChange={e => setAckStatus(e.target.value)} options={[
-                    { value: "received", label: "Received" }, { value: "under_review", label: "Under Review" },
-                    { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" },
-                    { value: "amendment_required", label: "Amendment Required" },
-                  ]} />
-                  <Input value={ackRef} onChange={e => setAckRef(e.target.value)} placeholder="Reference Number" />
-                  <textarea className="w-full h-16 px-3 py-2 rounded-lg bg-bg-primary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none" value={ackNotes} onChange={e => setAckNotes(e.target.value)} placeholder="Notes or feedback..." />
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setDetailData(null)}>Cancel</Button>
-                    <Button onClick={handleAcknowledge} loading={submitting}><CheckCircle className="h-4 w-4 mr-1" /> Submit Decision</Button>
-                  </div>
+                {/* Tabs */}
+                <div className="border-t border-border pt-3 flex gap-1">
+                  {(["review", "trend", "amendments"] as const).map(tab => (
+                    <button key={tab} onClick={() => setDetailTab(tab)}
+                      className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                        detailTab === tab ? "bg-accent text-white" : "text-text-muted hover:text-text-primary hover:bg-bg-primary"
+                      )}>
+                      {tab === "review" ? "Review" : tab === "trend" ? "Compliance Trend" : `Amendments${amendments.length > 0 ? ` (${amendments.length})` : ""}`}
+                    </button>
+                  ))}
                 </div>
+
+                {/* Tab: Review */}
+                {detailTab === "review" && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-text-primary">Review Decision</p>
+                    <Select value={ackStatus} onChange={e => setAckStatus(e.target.value)} options={[
+                      { value: "received", label: "Received" }, { value: "under_review", label: "Under Review" },
+                      { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" },
+                      { value: "amendment_required", label: "Amendment Required" },
+                    ]} />
+                    <Input value={ackRef} onChange={e => setAckRef(e.target.value)} placeholder="Reference Number" />
+                    <textarea className="w-full h-16 px-3 py-2 rounded-lg bg-bg-primary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none" value={ackNotes} onChange={e => setAckNotes(e.target.value)} placeholder="Notes or feedback..." />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setDetailData(null)}>Cancel</Button>
+                      <Button onClick={handleAcknowledge} loading={submitting}><CheckCircle className="h-4 w-4 mr-1" /> Submit Decision</Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab: Compliance Trend */}
+                {detailTab === "trend" && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-text-primary">Period-over-Period Comparison</p>
+                    {!comparison ? (
+                      <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent" /></div>
+                    ) : comparison.length === 0 ? (
+                      <p className="text-xs text-text-muted py-4 text-center">No historical data available.</p>
+                    ) : (
+                      <>
+                        {/* LC Rate trend */}
+                        <Card><CardContent className="p-3">
+                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Local Content Rate</p>
+                          <div className="flex items-end gap-1 h-24">
+                            {comparison.slice().reverse().map((p: { periodId: string; label: string; lcRate: number }, i: number) => {
+                              const maxRate = Math.max(...comparison.map((c: { lcRate: number }) => c.lcRate), 1);
+                              const height = Math.max((p.lcRate / maxRate) * 100, 4);
+                              const prev = i > 0 ? comparison.slice().reverse()[i - 1] : null;
+                              const trending = prev ? p.lcRate - prev.lcRate : 0;
+                              return (
+                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-0.5">
+                                  <span className="text-[9px] font-bold" style={{ color: p.lcRate >= 50 ? "var(--color-success)" : "var(--color-danger)" }}>{p.lcRate}%</span>
+                                  <div className="w-full rounded-t" style={{ height: `${height}%`, backgroundColor: p.lcRate >= 50 ? "var(--color-success)" : "var(--color-danger)", opacity: 0.7 }} />
+                                  <span className="text-[8px] text-text-muted">{p.label}</span>
+                                  {trending !== 0 && (
+                                    <span className={cn("text-[8px] flex items-center", trending > 0 ? "text-success" : "text-danger")}>
+                                      {trending > 0 ? <TrendingUp className="h-2 w-2" /> : <TrendingDown className="h-2 w-2" />}
+                                      {trending > 0 ? "+" : ""}{trending.toFixed(1)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent></Card>
+
+                        {/* Employment trend */}
+                        <Card><CardContent className="p-3">
+                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Guyanese Employment %</p>
+                          <div className="flex items-end gap-1 h-24">
+                            {comparison.slice().reverse().map((p: { periodId: string; label: string; employmentPct: number }) => {
+                              const maxPct = Math.max(...comparison.map((c: { employmentPct: number }) => c.employmentPct), 1);
+                              const height = Math.max((p.employmentPct / maxPct) * 100, 4);
+                              return (
+                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-0.5">
+                                  <span className="text-[9px] font-bold" style={{ color: p.employmentPct >= 60 ? "var(--color-success)" : "var(--color-warning)" }}>{p.employmentPct}%</span>
+                                  <div className="w-full rounded-t" style={{ height: `${height}%`, backgroundColor: p.employmentPct >= 60 ? "var(--color-success)" : "var(--color-warning)", opacity: 0.7 }} />
+                                  <span className="text-[8px] text-text-muted">{p.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent></Card>
+
+                        {/* Data table */}
+                        <Card><CardContent className="p-3">
+                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Detailed Breakdown</p>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-[11px]">
+                              <thead>
+                                <tr className="border-b border-border text-text-muted">
+                                  <th className="text-left py-1 pr-2">Period</th>
+                                  <th className="text-right py-1 px-1">LC Rate</th>
+                                  <th className="text-right py-1 px-1">Emp %</th>
+                                  <th className="text-right py-1 px-1">Expenditure</th>
+                                  <th className="text-right py-1 px-1">Employees</th>
+                                  <th className="text-right py-1 pl-1">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {comparison.slice().reverse().map((p: { periodId: string; label: string; lcRate: number; employmentPct: number; totalExpenditure: number; totalEmployees: number; guyaneseEmployees: number; status: string }) => (
+                                  <tr key={p.periodId} className="border-b border-border/50">
+                                    <td className="py-1.5 pr-2 font-medium">{p.label}</td>
+                                    <td className={cn("text-right py-1.5 px-1 font-bold", p.lcRate >= 50 ? "text-success" : "text-danger")}>{p.lcRate}%</td>
+                                    <td className={cn("text-right py-1.5 px-1", p.employmentPct >= 60 ? "text-success" : "text-warning")}>{p.employmentPct}%</td>
+                                    <td className="text-right py-1.5 px-1">{formatCurrency(p.totalExpenditure)}</td>
+                                    <td className="text-right py-1.5 px-1">{p.guyaneseEmployees}/{p.totalEmployees}</td>
+                                    <td className="text-right py-1.5 pl-1"><Badge variant={p.status === "submitted" ? "success" : "default"} className="text-[9px]">{p.status}</Badge></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent></Card>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab: Amendments */}
+                {detailTab === "amendments" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-text-primary">Amendment Requests</p>
+                      {!showAmendmentForm && (
+                        <Button size="sm" variant="outline" onClick={() => setShowAmendmentForm(true)}>
+                          <Plus className="h-3 w-3 mr-1" /> New Request
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* New amendment form */}
+                    {showAmendmentForm && (
+                      <Card className="border-warning/30">
+                        <CardContent className="p-4 space-y-3">
+                          <p className="text-xs font-semibold text-warning">New Amendment Request</p>
+
+                          {amendmentItems.map((item, idx) => (
+                            <div key={idx} className="bg-bg-primary rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-medium text-text-muted">Item {idx + 1}</span>
+                                {amendmentItems.length > 1 && (
+                                  <button onClick={() => removeAmendmentItem(idx)} className="text-text-muted hover:text-danger">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-[1fr_auto] gap-2">
+                                <Input placeholder="Section (e.g. Employment Records)" value={item.section} onChange={e => updateAmendmentItem(idx, "section", e.target.value)} className="text-xs" />
+                                <Select value={item.severity} onChange={e => updateAmendmentItem(idx, "severity", e.target.value)} options={[
+                                  { value: "critical", label: "Critical" },
+                                  { value: "major", label: "Major" },
+                                  { value: "minor", label: "Minor" },
+                                ]} className="w-24" />
+                              </div>
+                              <textarea className="w-full h-12 px-3 py-2 rounded-lg bg-bg-card border border-border text-xs focus:outline-none focus:ring-2 focus:ring-accent resize-none" value={item.description} onChange={e => updateAmendmentItem(idx, "description", e.target.value)} placeholder="Describe what needs to be corrected..." />
+                            </div>
+                          ))}
+
+                          <button onClick={addAmendmentItem} className="text-xs text-accent hover:text-accent-hover font-medium flex items-center gap-1">
+                            <Plus className="h-3 w-3" /> Add another item
+                          </button>
+
+                          <textarea className="w-full h-14 px-3 py-2 rounded-lg bg-bg-primary border border-border text-xs focus:outline-none focus:ring-2 focus:ring-accent resize-none" value={amendmentSummary} onChange={e => setAmendmentSummary(e.target.value)} placeholder="Overall summary of required amendments..." />
+
+                          <div>
+                            <label className="text-[10px] text-text-muted font-medium">Response Deadline</label>
+                            <Input type="date" value={amendmentDeadline} onChange={e => setAmendmentDeadline(e.target.value)} className="text-xs mt-1" />
+                          </div>
+
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setShowAmendmentForm(false)}>Cancel</Button>
+                            <Button size="sm" onClick={handleAmendmentSubmit} loading={amendmentSubmitting}>
+                              <Send className="h-3 w-3 mr-1" /> Send to Filer
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Existing amendments */}
+                    {amendments.length === 0 && !showAmendmentForm ? (
+                      <p className="text-xs text-text-muted py-4 text-center">No amendment requests for this submission.</p>
+                    ) : (
+                      amendments.map((a: { id: string; summary: string; items: string; status: string; responseDeadline: string | null; createdAt: string | null; respondedAt: string | null }) => {
+                        let items: Array<{ section: string; description: string; severity: string }> = [];
+                        try { items = JSON.parse(a.items); } catch { /* empty */ }
+                        return (
+                          <Card key={a.id} className={cn(a.status === "pending" ? "border-warning/30" : a.status === "resolved" ? "border-success/30" : "")}>
+                            <CardContent className="p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Badge variant={a.status === "pending" ? "warning" : a.status === "resolved" ? "success" : "default"} className="text-[10px]">
+                                  {a.status}
+                                </Badge>
+                                <div className="flex items-center gap-1 text-[10px] text-text-muted">
+                                  <Clock className="h-3 w-3" />
+                                  {a.responseDeadline ? `Due ${new Date(a.responseDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No deadline"}
+                                </div>
+                              </div>
+                              <p className="text-xs text-text-secondary">{a.summary}</p>
+                              <div className="space-y-1">
+                                {items.map((item, idx) => (
+                                  <div key={idx} className="flex items-start gap-2 text-[11px]">
+                                    <Badge variant={item.severity === "critical" ? "danger" : item.severity === "major" ? "warning" : "default"} className="text-[9px] shrink-0 mt-0.5">
+                                      {item.severity}
+                                    </Badge>
+                                    <div>
+                                      <span className="font-medium text-text-primary">{item.section}:</span>{" "}
+                                      <span className="text-text-secondary">{item.description}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {a.createdAt && (
+                                <p className="text-[9px] text-text-muted">
+                                  Requested {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  {a.respondedAt && ` · Responded ${new Date(a.respondedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
