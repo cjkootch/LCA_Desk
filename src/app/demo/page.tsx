@@ -1,0 +1,227 @@
+"use client";
+
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Building2, Briefcase, Truck, Shield, Crown, Lock,
+  User, Search, FileText, BarChart3,
+} from "lucide-react";
+import { toast } from "sonner";
+
+const DEMO_USERS = [
+  {
+    id: "filer-lite",
+    label: "Filer (Lite)",
+    description: "Compliance officer on Lite plan — 1 entity, basic features",
+    icon: Building2,
+    plan: "lite",
+    role: "filer",
+    email: "demo-filer-lite@lcadesk.com",
+    color: "text-accent",
+    bgColor: "bg-accent-light",
+  },
+  {
+    id: "filer-pro",
+    label: "Filer (Pro)",
+    description: "Full compliance team — 5 entities, AI, exports, talent pool",
+    icon: Crown,
+    plan: "pro",
+    role: "filer",
+    email: "demo-filer-pro@lcadesk.com",
+    color: "text-gold",
+    bgColor: "bg-gold-light",
+  },
+  {
+    id: "filer-trial",
+    label: "Filer (Trial)",
+    description: "New signup in 14-day Pro trial — sees trial banner",
+    icon: Shield,
+    plan: "lite",
+    role: "filer",
+    email: "demo-filer-trial@lcadesk.com",
+    color: "text-accent",
+    bgColor: "bg-accent-light",
+  },
+  {
+    id: "seeker",
+    label: "Job Seeker",
+    description: "Searching for petroleum sector jobs, building resume",
+    icon: Search,
+    plan: null,
+    role: "job_seeker",
+    email: "demo-seeker@lcadesk.com",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+  },
+  {
+    id: "supplier",
+    label: "Supplier",
+    description: "LCS-registered supplier managing their profile",
+    icon: Truck,
+    plan: null,
+    role: "supplier",
+    email: "demo-supplier@lcadesk.com",
+    color: "text-success",
+    bgColor: "bg-success-light",
+  },
+  {
+    id: "admin",
+    label: "Super Admin",
+    description: "Platform admin — sees all tenants, admin panel",
+    icon: Shield,
+    plan: "enterprise",
+    role: "filer",
+    email: "demo-admin@lcadesk.com",
+    color: "text-danger",
+    bgColor: "bg-danger-light",
+  },
+];
+
+function DemoContent() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [masterPassword, setMasterPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleMasterLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (masterPassword === process.env.NEXT_PUBLIC_DEMO_PASSWORD || masterPassword === "lcadesk-demo-2026") {
+      setAuthenticated(true);
+    } else {
+      toast.error("Invalid demo password");
+    }
+  };
+
+  const handleDemoLogin = async (user: typeof DEMO_USERS[0]) => {
+    setSigningIn(user.id);
+    try {
+      const result = await signIn("credentials", {
+        email: user.email,
+        password: "demo-password-2026",
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error(`Demo user "${user.label}" not set up yet. Create it in the admin panel.`);
+        setSigningIn(null);
+        return;
+      }
+
+      // Redirect based on role
+      if (user.role === "job_seeker") {
+        router.push("/seeker/dashboard");
+      } else if (user.role === "supplier") {
+        router.push("/supplier-portal/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      toast.error("Login failed");
+      setSigningIn(null);
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="w-full max-w-sm p-8">
+          <div className="flex justify-center mb-6">
+            <Image src="/logo-full.png" alt="LCA Desk" width={160} height={48} priority />
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-heading font-bold text-text-primary text-center mb-1">Demo Access</h2>
+              <p className="text-xs text-text-muted text-center mb-6">Internal use only</p>
+              <form onSubmit={handleMasterLogin} className="space-y-4">
+                <Input
+                  type="password"
+                  placeholder="Demo password"
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                  autoFocus
+                />
+                <Button type="submit" className="w-full">Access Demo Panel</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-bg-primary">
+      <div className="max-w-3xl mx-auto p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <Image src="/logo-full.png" alt="LCA Desk" width={140} height={40} />
+            <p className="text-xs text-text-muted mt-1">Demo Panel</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setAuthenticated(false)}>
+            <Lock className="h-4 w-4 mr-1" /> Lock
+          </Button>
+        </div>
+
+        <h1 className="text-xl font-heading font-bold text-text-primary mb-2">Select Demo User</h1>
+        <p className="text-sm text-text-secondary mb-6">Click a user type to sign in as that persona. Each has pre-configured data.</p>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          {DEMO_USERS.map((user) => (
+            <Card
+              key={user.id}
+              className="hover:border-accent/30 transition-colors cursor-pointer"
+              onClick={() => handleDemoLogin(user)}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2.5 rounded-lg ${user.bgColor} shrink-0`}>
+                    <user.icon className={`h-5 w-5 ${user.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-text-primary">{user.label}</h3>
+                      {user.plan && (
+                        <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-[9px]">
+                          {user.plan}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-text-secondary mt-0.5">{user.description}</p>
+                    <p className="text-[10px] text-text-muted mt-1 font-mono">{user.email}</p>
+                  </div>
+                  {signingIn === user.id && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-8 p-4 bg-bg-primary border border-border rounded-lg">
+          <h3 className="text-sm font-semibold text-text-primary mb-2">Setup Instructions</h3>
+          <p className="text-xs text-text-secondary">
+            Create demo users in the database with the emails above and password &quot;demo-password-2026&quot;.
+            Set appropriate roles, plans, and trialEndsAt values. The Filer (Trial) user should have
+            trialEndsAt set to 14 days from now. The Admin user should have isSuperAdmin = true.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function DemoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>}>
+      <DemoContent />
+    </Suspense>
+  );
+}

@@ -118,11 +118,16 @@ function LoginForm() {
           </p>
         </div>
 
-        <p className="text-xs text-text-muted text-center mt-6">
-          <a href="https://lcadesk.com" className="hover:text-text-secondary transition-colors">
-            Learn more about LCA Desk →
+        <div className="text-center mt-6 space-y-2">
+          <p className="text-xs text-text-muted">
+            <a href="https://lcadesk.com" className="hover:text-text-secondary transition-colors">
+              Learn more about LCA Desk →
+            </a>
+          </p>
+          <a href="/demo" className="text-[9px] text-border hover:text-text-muted transition-colors">
+            ·
           </a>
-        </p>
+        </div>
       </div>
     </div>
   );
