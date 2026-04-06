@@ -955,7 +955,21 @@ export async function fetchRecentActivity() {
     .orderBy(reportingPeriods.updatedAt)
     .limit(5);
 
-  return recentPeriods.map((p) => ({
+  // Also get recent audit log entries
+  const recentAudit = await db
+    .select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      userName: auditLogs.userName,
+      createdAt: auditLogs.createdAt,
+    })
+    .from(auditLogs)
+    .where(eq(auditLogs.tenantId, tenantId))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(5);
+
+  const periodItems = recentPeriods.map((p) => ({
     id: p.id,
     type: "period_update" as const,
     entityName: p.entityName,
@@ -963,6 +977,19 @@ export async function fetchRecentActivity() {
     status: p.status,
     timestamp: p.updatedAt,
   }));
+
+  const auditItems = recentAudit.map((a) => ({
+    id: a.id,
+    type: "audit" as const,
+    entityName: a.userName || "System",
+    reportType: `${a.action} ${a.entityType?.replace(/_/g, " ")}`,
+    status: a.action === "submit" ? "submitted" : a.action === "create" ? "in_progress" : a.action === "delete" ? "not_started" : "in_progress",
+    timestamp: a.createdAt,
+  }));
+
+  return [...periodItems, ...auditItems]
+    .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+    .slice(0, 8);
 }
 
 // ─── CHAT CONVERSATIONS ──────────────────────────────────────────
@@ -3179,4 +3206,26 @@ export async function searchLcsRegister(query: string) {
     r.tradingName?.toLowerCase().includes(q) ||
     r.certId?.toLowerCase().includes(q)
   ).slice(0, 20);
+}
+
+// ─── LCS JOBS FOR SEEKER ─────────────────────────────────────────
+
+export async function fetchLcsJobs(filters?: { search?: string; category?: string; status?: string }) {
+  const results = await db.select().from(lcsEmploymentNotices)
+    .orderBy(desc(lcsEmploymentNotices.scrapedAt))
+    .limit(200);
+
+  let filtered = results;
+  if (filters?.status) filtered = filtered.filter(j => j.status === filters.status);
+  if (filters?.category) filtered = filtered.filter(j => j.employmentCategory === filters.category);
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(j =>
+      j.jobTitle.toLowerCase().includes(q) ||
+      j.companyName.toLowerCase().includes(q) ||
+      j.description?.toLowerCase().includes(q) ||
+      j.aiSummary?.toLowerCase().includes(q)
+    );
+  }
+  return filtered;
 }

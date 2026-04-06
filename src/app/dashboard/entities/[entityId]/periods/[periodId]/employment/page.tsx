@@ -18,6 +18,7 @@ import { calculateEmploymentMetrics } from "@/lib/compliance/calculators";
 import { getEmploymentMinimums } from "@/lib/compliance/jurisdiction-config";
 import { cn, formatPercentage } from "@/lib/utils";
 import { fetchEntity, fetchEmployment, addEmployment, removeEmployment, updateEmploymentRecord, checkPeriodLocked } from "@/server/actions";
+import { CsvImport } from "@/components/reporting/CsvImport";
 import type { EmploymentRecord } from "@/types/database.types";
 
 function mapEmployment(e: Record<string, unknown>): EmploymentRecord {
@@ -135,6 +136,7 @@ export default function EmploymentPage() {
           {!locked && (
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
+            <CsvImport type="employment" periodId={periodId} entityId={entityId} onImported={loadData} />
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Add Employment Record</DialogTitle></DialogHeader>
               <EmploymentForm onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />

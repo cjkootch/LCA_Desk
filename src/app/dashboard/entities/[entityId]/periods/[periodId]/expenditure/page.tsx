@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { calculateLocalContentRate } from "@/lib/compliance/calculators";
 import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure, updateExpenditure, checkPeriodLocked } from "@/server/actions";
 import { RELATED_SECTORS } from "@/lib/compliance/sectors";
+import { CsvImport } from "@/components/reporting/CsvImport";
 import type { ExpenditureRecord } from "@/types/database.types";
 
 function mapExpenditure(e: Record<string, unknown>): ExpenditureRecord {
@@ -134,6 +135,7 @@ export default function ExpenditurePage() {
           {!locked && (
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
+            <CsvImport type="expenditure" periodId={periodId} entityId={entityId} onImported={loadData} />
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Add Expenditure Record</DialogTitle></DialogHeader>
               <ExpenditureForm sectorOptions={RELATED_SECTORS} onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />

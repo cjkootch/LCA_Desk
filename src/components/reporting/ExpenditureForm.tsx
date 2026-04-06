@@ -3,10 +3,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CertVerification } from "@/components/reporting/CertVerification";
+import { Badge } from "@/components/ui/badge";
+import { searchLcsRegister } from "@/server/actions";
 
 const expenditureSchema = z.object({
   type_of_item_procured: z.string().min(1, "Type of item is required"),
@@ -26,6 +29,88 @@ const expenditureSchema = z.object({
 });
 
 type ExpenditureFormData = z.infer<typeof expenditureSchema>;
+
+function SupplierAutoSuggest({ value, onChange, error }: {
+  value: string;
+  onChange: (name: string, certId?: string) => void;
+  error?: string;
+}) {
+  const [query, setQuery] = useState(value || "");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value || ""); }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInput = (val: string) => {
+    setQuery(val);
+    onChange(val);
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    if (val.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        searchLcsRegister(val).then(results => {
+          setSuggestions(results);
+          setShowSuggestions(results.length > 0);
+        }).catch(() => {});
+      }, 300);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="block text-sm font-medium text-text-primary mb-1.5">Supplier Name *</label>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => handleInput(e.target.value)}
+        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+        placeholder="Start typing to search LCS register..."
+        className="w-full h-10 px-3 rounded-lg bg-white border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+      />
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
+      {showSuggestions && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {suggestions.map((s) => (
+            <button
+              key={s.certId || s.legalName}
+              type="button"
+              className="w-full text-left px-3 py-2 hover:bg-bg-primary transition-colors border-b border-border-light last:border-0"
+              onClick={() => {
+                onChange(s.legalName, s.certId || undefined);
+                setQuery(s.legalName);
+                setShowSuggestions(false);
+              }}
+            >
+              <p className="text-sm font-medium text-text-primary">{s.legalName}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {s.certId && <span className="text-[10px] font-mono text-accent">{s.certId}</span>}
+                {s.status && <Badge variant={s.status.toLowerCase() === "active" ? "success" : "default"} className="text-[9px]">{s.status}</Badge>}
+                {s.serviceCategories?.slice(0, 2).map((c: string) => (
+                  <span key={c} className="text-[10px] text-text-muted">{c}</span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ExpenditureFormProps {
   sectorOptions: string[];
@@ -106,10 +191,12 @@ export function ExpenditureForm({
       />
 
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Supplier Name *"
-          id="supplier_name"
-          {...register("supplier_name")}
+        <SupplierAutoSuggest
+          value={watch("supplier_name")}
+          onChange={(name, certId) => {
+            setValue("supplier_name", name);
+            if (certId) setValue("supplier_certificate_id", certId);
+          }}
           error={errors.supplier_name?.message}
         />
         <Input

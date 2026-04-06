@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Search, MapPin, Calendar, Users, Briefcase } from "lucide-react";
-import { fetchPublicJobs } from "@/server/actions";
+import { Search, MapPin, Calendar, Users, Briefcase, Sparkles, ExternalLink } from "lucide-react";
+import { fetchPublicJobs, fetchLcsJobs } from "@/server/actions";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import Link from "next/link";
 
 const CATEGORIES = [
@@ -20,19 +21,25 @@ const CONTRACT_TYPES = ["All", "permanent", "Full-time", "Part-time", "contract"
 
 export default function SeekerJobsPage() {
   const [jobs, setJobs] = useState<Awaited<ReturnType<typeof fetchPublicJobs>>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [lcsJobs, setLcsJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [contractType, setContractType] = useState("All");
+  const [tab, setTab] = useState<"all" | "posted" | "lcs">("all");
 
   const loadJobs = () => {
     setLoading(true);
-    fetchPublicJobs({
-      search: search || undefined,
-      category: category !== "All" ? category : undefined,
-      contractType: contractType !== "All" ? contractType : undefined,
-    })
-      .then(setJobs)
+    Promise.all([
+      fetchPublicJobs({
+        search: search || undefined,
+        category: category !== "All" ? category : undefined,
+        contractType: contractType !== "All" ? contractType : undefined,
+      }),
+      fetchLcsJobs({ search: search || undefined, category: category !== "All" ? category : undefined }),
+    ])
+      .then(([posted, lcs]) => { setJobs(posted); setLcsJobs(lcs); })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
@@ -98,12 +105,26 @@ export default function SeekerJobsPage() {
           </CardContent>
         </Card>
 
+        {/* Source tabs */}
+        <div className="flex items-center gap-1 bg-bg-primary rounded-lg p-1 w-fit mb-4">
+          {([
+            { key: "all" as const, label: `All (${jobs.length + lcsJobs.length})` },
+            { key: "posted" as const, label: `Posted (${jobs.length})` },
+            { key: "lcs" as const, label: `LCS Board (${lcsJobs.length})` },
+          ]).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${tab === t.key ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {/* Results */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
           </div>
-        ) : jobs.length === 0 ? (
+        ) : (tab === "all" ? jobs.length + lcsJobs.length : tab === "posted" ? jobs.length : lcsJobs.length) === 0 ? (
           <EmptyState
             icon={Briefcase}
             title="No jobs found"
@@ -111,8 +132,62 @@ export default function SeekerJobsPage() {
           />
         ) : (
           <>
-            <p className="text-sm text-text-muted">{jobs.length} position{jobs.length !== 1 ? "s" : ""} found</p>
+            <p className="text-sm text-text-muted">
+              {tab === "all" ? jobs.length + lcsJobs.length : tab === "posted" ? jobs.length : lcsJobs.length} position{(tab === "all" ? jobs.length + lcsJobs.length : tab === "posted" ? jobs.length : lcsJobs.length) !== 1 ? "s" : ""} found
+            </p>
+
+            {/* LCS Board Jobs */}
+            {(tab === "all" || tab === "lcs") && lcsJobs.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {tab === "all" && <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mt-2">From LCS Employment Board</h3>}
+                {lcsJobs.filter(j => j.status === "open").map((job: { id: string; companyName: string; jobTitle: string; employmentCategory: string | null; closingDate: string | null; location: string | null; sourceUrl: string | null; aiSummary: string | null; status: string | null }) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  let ai: any = null;
+                  try { if (job.aiSummary) ai = JSON.parse(job.aiSummary); } catch {}
+                  return (
+                    <Card key={job.id} className="hover:border-accent/30 transition-colors mb-3">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base font-medium text-text-primary">{job.jobTitle}</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <CompanyLogo companyName={job.companyName} size={18} />
+                              <span className="text-sm text-text-secondary">{job.companyName}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {job.employmentCategory && <Badge variant="default" className="text-xs">{job.employmentCategory}</Badge>}
+                              <Badge variant="accent" className="text-xs">LCS Board</Badge>
+                              {job.location && (
+                                <span className="flex items-center gap-1 text-xs text-text-muted"><MapPin className="h-3 w-3" /> {job.location}</span>
+                              )}
+                            </div>
+                            {ai?.summary && <p className="text-xs text-text-secondary mt-2 line-clamp-2">{ai.summary}</p>}
+                          </div>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            {job.closingDate && (
+                              <div className="text-right">
+                                <div className="flex items-center gap-1 text-xs text-text-muted"><Calendar className="h-3 w-3" /> Closes</div>
+                                <p className="text-xs font-medium text-text-primary mt-0.5">{new Date(job.closingDate).toLocaleDateString()}</p>
+                              </div>
+                            )}
+                            {job.sourceUrl && (
+                              <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="gap-1"><ExternalLink className="h-3 w-3" /> View</Button>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* User-posted Jobs */}
+            {(tab === "all" || tab === "posted") && (
             <div className="space-y-3">
+              {tab === "all" && jobs.length > 0 && <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Posted on LCA Desk</h3>}
               {jobs.map((job) => (
                 <Link key={job.id} href={`/seeker/jobs/${job.id}`}>
                   <Card className="hover:border-accent/30 transition-colors cursor-pointer mb-3">
@@ -167,6 +242,7 @@ export default function SeekerJobsPage() {
                 </Link>
               ))}
             </div>
+            )}
           </>
         )}
       </div>
