@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Search, Users, MapPin, Briefcase, Mail, FileText,
-  CheckCircle, Lock, Crown, Shield,
+  CheckCircle, Lock, Crown, Shield, Trophy,
 } from "lucide-react";
-import { fetchTalentPool, fetchPlanAndUsage } from "@/server/actions";
+import { fetchTalentPool, fetchPlanAndUsage, fetchUserBadges } from "@/server/actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -151,6 +151,9 @@ export default function TalentPoolPage() {
                         {c.isGuyanese && <Badge variant="success" className="text-[10px]">Guyanese</Badge>}
                         {c.employmentCategory && <Badge variant="default" className="text-[10px]">{c.employmentCategory}</Badge>}
                         {c.contractTypePreference && <Badge variant="default" className="text-[10px]">{c.contractTypePreference}</Badge>}
+                        {c.badges?.map((b: string) => (
+                          <Badge key={b} variant="gold" className="text-[10px] gap-0.5"><Trophy className="h-2.5 w-2.5" />{b}</Badge>
+                        ))}
                         {c.yearsExperience && <Badge variant="default" className="text-[10px]">{c.yearsExperience}yr exp</Badge>}
                         {c.locationPreference && (
                           <span className="flex items-center gap-0.5 text-[10px] text-text-muted">

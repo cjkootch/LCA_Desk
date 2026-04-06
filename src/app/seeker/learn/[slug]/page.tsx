@@ -61,28 +61,34 @@ export default function CoursePage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let quizQuestions: any[] = [];
-  try { if (currentModule?.quizQuestions) quizQuestions = JSON.parse(currentModule.quizQuestions); } catch {}
+  try {
+    if (currentModule?.quizQuestions) {
+      const parsed = JSON.parse(currentModule.quizQuestions);
+      if (Array.isArray(parsed) && parsed.length > 0) quizQuestions = parsed;
+    }
+  } catch {}
 
   const handleSubmitQuiz = async () => {
+    if (quizQuestions.length === 0) {
+      toast.error("Quiz data unavailable. Please try again later.");
+      return;
+    }
     if (Object.keys(answers).length < quizQuestions.length) {
       toast.error("Please answer all questions");
       return;
     }
 
-    const correct = quizQuestions.filter((q: { correctIndex: number }, i: number) => answers[i] === q.correctIndex).length;
-    const score = Math.round((correct / quizQuestions.length) * 100);
-
     setSubmitting(true);
     try {
-      const result = await completeModule(course.id, currentModule.id, score);
+      // Send answers to server for validation — don't trust client scoring
+      const result = await completeModule(course.id, currentModule.id, answers);
       setQuizResult(result);
       if (result.passed) {
         toast.success(result.badgeEarned ? `Quiz passed! You earned the "${course.badgeLabel}" badge!` : "Quiz passed! Module complete.");
-        // Refresh progress
         const refreshed = await fetchCourseWithModules(slug);
         if (refreshed) setData(refreshed);
       } else {
-        toast.error(`Score: ${score}%. You need ${currentModule.passingScore || 80}% to pass.`);
+        toast.error(`Score: ${result.score}%. You need ${currentModule.passingScore || 80}% to pass.`);
       }
     } catch { toast.error("Failed to submit quiz"); }
     setSubmitting(false);

@@ -3553,12 +3553,31 @@ export async function fetchTalentPool(filters?: {
     .where(eq(jobSeekerProfiles.profileVisible, true))
     .limit(200);
 
-  // Strip contact info for non-Pro callers
-  const sanitized = profiles.map(p => ({
-    ...p,
-    userEmail: callerIsPro ? p.userEmail : null,
-    cvUrl: callerIsPro ? p.cvUrl : null,
-  }));
+  // Get badges for all visible users
+  const allUserIds = profiles.map(p => p.userId);
+  const allBadges = allUserIds.length > 0
+    ? await db.select({
+        userId: userCourseProgress.userId,
+        badgeLabel: courses.badgeLabel,
+      }).from(userCourseProgress)
+        .innerJoin(courses, eq(userCourseProgress.courseId, courses.id))
+        .where(sql`${userCourseProgress.badgeEarnedAt} IS NOT NULL`)
+        .limit(500)
+    : [];
+
+  // Strip contact info for non-Pro callers + add badges
+  const sanitized = profiles.map(p => {
+    const userBadges = allBadges
+      .filter(b => b.userId === p.userId)
+      .map(b => b.badgeLabel)
+      .filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+    return {
+      ...p,
+      userEmail: callerIsPro ? p.userEmail : null,
+      cvUrl: callerIsPro ? p.cvUrl : null,
+      badges: userBadges,
+    };
+  });
 
   let filtered = sanitized;
 
@@ -3624,15 +3643,44 @@ export async function fetchCourseWithModules(courseSlug: string) {
   return { course, modules, progress };
 }
 
-export async function completeModule(courseId: string, moduleId: string, quizScore: number) {
+export async function completeModule(courseId: string, moduleId: string, answers: Record<number, number>) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  // Check if module's quiz was passed
-  const [mod] = await db.select({ passingScore: courseModules.passingScore })
-    .from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
-  const passed = quizScore >= (mod?.passingScore || 80);
-  if (!passed) return { passed: false, score: quizScore, required: mod?.passingScore || 80 };
+  // Fetch module with quiz data for server-side validation
+  const [mod] = await db.select({
+    passingScore: courseModules.passingScore,
+    quizQuestions: courseModules.quizQuestions,
+    orderIndex: courseModules.orderIndex,
+    courseId: courseModules.courseId,
+  }).from(courseModules).where(and(eq(courseModules.id, moduleId), eq(courseModules.courseId, courseId))).limit(1);
+  if (!mod) throw new Error("Module not found");
+
+  // Validate module order — check previous modules are completed
+  if (mod.orderIndex > 1) {
+    const prevModules = await db.select({ id: courseModules.id })
+      .from(courseModules)
+      .where(and(eq(courseModules.courseId, courseId), sql`${courseModules.orderIndex} < ${mod.orderIndex}`));
+    const completedPrev = await db.select({ moduleId: userCourseProgress.moduleId })
+      .from(userCourseProgress)
+      .where(and(eq(userCourseProgress.userId, session.user.id), eq(userCourseProgress.courseId, courseId), eq(userCourseProgress.status, "completed")));
+    const allPrevDone = prevModules.every(pm => completedPrev.some(cp => cp.moduleId === pm.id));
+    if (!allPrevDone) throw new Error("Complete previous modules first");
+  }
+
+  // Server-side quiz scoring — don't trust client score
+  let quizScore = 0;
+  try {
+    const questions = JSON.parse(mod.quizQuestions || "[]");
+    if (!Array.isArray(questions) || questions.length === 0) throw new Error("Invalid quiz");
+    const correct = questions.filter((q: { correctIndex: number }, i: number) => answers[i] === q.correctIndex).length;
+    quizScore = Math.round((correct / questions.length) * 100);
+  } catch {
+    throw new Error("Quiz validation failed");
+  }
+
+  const passed = quizScore >= (mod.passingScore || 80);
+  if (!passed) return { passed: false, score: quizScore, required: mod.passingScore || 80 };
 
   // Upsert progress
   const [existing] = await db.select({ id: userCourseProgress.id })

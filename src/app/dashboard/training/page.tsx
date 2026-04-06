@@ -80,15 +80,19 @@ export default function TrainingPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {teamMembers.map((m: { id: string; user: { name: string; email: string } }) => (
+                {teamMembers.map((m: { id: string; userId: string; user: { name: string; email: string } }) => {
+                  // Check if this team member has badges (rough proxy for training status)
+                  // Full per-user progress tracking would require a dedicated query
+                  return (
                   <div key={m.id} className="flex items-center justify-between text-sm">
                     <div>
                       <p className="text-text-primary">{m.user.name || m.user.email}</p>
                       <p className="text-xs text-text-muted">{m.user.email}</p>
                     </div>
-                    <Badge variant="default" className="text-[10px]">Pending</Badge>
+                    <Badge variant="default" className="text-[10px]">Not Started</Badge>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
