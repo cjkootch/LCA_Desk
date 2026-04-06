@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   FileSpreadsheet, FileText, Send, CheckCircle, Mail, Shield,
-  Lock, AlertTriangle, Clock, User,
+  Lock, AlertTriangle, Clock, User, Globe, Download, ArrowRight,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -46,6 +46,7 @@ export default function ExportPage() {
   const [submitting, setSubmitting] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
+  const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -103,16 +104,20 @@ export default function ExportPage() {
     setExporting(null);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (method: "platform" | "email") => {
     if (!attestChecked) {
       toast.error("You must attest to the accuracy of this report before submitting.");
       return;
     }
     setSubmitting(true);
     try {
-      await attestAndSubmit(periodId, getJurisdictionTemplate(jurisdictionCode).attestationText);
+      await attestAndSubmit(periodId, getJurisdictionTemplate(jurisdictionCode).attestationText, method);
       setPeriod((prev: typeof period) => prev ? { ...prev, status: "submitted", submittedAt: new Date(), lockedAt: new Date() } : prev);
-      toast.success("Report submitted and locked. A snapshot has been saved.");
+      toast.success(
+        method === "platform"
+          ? "Report submitted directly to the Secretariat via LCA Desk."
+          : "Report submitted and locked. A snapshot has been saved."
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Submission failed");
     }
@@ -196,110 +201,211 @@ export default function ExportPage() {
         </Card>
 
         {/* Export files */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success-light"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
-            <CardContent><Button onClick={() => handleExport("excel")} loading={exporting === "excel"} className="w-full"><FileSpreadsheet className="h-4 w-4 mr-2" />Download Excel Report</Button></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-danger-light"><FileText className="h-6 w-6 text-danger" /></div><div><CardTitle className="text-base">Narrative PDF</CardTitle><p className="text-sm text-text-muted mt-1">Comparative Analysis Report</p></div></div></CardHeader>
-            <CardContent><Button onClick={() => handleExport("pdf")} variant="secondary" loading={exporting === "pdf"} className="w-full"><FileText className="h-4 w-4 mr-2" />Download Narrative PDF</Button></CardContent>
-          </Card>
-        </div>
-
-        {/* Submission section */}
         <Card className="mb-6">
-          <CardHeader><div className="flex items-center gap-2"><Send className="h-5 w-5 text-accent" /><CardTitle className="text-base">Submit to Secretariat</CardTitle></div></CardHeader>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-accent" />
+              <CardTitle className="text-base">Download Report Files</CardTitle>
+            </div>
+          </CardHeader>
           <CardContent>
             <p className="text-sm text-text-secondary mb-4">
-              Download both files above, then submit via email to the Local Content Secretariat.
+              Generate your official compliance reports. These files can be submitted via LCA Desk or emailed to the Secretariat.
             </p>
-            <div className="bg-bg-primary rounded-lg p-4 space-y-2 text-sm mb-4">
-              <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">{getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}</span></div>
-              <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
-            </div>
-            <a
-              href={`mailto:${getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
-                `Dear ${getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort},\n\nPlease find attached the ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
-              )}`}
-            >
-              <Button variant="primary" className="w-full mb-2">
-                <Mail className="h-4 w-4 mr-2" /> Compose Submission Email
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button onClick={() => handleExport("excel")} loading={exporting === "excel"} variant="outline" className="w-full gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-success" /> Excel Report <span className="text-[10px] text-text-muted ml-auto">v4.1</span>
               </Button>
-            </a>
-            <p className="text-xs text-text-muted">
-              Remember to attach both downloaded files before sending.
-            </p>
+              <Button onClick={() => handleExport("pdf")} loading={exporting === "pdf"} variant="outline" className="w-full gap-2">
+                <FileText className="h-4 w-4 text-danger" /> Narrative PDF
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Workflow actions */}
+        {/* Submission method choice */}
         {!isSubmitted && (
-          <Card className="mb-6">
-            <CardContent className="p-5 space-y-4">
-              {/* Review/Approve buttons */}
-              {(period.status === "not_started" || period.status === "in_progress") && (
-                <div>
-                  <Button onClick={handleSendForReview} variant="outline" className="w-full gap-2">
-                    <Clock className="h-4 w-4" /> Send for Review
-                  </Button>
-                  <p className="text-[11px] text-text-muted mt-1.5">Mark this report as ready for internal review before submission.</p>
-                </div>
-              )}
+          <>
+            {/* Workflow status buttons */}
+            {(period.status === "not_started" || period.status === "in_progress" || period.status === "in_review") && (
+              <Card className="mb-6">
+                <CardContent className="p-4">
+                  {(period.status === "not_started" || period.status === "in_progress") && (
+                    <div>
+                      <Button onClick={handleSendForReview} variant="outline" className="w-full gap-2">
+                        <Clock className="h-4 w-4" /> Send for Review
+                      </Button>
+                      <p className="text-[11px] text-text-muted mt-1.5">Mark this report as ready for internal review before submission.</p>
+                    </div>
+                  )}
+                  {period.status === "in_review" && (
+                    <div>
+                      <Button onClick={handleApprove} variant="outline" className="w-full gap-2">
+                        <CheckCircle className="h-4 w-4" /> Approve for Submission
+                      </Button>
+                      <p className="text-[11px] text-text-muted mt-1.5">Confirm this report has been reviewed and is ready to submit.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-              {period.status === "in_review" && (
-                <div>
-                  <Button onClick={handleApprove} variant="outline" className="w-full gap-2">
-                    <CheckCircle className="h-4 w-4" /> Approve for Submission
-                  </Button>
-                  <p className="text-[11px] text-text-muted mt-1.5">Confirm this report has been reviewed and is ready to submit.</p>
+            {/* Choose submission method */}
+            <Card className="mb-6">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Send className="h-5 w-5 text-accent" />
+                  <CardTitle className="text-base">Submit to Secretariat</CardTitle>
                 </div>
-              )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-text-secondary">
+                  Choose how to deliver your report to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"}.
+                </p>
 
-              {/* Attestation */}
-              <div className="border-t border-border pt-4">
-                <div className="flex items-start gap-2 mb-3">
-                  <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-text-primary">Attestation & Submission</h3>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      This action is irreversible. The report will be locked and a snapshot saved.
+                {/* Option cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Option 1: Direct Platform Submission */}
+                  <button
+                    onClick={() => setSubmitMethod("platform")}
+                    className={`text-left rounded-xl border-2 p-4 transition-all ${
+                      submitMethod === "platform"
+                        ? "border-accent bg-accent-light ring-1 ring-accent/20"
+                        : "border-border hover:border-accent/40 bg-bg-card"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 rounded-lg bg-accent/10">
+                        <Globe className="h-5 w-5 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-text-primary">Submit via LCA Desk</p>
+                        <Badge variant="success" className="text-[9px] mt-0.5">Recommended</Badge>
+                      </div>
+                    </div>
+                    <ul className="text-xs text-text-secondary space-y-1 mt-3">
+                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Instant delivery to the Secretariat</li>
+                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Track review status in real-time</li>
+                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Receive amendment requests digitally</li>
+                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Full audit trail & receipt</li>
+                    </ul>
+                  </button>
+
+                  {/* Option 2: Export & Email */}
+                  <button
+                    onClick={() => setSubmitMethod("email")}
+                    className={`text-left rounded-xl border-2 p-4 transition-all ${
+                      submitMethod === "email"
+                        ? "border-accent bg-accent-light ring-1 ring-accent/20"
+                        : "border-border hover:border-accent/40 bg-bg-card"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 rounded-lg bg-bg-primary">
+                        <Mail className="h-5 w-5 text-text-muted" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-text-primary">Export & Email</p>
+                        <Badge variant="default" className="text-[9px] mt-0.5">Traditional</Badge>
+                      </div>
+                    </div>
+                    <ul className="text-xs text-text-secondary space-y-1 mt-3">
+                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Download Excel + PDF files</li>
+                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Email to {getJurisdictionTemplate(jurisdictionCode).submissionEmail || "Secretariat"}</li>
+                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Attach files manually</li>
+                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Wait for email confirmation</li>
+                    </ul>
+                  </button>
+                </div>
+
+                {/* Email compose section (shown when email method selected) */}
+                {submitMethod === "email" && (
+                  <div className="bg-bg-primary rounded-lg p-4 space-y-3 border border-border">
+                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Email Submission Details</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">{getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}</span></div>
+                      <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
+                    </div>
+                    <a
+                      href={`mailto:${getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
+                        `Dear ${getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort},\n\nPlease find attached the ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
+                      )}`}
+                    >
+                      <Button variant="secondary" className="w-full gap-2">
+                        <Mail className="h-4 w-4" /> Compose Submission Email
+                      </Button>
+                    </a>
+                    <p className="text-[10px] text-text-muted">
+                      Remember to attach both downloaded files before sending.
                     </p>
                   </div>
-                </div>
+                )}
 
-                <div className="bg-warning-light border border-warning/20 rounded-lg p-3 mb-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                    <p className="text-xs text-text-secondary leading-relaxed">{getJurisdictionTemplate(jurisdictionCode).attestationText}</p>
+                {/* Platform submit info (shown when platform method selected) */}
+                {submitMethod === "platform" && (
+                  <div className="bg-accent-light rounded-lg p-4 border border-accent/20">
+                    <div className="flex items-start gap-2 mb-2">
+                      <Globe className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-accent">Direct Platform Submission</p>
+                        <p className="text-xs text-text-secondary mt-1">
+                          Your report data, attestation, and all supporting records will be delivered directly to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"} through LCA Desk. They will see your full submission including compliance metrics, employment breakdown, and expenditure details — no email attachments needed.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <label className="flex items-start gap-3 cursor-pointer mb-4">
-                  <input
-                    type="checkbox"
-                    checked={attestChecked}
-                    onChange={(e) => setAttestChecked(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-sm text-text-primary font-medium">
-                    I have read and agree to the attestation above
-                  </span>
-                </label>
+                {/* Attestation */}
+                {submitMethod && (
+                  <div className="border-t border-border pt-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-semibold text-text-primary">Attestation & Final Submission</h3>
+                        <p className="text-xs text-text-muted mt-0.5">
+                          This action is irreversible. The report will be locked and a snapshot saved.
+                        </p>
+                      </div>
+                    </div>
 
-                <Button
-                  onClick={handleSubmit}
-                  loading={submitting}
-                  disabled={!attestChecked}
-                  size="lg"
-                  className="w-full gap-2"
-                >
-                  <Lock className="h-5 w-5" />
-                  Attest & Submit Report
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="bg-warning-light border border-warning/20 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                        <p className="text-xs text-text-secondary leading-relaxed">{getJurisdictionTemplate(jurisdictionCode).attestationText}</p>
+                      </div>
+                    </div>
+
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={attestChecked}
+                        onChange={(e) => setAttestChecked(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                      />
+                      <span className="text-sm text-text-primary font-medium">
+                        I have read and agree to the attestation above
+                      </span>
+                    </label>
+
+                    <Button
+                      onClick={() => handleSubmit(submitMethod)}
+                      loading={submitting}
+                      disabled={!attestChecked}
+                      size="lg"
+                      className="w-full gap-2"
+                    >
+                      {submitMethod === "platform" ? (
+                        <><Globe className="h-5 w-5" /> Attest & Submit via LCA Desk</>
+                      ) : (
+                        <><Lock className="h-5 w-5" /> Attest & Submit Report</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* Submitted state */}

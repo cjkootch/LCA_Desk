@@ -311,7 +311,7 @@ export async function updatePeriodStatus(periodId: string, newStatus: string) {
   return updated;
 }
 
-export async function attestAndSubmit(periodId: string, attestationText: string) {
+export async function attestAndSubmit(periodId: string, attestationText: string, submissionMethod: "platform" | "email" = "email") {
   const { tenantId, userId } = await getSessionTenant();
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw new Error("User not found");
@@ -376,14 +376,17 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     .returning();
 
   // Create submission log
+  const jCode = await getEntityJurisdictionCode(current.entityId);
+  const { getJurisdictionTemplate } = await import("@/lib/compliance/jurisdiction-config");
+  const jTemplate = getJurisdictionTemplate(jCode);
   await db.insert(submissionLogs).values({
     reportingPeriodId: periodId,
     entityId: current.entityId,
     tenantId,
     submittedBy: userId,
-    submissionMethod: "email",
-    submittedToEmail: "localcontent@nre.gov.gy",
-    status: "sent",
+    submissionMethod,
+    submittedToEmail: submissionMethod === "platform" ? "LCA Desk Platform" : (jTemplate.submissionEmail || "localcontent@nre.gov.gy"),
+    status: submissionMethod === "platform" ? "delivered" : "sent",
   });
 
   await logAudit({
@@ -468,7 +471,7 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
 
 // Keep backward compat
 export async function markPeriodSubmitted(periodId: string) {
-  return attestAndSubmit(periodId, "I certify that the information contained in this report is true and accurate to the best of my knowledge.");
+  return attestAndSubmit(periodId, "I certify that the information contained in this report is true and accurate to the best of my knowledge.", "email");
 }
 
 export async function checkPeriodLocked(periodId: string): Promise<boolean> {
@@ -4201,6 +4204,12 @@ export async function fetchSecretariatDashboard() {
     .orderBy(desc(reportingPeriods.submittedAt))
     .limit(100);
 
+  // Get submission methods from logs
+  const subLogs = await db.select({
+    periodId: submissionLogs.reportingPeriodId,
+    method: submissionLogs.submissionMethod,
+  }).from(submissionLogs).limit(200);
+
   // Get acknowledgment status for each
   const acks = await db.select()
     .from(submissionAcknowledgments)
@@ -4209,8 +4218,10 @@ export async function fetchSecretariatDashboard() {
 
   const enriched = submissions.map(s => {
     const ack = acks.find(a => a.reportingPeriodId === s.periodId);
+    const log = subLogs.find(l => l.periodId === s.periodId);
     return {
       ...s,
+      submissionMethod: log?.method || "email",
       acknowledgment: ack ? {
         status: ack.status,
         referenceNumber: ack.referenceNumber,
@@ -4364,6 +4375,13 @@ export async function fetchSubmissionDetail(periodId: string) {
     try { snapshot = JSON.parse(period.snapshotData as string); } catch {}
   }
 
+  // Submission method
+  const [subLog] = await db.select({ method: submissionLogs.submissionMethod })
+    .from(submissionLogs)
+    .where(eq(submissionLogs.reportingPeriodId, periodId))
+    .orderBy(desc(submissionLogs.createdAt))
+    .limit(1);
+
   return {
     period: {
       id: period.id,
@@ -4376,6 +4394,7 @@ export async function fetchSubmissionDetail(periodId: string) {
       attestation: period.attestation,
       attestedAt: period.attestedAt,
     },
+    submissionMethod: subLog?.method || "email",
     entity: { name: entity?.legalName, type: entity?.companyType, id: entity?.id },
     tenant: { name: tenant?.name },
     attester,

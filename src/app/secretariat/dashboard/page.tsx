@@ -203,10 +203,12 @@ export default function SecretariatDashboardPage() {
                       <p className="text-xs text-text-muted">{s.tenantName} · {s.companyType} · {s.reportType.replace(/_/g, " ").toUpperCase()} FY{s.fiscalYear}</p>
                       <p className="text-[10px] text-text-muted mt-0.5">
                         Submitted {s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                        {s.submissionMethod === "platform" && " · via LCA Desk"}
                         {ack?.referenceNumber && ` · Ref: ${ack.referenceNumber}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {s.submissionMethod === "platform" && <Badge variant="accent" className="text-[9px]">Platform</Badge>}
                       {ackCfg ? <Badge variant={ackCfg.variant}>{ackCfg.label}</Badge> : <Badge variant="warning">Pending</Badge>}
                       <Eye className="h-4 w-4 text-text-muted" />
                     </div>
@@ -234,6 +236,7 @@ export default function SecretariatDashboardPage() {
                   <div className="flex justify-between"><span className="text-text-muted">Report</span><span className="font-medium">{detailData.period.reportType.replace(/_/g, " ")} — FY {detailData.period.fiscalYear}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Period</span><span>{detailData.period.periodStart} to {detailData.period.periodEnd}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Submitted</span><span>{detailData.period.submittedAt ? new Date(detailData.period.submittedAt).toLocaleString() : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-text-muted">Method</span><span>{detailData.submissionMethod === "platform" ? <Badge variant="accent" className="text-[9px]">LCA Desk Platform</Badge> : <Badge variant="default" className="text-[9px]">Email</Badge>}</span></div>
                   {detailData.attester && <div className="flex justify-between"><span className="text-text-muted">Attested by</span><span>{detailData.attester.name} ({detailData.attester.email})</span></div>}
                 </div>
 
