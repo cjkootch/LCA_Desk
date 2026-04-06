@@ -10,9 +10,9 @@ import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import {
   ArrowLeft, Building2, Megaphone, Briefcase, Mail, Phone, User,
   ExternalLink, CheckCircle, Shield, Calendar, Clock, Sparkles,
-  Flag,
+  Flag, Lock, Crown,
 } from "lucide-react";
-import { fetchCompanyProfile, claimCompanyProfile } from "@/server/actions";
+import { fetchCompanyProfile, claimCompanyProfile, fetchPlanAndUsage } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -25,13 +25,14 @@ export default function CompanyProfilePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
+  const [plan, setPlan] = useState("starter");
 
   useEffect(() => {
-    fetchCompanyProfile(slug)
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchCompanyProfile(slug).then(setData).catch(() => {}).finally(() => setLoading(false));
+    fetchPlanAndUsage().then(d => setPlan(d.plan)).catch(() => {});
   }, [slug]);
+
+  const isPro = plan === "pro" || plan === "enterprise";
 
   const handleClaim = async () => {
     if (!data?.profile) return;
@@ -140,30 +141,78 @@ export default function CompanyProfilePage() {
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* Contact */}
           <Card>
-            <CardHeader><CardTitle className="text-sm">Contact Information</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {names.map((n: string, i: number) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
-                  <User className="h-3.5 w-3.5 text-text-muted" /> {n}
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Contact Information</CardTitle>
+                {!isPro && (emails.length > 0 || phones.length > 0) && (
+                  <Lock className="h-3.5 w-3.5 text-text-muted" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isPro ? (
+                <div className="space-y-2">
+                  {names.map((n: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
+                      <User className="h-3.5 w-3.5 text-text-muted" /> {n}
+                    </div>
+                  ))}
+                  {emails.map((e: string, i: number) => (
+                    <a key={i} href={`mailto:${e}`} className="flex items-center gap-2 text-xs text-accent hover:text-accent-hover">
+                      <Mail className="h-3.5 w-3.5" /> {e}
+                    </a>
+                  ))}
+                  {phones.map((p: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
+                      <Phone className="h-3.5 w-3.5 text-text-muted" /> {p}
+                    </div>
+                  ))}
+                  {profile.website && (
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-accent hover:text-accent-hover">
+                      <ExternalLink className="h-3.5 w-3.5" /> {profile.website}
+                    </a>
+                  )}
+                  {emails.length === 0 && phones.length === 0 && names.length === 0 && !profile.website && (
+                    <p className="text-xs text-text-muted">No contact info available</p>
+                  )}
                 </div>
-              ))}
-              {emails.map((e: string, i: number) => (
-                <a key={i} href={`mailto:${e}`} className="flex items-center gap-2 text-xs text-accent hover:text-accent-hover">
-                  <Mail className="h-3.5 w-3.5" /> {e}
-                </a>
-              ))}
-              {phones.map((p: string, i: number) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
-                  <Phone className="h-3.5 w-3.5 text-text-muted" /> {p}
+              ) : (
+                <div className="relative">
+                  {/* Blurred preview */}
+                  <div className="space-y-2 select-none" style={{ filter: "blur(5px)" }}>
+                    {names.length > 0 ? names.slice(0, 2).map((n: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
+                        <User className="h-3.5 w-3.5 text-text-muted" /> {n}
+                      </div>
+                    )) : (
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
+                        <User className="h-3.5 w-3.5 text-text-muted" /> Contact Name
+                      </div>
+                    )}
+                    {emails.length > 0 ? emails.slice(0, 2).map((e: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-text-secondary">
+                        <Mail className="h-3.5 w-3.5 text-text-muted" /> {e}
+                      </div>
+                    )) : (
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
+                        <Mail className="h-3.5 w-3.5 text-text-muted" /> email@company.com
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-text-secondary">
+                      <Phone className="h-3.5 w-3.5 text-text-muted" /> +592 XXX XXXX
+                    </div>
+                  </div>
+                  {/* Overlay CTA */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg-card/60 rounded-lg">
+                    <Lock className="h-5 w-5 text-text-muted mb-2" />
+                    <p className="text-xs font-medium text-text-primary text-center">Contact info is Pro only</p>
+                    <Link href="/dashboard/settings/billing">
+                      <Button size="sm" className="mt-2 gap-1.5">
+                        <Crown className="h-3.5 w-3.5" /> Upgrade to Pro
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-              ))}
-              {profile.website && (
-                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-accent hover:text-accent-hover">
-                  <ExternalLink className="h-3.5 w-3.5" /> {profile.website}
-                </a>
-              )}
-              {emails.length === 0 && phones.length === 0 && names.length === 0 && !profile.website && (
-                <p className="text-xs text-text-muted">No contact info available</p>
               )}
             </CardContent>
           </Card>
