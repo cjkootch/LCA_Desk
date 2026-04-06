@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
             plan,
             stripeSubscriptionId: session.subscription as string,
             stripeCustomerId: session.customer as string,
+            trialEndsAt: null, // Clear trial — they've paid
           })
           .where(eq(tenants.id, tenantId));
       }
