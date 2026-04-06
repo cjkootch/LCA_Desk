@@ -1701,3 +1701,308 @@ export async function updateMySupplierProfile(data: Record<string, unknown>) {
     .returning();
   return updated;
 }
+
+// ─── JOB SEEKER PORTAL (EXTENDED) ────────────────────────────────
+
+export async function fetchMyProfile() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const profile = await db.query.jobSeekerProfiles.findFirst({
+    where: eq(jobSeekerProfiles.userId, session.user.id),
+  });
+
+  const [user] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  return profile ? { ...profile, name: user?.name, email: user?.email } : null;
+}
+
+export async function updateMyProfile(data: {
+  currentJobTitle?: string;
+  employmentCategory?: string;
+  employmentClassification?: string;
+  yearsExperience?: number;
+  isGuyanese?: boolean;
+  nationality?: string;
+  cvUrl?: string;
+  skills?: string[];
+  locationPreference?: string;
+  contractTypePreference?: string;
+  alertsEnabled?: boolean;
+  name?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  if (data.name) {
+    await db.update(users).set({ name: data.name, updatedAt: new Date() }).where(eq(users.id, session.user.id));
+  }
+
+  const [updated] = await db
+    .update(jobSeekerProfiles)
+    .set({
+      currentJobTitle: data.currentJobTitle ?? undefined,
+      employmentCategory: data.employmentCategory ?? undefined,
+      employmentClassification: data.employmentClassification ?? undefined,
+      yearsExperience: data.yearsExperience ?? undefined,
+      isGuyanese: data.isGuyanese ?? undefined,
+      nationality: data.nationality ?? undefined,
+      cvUrl: data.cvUrl ?? undefined,
+      skills: data.skills ?? undefined,
+      locationPreference: data.locationPreference ?? undefined,
+      contractTypePreference: data.contractTypePreference ?? undefined,
+      alertsEnabled: data.alertsEnabled ?? undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(jobSeekerProfiles.userId, session.user.id))
+    .returning();
+
+  return updated;
+}
+
+export async function fetchPublicJobs(filters?: {
+  category?: string;
+  contractType?: string;
+  location?: string;
+  search?: string;
+}) {
+  const conditions = [
+    eq(jobPostings.status, "open"),
+    eq(jobPostings.isPublic, true),
+  ];
+  if (filters?.category) conditions.push(eq(jobPostings.employmentCategory, filters.category));
+  if (filters?.contractType) conditions.push(eq(jobPostings.contractType, filters.contractType));
+
+  const results = await db
+    .select({
+      id: jobPostings.id,
+      jobTitle: jobPostings.jobTitle,
+      employmentCategory: jobPostings.employmentCategory,
+      employmentClassification: jobPostings.employmentClassification,
+      contractType: jobPostings.contractType,
+      location: jobPostings.location,
+      description: jobPostings.description,
+      qualifications: jobPostings.qualifications,
+      vacancyCount: jobPostings.vacancyCount,
+      applicationDeadline: jobPostings.applicationDeadline,
+      startDate: jobPostings.startDate,
+      guyaneseFirstStatement: jobPostings.guyaneseFirstStatement,
+      createdAt: jobPostings.createdAt,
+      companyName: tenants.name,
+    })
+    .from(jobPostings)
+    .innerJoin(tenants, eq(jobPostings.tenantId, tenants.id))
+    .where(and(...conditions))
+    .orderBy(jobPostings.createdAt)
+    .limit(100);
+
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    return results.filter(
+      (j) =>
+        j.jobTitle.toLowerCase().includes(q) ||
+        j.companyName.toLowerCase().includes(q) ||
+        j.location?.toLowerCase().includes(q) ||
+        j.description?.toLowerCase().includes(q)
+    );
+  }
+
+  return results;
+}
+
+export async function fetchJobDetail(jobId: string) {
+  const [job] = await db
+    .select({
+      id: jobPostings.id,
+      jobTitle: jobPostings.jobTitle,
+      employmentCategory: jobPostings.employmentCategory,
+      employmentClassification: jobPostings.employmentClassification,
+      contractType: jobPostings.contractType,
+      location: jobPostings.location,
+      description: jobPostings.description,
+      qualifications: jobPostings.qualifications,
+      vacancyCount: jobPostings.vacancyCount,
+      applicationDeadline: jobPostings.applicationDeadline,
+      startDate: jobPostings.startDate,
+      guyaneseFirstStatement: jobPostings.guyaneseFirstStatement,
+      status: jobPostings.status,
+      createdAt: jobPostings.createdAt,
+      companyName: tenants.name,
+    })
+    .from(jobPostings)
+    .innerJoin(tenants, eq(jobPostings.tenantId, tenants.id))
+    .where(and(eq(jobPostings.id, jobId), eq(jobPostings.isPublic, true)))
+    .limit(1);
+
+  return job ?? null;
+}
+
+export async function applyToJob(data: {
+  jobPostingId: string;
+  coverNote?: string;
+  cvUrl?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [user] = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1);
+  const profile = await db.query.jobSeekerProfiles.findFirst({
+    where: eq(jobSeekerProfiles.userId, session.user.id),
+  });
+
+  const existing = await db
+    .select({ id: jobApplications.id })
+    .from(jobApplications)
+    .where(
+      and(
+        eq(jobApplications.jobPostingId, data.jobPostingId),
+        eq(jobApplications.applicantUserId, session.user.id)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) throw new Error("You have already applied to this position");
+
+  const [application] = await db
+    .insert(jobApplications)
+    .values({
+      jobPostingId: data.jobPostingId,
+      applicantUserId: session.user.id,
+      applicantName: user?.name || "Unknown",
+      applicantEmail: user?.email || "",
+      isGuyanese: profile?.isGuyanese ?? true,
+      nationality: profile?.nationality || "Guyanese",
+      employmentCategory: profile?.employmentCategory || null,
+      employmentClassification: profile?.employmentClassification || null,
+      coverNote: data.coverNote || null,
+      cvUrl: data.cvUrl || profile?.cvUrl || null,
+    })
+    .returning();
+
+  return application;
+}
+
+export async function fetchSeekerOpportunities(filters?: {
+  type?: string;
+  category?: string;
+  search?: string;
+}) {
+  const conditions = [eq(lcsOpportunities.status, "active")];
+  if (filters?.type) conditions.push(eq(lcsOpportunities.type, filters.type));
+  if (filters?.category) conditions.push(eq(lcsOpportunities.lcaCategory, filters.category));
+
+  const results = await db
+    .select()
+    .from(lcsOpportunities)
+    .where(and(...conditions))
+    .orderBy(lcsOpportunities.postedDate)
+    .limit(200);
+
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    return results.filter(
+      (o) =>
+        o.title.toLowerCase().includes(q) ||
+        o.contractorName.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q)
+    );
+  }
+
+  return results;
+}
+
+export async function seekerSaveOpportunity(opportunityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [saved] = await db
+    .insert(savedOpportunities)
+    .values({
+      tenantId: session.user.id,
+      userId: session.user.id,
+      opportunityId,
+    })
+    .onConflictDoNothing()
+    .returning();
+  return saved;
+}
+
+export async function seekerUnsaveOpportunity(opportunityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await db
+    .delete(savedOpportunities)
+    .where(
+      and(
+        eq(savedOpportunities.userId, session.user.id),
+        eq(savedOpportunities.opportunityId, opportunityId)
+      )
+    );
+}
+
+export async function fetchMySavedOpportunities() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return db
+    .select({
+      id: savedOpportunities.id,
+      opportunityId: savedOpportunities.opportunityId,
+      notes: savedOpportunities.notes,
+      savedAt: savedOpportunities.createdAt,
+      title: lcsOpportunities.title,
+      contractorName: lcsOpportunities.contractorName,
+      type: lcsOpportunities.type,
+      deadline: lcsOpportunities.deadline,
+      sourceUrl: lcsOpportunities.sourceUrl,
+    })
+    .from(savedOpportunities)
+    .innerJoin(lcsOpportunities, eq(savedOpportunities.opportunityId, lcsOpportunities.id))
+    .where(eq(savedOpportunities.userId, session.user.id))
+    .orderBy(savedOpportunities.createdAt);
+}
+
+export async function fetchSeekerDashboardStats() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const apps = await db
+    .select({ status: jobApplications.status })
+    .from(jobApplications)
+    .where(eq(jobApplications.applicantUserId, session.user.id));
+
+  const saved = await db
+    .select({ id: savedOpportunities.id })
+    .from(savedOpportunities)
+    .where(eq(savedOpportunities.userId, session.user.id));
+
+  const openJobs = await db
+    .select({ id: jobPostings.id })
+    .from(jobPostings)
+    .where(and(eq(jobPostings.status, "open"), eq(jobPostings.isPublic, true)))
+    .limit(500);
+
+  const profile = await db.query.jobSeekerProfiles.findFirst({
+    where: eq(jobSeekerProfiles.userId, session.user.id),
+  });
+
+  return {
+    totalApplications: apps.length,
+    activeApplications: apps.filter((a) => !["selected", "rejected"].includes(a.status || "")).length,
+    selectedCount: apps.filter((a) => a.status === "selected").length,
+    rejectedCount: apps.filter((a) => a.status === "rejected").length,
+    savedOpportunities: saved.length,
+    openJobsCount: openJobs.length,
+    profileComplete: !!(
+      profile?.currentJobTitle &&
+      profile?.employmentCategory &&
+      profile?.skills?.length
+    ),
+    profile,
+  };
+}
