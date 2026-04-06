@@ -347,23 +347,25 @@ async function main() {
       .from(lcsOpportunities)
       .limit(500);
 
-    // Filter: needs analysis if no aiSummary, OR if aiSummary exists but has
-    // "Unknown" contractor and we have attachments that might identify them
+    // Filter: needs analysis if:
+    // 1. No aiSummary at all
+    // 2. Contractor is still "Unknown" (AI might find it in docs)
+    // 3. Has aiSummary but issuing_company is missing/null
     const toAnalyze = allNoticesWithDocs.filter(n => {
       const hasAttachments = n.attachmentUrl || n.attachmentUrls;
       if (!hasAttachments) return false;
 
-      // No summary at all — needs analysis
+      // No summary at all
       if (!n.aiSummary) return true;
 
-      // Has summary but still "Unknown" contractor and has multi-doc attachments
-      // that weren't analyzed before (old runs only did single PDF)
-      if (n.contractorName === "Unknown" && n.attachmentUrls) {
-        try {
-          const urls = JSON.parse(n.attachmentUrls) as string[];
-          return urls.length > 1; // re-analyze if there are extra docs we missed
-        } catch { return false; }
-      }
+      // Still "Unknown" contractor — re-analyze to find company name
+      if (n.contractorName === "Unknown") return true;
+
+      // Has summary but check if it's incomplete (missing issuing_company)
+      try {
+        const parsed = JSON.parse(n.aiSummary);
+        if (!parsed.issuing_company && !parsed.scope_of_work) return true; // very incomplete
+      } catch { return true; } // bad JSON, redo
 
       return false;
     });
