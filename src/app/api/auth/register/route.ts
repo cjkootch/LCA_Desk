@@ -28,15 +28,53 @@ const registerSchema = z.object({
   serviceCategories: z.array(z.string()).optional(),
 });
 
+const ALLOWED_ORIGINS = ["https://lcadesk.com", "https://www.lcadesk.com"];
+
+function corsHeaders(origin: string | null) {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  const cors = corsHeaders(origin);
+
   try {
-    const body = await req.json();
+    const raw = await req.json();
+    // Normalize snake_case keys from marketing site to camelCase
+    const body = {
+      ...raw,
+      companyName: raw.companyName ?? raw.company_name,
+      accountType: raw.accountType ?? raw.account_type,
+      currentJobTitle: raw.currentJobTitle ?? raw.current_job_title,
+      employmentCategory: raw.employmentCategory ?? raw.employment_category,
+      locationPreference: raw.locationPreference ?? raw.location_preference,
+      isGuyanese: raw.isGuyanese ?? raw.is_guyanese,
+      alertsEnabled: raw.alertsEnabled ?? raw.alerts_enabled,
+      lcsCertId: raw.lcsCertId ?? raw.lcs_cert_id,
+      lcsVerified: raw.lcsVerified ?? raw.lcs_verified,
+      lcsStatus: raw.lcsStatus ?? raw.lcs_status,
+      lcsExpirationDate: raw.lcsExpirationDate ?? raw.lcs_expiration_date,
+      lcsLegalName: raw.lcsLegalName ?? raw.lcs_legal_name,
+      serviceCategories: raw.serviceCategories ?? raw.service_categories,
+    };
     const parsed = registerSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400, headers: cors }
       );
     }
 
@@ -51,7 +89,7 @@ export async function POST(req: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Email already registered" },
-        { status: 409 }
+        { status: 409, headers: cors }
       );
     }
 
@@ -107,8 +145,8 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "filer",
-        redirectTo: "/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
     // ─── JOB SEEKER REGISTRATION ─────────────────────────────────
@@ -126,8 +164,8 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "job_seeker",
-        redirectTo: "/seeker/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
     // ─── SUPPLIER REGISTRATION ───────────────────────────────────
@@ -145,16 +183,19 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "supplier",
-        redirectTo: "/supplier-portal/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
-    return NextResponse.json({ success: true, userId: user.id, role });
+    return NextResponse.json(
+      { success: true, userId: user.id, role, redirectTo: "/auth/login" },
+      { headers: cors }
+    );
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Registration failed" },
-      { status: 500 }
+      { status: 500, headers: cors }
     );
   }
 }

@@ -14,6 +14,7 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { lcsContractors, lcsOpportunities } from "../server/db/schema";
+import { eq, and, isNotNull } from "drizzle-orm";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
@@ -312,6 +313,70 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
+  // ── Phase 4: Extract PDF content from attachments ──
+  console.log("\nPhase 4: Extracting PDF content from attachments...\n");
+
+  // Get all notices that have a PDF attachment URL but no extracted content yet
+  const allWithAttachments = await db
+    .select({ id: lcsOpportunities.id, attachmentUrl: lcsOpportunities.attachmentUrl, attachmentContent: lcsOpportunities.attachmentContent, sourceSlug: lcsOpportunities.sourceSlug, contractorName: lcsOpportunities.contractorName })
+    .from(lcsOpportunities)
+    .where(isNotNull(lcsOpportunities.attachmentUrl))
+    .limit(500);
+
+  const toProcess = allWithAttachments.filter(n => n.attachmentUrl?.endsWith(".pdf") && !n.attachmentContent);
+
+  console.log(`  Found ${toProcess.length} notices with PDF attachments\n`);
+
+  let pdfsOk = 0;
+  let pdfsSkipped = 0;
+  const BATCH_SIZE = 10;
+
+  for (let i = 0; i < toProcess.length; i++) {
+    const notice = toProcess[i];
+    const tag = `[${String(i + 1).padStart(3, " ")}/${toProcess.length}]`;
+
+    try {
+      const pdfText = await extractPdfText(notice.attachmentUrl!);
+      if (pdfText && pdfText.length > 10) {
+        // Update the record with extracted content
+        await db
+          .update(lcsOpportunities)
+          .set({ attachmentContent: pdfText, updatedAt: new Date() })
+          .where(eq(lcsOpportunities.id, notice.id));
+
+        // If contractor was Unknown, try to match from PDF content
+        if (notice.contractorName === "Unknown") {
+          const pdfMatch = matchContractor(pdfText);
+          if (pdfMatch) {
+            await db
+              .update(lcsOpportunities)
+              .set({ contractorName: pdfMatch.name, contractorSlug: pdfMatch.slug })
+              .where(eq(lcsOpportunities.id, notice.id));
+            console.log(`${tag} 📄 ${pdfMatch.name} (from PDF) — ${notice.sourceSlug}`);
+          } else {
+            console.log(`${tag} 📄 Extracted ${pdfText.length} chars — ${notice.sourceSlug}`);
+          }
+        } else {
+          console.log(`${tag} 📄 ${notice.contractorName} — ${pdfText.length} chars extracted`);
+        }
+        pdfsOk++;
+      } else {
+        pdfsSkipped++;
+        console.log(`${tag} ⚠  No text in PDF — ${notice.sourceSlug}`);
+      }
+    } catch {
+      pdfsSkipped++;
+      console.log(`${tag} ❌  PDF error — ${notice.sourceSlug}`);
+    }
+
+    await sleep(DELAY_MS);
+
+    // Progress update every batch
+    if ((i + 1) % BATCH_SIZE === 0) {
+      console.log(`  ... ${i + 1}/${toProcess.length} PDFs processed\n`);
+    }
+  }
+
   console.log("\n════════════════════════════════════════════");
   console.log("  Complete");
   console.log("════════════════════════════════════════════");
@@ -321,6 +386,8 @@ async function main() {
   console.log(`  ⚠ Companies skipped:     ${skipped}`);
   console.log(`  📋 Notices scraped:       ${noticesOk}`);
   console.log(`  ⚠ Notices skipped:       ${noticesSkipped}`);
+  console.log(`  📄 PDFs extracted:        ${pdfsOk}`);
+  console.log(`  ⚠ PDFs skipped:          ${pdfsSkipped}`);
   console.log();
   process.exit(0);
 }
@@ -364,6 +431,26 @@ interface ScrapedNotice {
   deadline: string | null;
   sourceUrl: string;
   sourceSlug: string;
+  attachmentUrl: string | null;
+  attachmentContent: string | null;
+}
+
+async function extractPdfText(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LCADesk-Scraper/1.0; +https://lcadesk.com)" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require("pdf-parse");
+    const data = await pdfParse(Buffer.from(buffer));
+    // Limit to first 3000 chars to avoid huge storage
+    return data.text?.slice(0, 3000).replace(/\s+/g, " ").trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── COMPANY NAME EXTRACTION ──────────────────────────────────────
@@ -508,9 +595,14 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const deadlineMatch = html.match(/(?:deadline|closing date|submit by|due date)[:\s]*([^\n<]{5,40})/i);
   const deadline = normalizeDate(deadlineMatch?.[1]?.trim() || null);
 
+  // Extract first PDF attachment URL
+  const pdfMatch = html.match(/href="(https?:\/\/[^"]+\.pdf)"/i);
+  const attachmentUrl = pdfMatch?.[1] || null;
+
   return {
     contractorName, contractorSlug, type, noticeType, title, description,
     lcaCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
+    attachmentUrl, attachmentContent: null, // filled in Phase 4
   };
 }
 
@@ -529,6 +621,8 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
       deadline: notice.deadline ?? undefined,
       sourceUrl: notice.sourceUrl,
       sourceSlug: notice.sourceSlug,
+      attachmentUrl: notice.attachmentUrl,
+      attachmentContent: notice.attachmentContent,
       status,
       scrapedAt: new Date(),
       updatedAt: new Date(),
@@ -539,6 +633,8 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
         title: notice.title,
         description: notice.description,
         lcaCategory: notice.lcaCategory,
+        attachmentUrl: notice.attachmentUrl,
+        attachmentContent: notice.attachmentContent,
         deadline: notice.deadline ?? undefined,
         status,
         scrapedAt: new Date(),
