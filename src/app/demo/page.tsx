@@ -205,14 +205,42 @@ function DemoContent() {
           ))}
         </div>
 
-        <div className="mt-8 p-4 bg-bg-primary border border-border rounded-lg">
-          <h3 className="text-sm font-semibold text-text-primary mb-2">Setup Instructions</h3>
-          <p className="text-xs text-text-secondary">
-            Create demo users in the database with the emails above and password &quot;demo-password-2026&quot;.
-            Set appropriate roles, plans, and trialEndsAt values. The Filer (Trial) user should have
-            trialEndsAt set to 14 days from now. The Admin user should have isSuperAdmin = true.
-          </p>
-        </div>
+        <Card className="mt-8 border-accent/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary">Setup Demo Users</h3>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Creates all 6 demo accounts with sample filing data. Safe to run multiple times.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const res = await fetch("/api/demo/seed", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ secret: masterPassword }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast.success(`Demo users created! Password: ${data.password}`);
+                    } else {
+                      toast.error(data.error || "Setup failed");
+                    }
+                  } catch { toast.error("Setup failed"); }
+                  setLoading(false);
+                }}
+              >
+                <User className="h-4 w-4 mr-1" /> Create Demo Users
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
