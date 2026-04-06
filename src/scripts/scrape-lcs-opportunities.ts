@@ -376,8 +376,8 @@ async function main() {
         }
 
         const response = await claude.messages.create({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 1024,
+          model: "claude-sonnet-4-6",
+          max_tokens: 2048,
           messages: [{
             role: "user",
             content: [
@@ -387,28 +387,41 @@ async function main() {
               },
               {
                 type: "text",
-                text: `Analyze this procurement/opportunity notice PDF. Extract the following into a JSON object. Use null for any field not found. Be concise.
+                text: `You are analyzing a procurement or employment opportunity notice from Guyana's petroleum sector. Extract ALL available information from this PDF — check letterheads, headers, footers, signature blocks, tables, and body text thoroughly.
+
+Return a JSON object with these fields. Be thorough — extract every field you can find. Use null ONLY if truly not present in the document.
 
 {
-  "issuing_company": "Full company name that issued this notice",
-  "opportunity_type": "EOI | RFQ | RFP | RFI | Tender | Notice | Other",
-  "title": "Brief title of the opportunity",
-  "scope_of_work": "2-3 sentence summary of what is being procured or offered",
-  "requirements": ["List of key requirements, certifications, or qualifications"],
-  "submission_deadline": "YYYY-MM-DD or null",
-  "project_start_date": "YYYY-MM-DD or null",
-  "contract_duration": "Duration if mentioned",
-  "estimated_value": "Dollar amount if mentioned",
-  "contact_name": "Contact person name",
-  "contact_emails": ["Array of contact email addresses found"],
-  "contact_phone": "Contact phone",
-  "lca_categories": ["Relevant Local Content Act categories"],
-  "location": "Project location",
+  "issuing_company": "Full legal company name from letterhead, header, or body (e.g. 'ExxonMobil Guyana Limited', 'Halliburton Guyana Inc.')",
+  "parent_company": "Parent/global company if different from issuing (e.g. 'ExxonMobil Corporation')",
+  "reference_number": "Document reference, RFQ/EOI/RFP number, or tender ID",
+  "opportunity_type": "EOI | RFQ | RFP | RFI | Tender | Pre-Qualification | Notice | Other",
+  "title": "Full title of the opportunity as stated in the document",
+  "scope_of_work": "Detailed 3-5 sentence summary of what is being procured, including specific services, equipment, or goods required",
+  "requirements": ["Every requirement, certification, qualification, or prerequisite listed — include LCS registration, insurance, safety certs, experience requirements, etc."],
+  "eligibility": "Who can apply — any restrictions on company size, nationality, registration status",
+  "submission_deadline": "YYYY-MM-DD format",
+  "project_start_date": "YYYY-MM-DD format if mentioned",
+  "project_end_date": "YYYY-MM-DD format if mentioned",
+  "contract_duration": "Duration as stated (e.g. '2 years', '6 months', '1 year with option to extend')",
+  "estimated_value": "Dollar amount or range if mentioned, with currency",
+  "location": "Specific project location (e.g. 'Stabroek Block, Offshore Guyana', 'Shore Base, Houston, Guyana')",
+  "contact_name": "Primary contact person's full name",
+  "contact_title": "Contact person's job title",
+  "contact_emails": ["Every email address found in the document"],
+  "contact_phone": "Phone number(s) found",
+  "contact_address": "Physical address if listed",
+  "submission_method": "How to submit (email, portal, physical delivery, etc.)",
+  "submission_instructions": "Any specific instructions for responding",
+  "lca_categories": ["Relevant Local Content Act categories this falls under"],
+  "industry_sector": "Specific sector (e.g. 'Upstream Oil & Gas', 'Marine Services', 'Construction')",
   "lcs_registration_required": true or false,
-  "key_dates": ["Any other important dates mentioned"]
+  "key_dates": ["All dates mentioned with context, e.g. 'Site visit: 2024-03-15', 'Q&A deadline: 2024-03-20'"],
+  "evaluation_criteria": ["How responses will be evaluated if mentioned"],
+  "attachments_referenced": ["Any referenced attachments, appendices, or forms mentioned"]
 }
 
-Return ONLY the JSON object, no other text.`,
+Return ONLY the JSON object, no markdown, no explanation.`,
               },
             ],
           }],

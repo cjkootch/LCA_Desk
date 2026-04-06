@@ -10,111 +10,15 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Megaphone, Search, Bookmark, BookmarkCheck, ExternalLink, Calendar,
   Building2, ChevronDown, ChevronUp, Sparkles, FileDown, FileText,
-  MapPin, Clock, DollarSign, CheckCircle, Mail, Phone, User, CalendarDays,
+  Mail,
 } from "lucide-react";
+import { AiSummaryPanel } from "@/components/shared/AiSummaryPanel";
 import { fetchSeekerOpportunities, seekerSaveOpportunity, seekerUnsaveOpportunity, fetchMySavedOpportunities } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 function decodeHtml(s: string) {
   return s.replace(/&#038;/g, "&").replace(/&#8211;/g, "\u2013").replace(/&#8217;/g, "\u2019").replace(/\s*[\u2013\-]\s*Local Content Register$/i, "");
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function AiSummaryPanel({ summary }: { summary: any }) {
-  if (!summary) return null;
-  return (
-    <div className="grid sm:grid-cols-2 gap-4">
-      {summary.scope_of_work && (
-        <div className="sm:col-span-2">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Scope of Work</h4>
-          <p className="text-sm text-text-secondary">{summary.scope_of_work}</p>
-        </div>
-      )}
-      {summary.requirements?.length > 0 && (
-        <div>
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Requirements</h4>
-          <ul className="space-y-1">
-            {summary.requirements.map((r: string, i: number) => (
-              <li key={i} className="flex items-start gap-1.5 text-xs text-text-secondary">
-                <CheckCircle className="h-3 w-3 text-accent mt-0.5 shrink-0" /> {r}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div className="space-y-2">
-        {summary.issuing_company && (
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <Building2 className="h-3.5 w-3.5 text-text-muted" />
-            <span className="font-medium">{summary.issuing_company}</span>
-          </div>
-        )}
-        {summary.location && (
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <MapPin className="h-3.5 w-3.5 text-text-muted" /> {summary.location}
-          </div>
-        )}
-        {summary.estimated_value && (
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <DollarSign className="h-3.5 w-3.5 text-text-muted" /> {summary.estimated_value}
-          </div>
-        )}
-        {summary.contract_duration && (
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <Clock className="h-3.5 w-3.5 text-text-muted" /> {summary.contract_duration}
-          </div>
-        )}
-        {summary.submission_deadline && (
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <CalendarDays className="h-3.5 w-3.5 text-text-muted" /> Deadline: {summary.submission_deadline}
-          </div>
-        )}
-        {summary.lcs_registration_required && (
-          <div className="flex items-center gap-2 text-xs text-accent font-medium">
-            <CheckCircle className="h-3.5 w-3.5" /> LCS Registration Required
-          </div>
-        )}
-      </div>
-      {(summary.contact_name || summary.contact_email || summary.contact_phone) && (
-        <div className="sm:col-span-2 border-t border-border-light pt-3">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Contact</h4>
-          <div className="flex flex-wrap gap-4">
-            {summary.contact_name && (
-              <span className="flex items-center gap-1.5 text-xs text-text-secondary">
-                <User className="h-3.5 w-3.5 text-text-muted" /> {summary.contact_name}
-              </span>
-            )}
-            {summary.contact_email && (() => {
-              const raw = String(summary.contact_email);
-              const emails = raw.includes(",") ? raw.split(",").map((e: string) => e.trim()) :
-                raw.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [raw];
-              return emails.map((email: string) => (
-                <a key={email} href={`mailto:${email}`} className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover">
-                  <Mail className="h-3.5 w-3.5" /> {email}
-                </a>
-              ));
-            })()}
-            {summary.contact_phone && (
-              <span className="flex items-center gap-1.5 text-xs text-text-secondary">
-                <Phone className="h-3.5 w-3.5 text-text-muted" /> {summary.contact_phone}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-      {summary.lca_categories?.length > 0 && (
-        <div className="sm:col-span-2">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">LCA Categories</h4>
-          <div className="flex flex-wrap gap-1">
-            {summary.lca_categories.map((cat: string, i: number) => (
-              <Badge key={i} variant="default" className="text-[10px]">{cat}</Badge>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function SeekerOpportunitiesPage() {
