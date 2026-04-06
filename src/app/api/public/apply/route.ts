@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { jobApplications, jobPostings } from "@/server/db/schema";
+import { jobApplications, jobPostings, tenants, tenantMembers, users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { notifyApplicationReceived } from "@/lib/email/notify";
 
 const applySchema = z.object({
   job_posting_id: z.string().uuid(),
@@ -50,6 +51,27 @@ export async function POST(req: NextRequest) {
         status: "received",
       })
       .returning();
+
+    // Notify employer (fire and forget)
+    const [tenant] = await db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, posting.tenantId)).limit(1);
+    const members = await db
+      .select({ email: users.email })
+      .from(tenantMembers)
+      .innerJoin(users, eq(tenantMembers.userId, users.id))
+      .where(eq(tenantMembers.tenantId, posting.tenantId));
+
+    for (const member of members) {
+      if (member.email) {
+        notifyApplicationReceived({
+          employerEmail: member.email,
+          employerName: tenant?.name || "",
+          applicantName: data.applicant_name,
+          jobTitle: posting.jobTitle,
+          isGuyanese: data.is_guyanese,
+          postingId: posting.id,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
