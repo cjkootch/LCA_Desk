@@ -499,8 +499,9 @@ export const lcsOpportunities = pgTable(
     deadline: date("deadline"),
     sourceUrl: text("source_url"),
     sourceSlug: text("source_slug").unique(),
-    attachmentUrl: text("attachment_url"),
-    attachmentContent: text("attachment_content"), // extracted PDF text
+    attachmentUrl: text("attachment_url"), // primary PDF
+    attachmentUrls: text("attachment_urls"), // JSON array of all attachment URLs
+    attachmentContent: text("attachment_content"), // extracted PDF text (legacy)
     aiSummary: text("ai_summary"), // JSON structured summary from Claude
     status: text("status").default("active"),
     scrapedAt: timestamp("scraped_at").defaultNow(),

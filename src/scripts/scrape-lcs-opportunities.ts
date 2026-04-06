@@ -332,23 +332,43 @@ async function main() {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const claude = new Anthropic({ apiKey: anthropicKey });
 
-    // Get notices with PDF attachments that don't have AI summaries yet
-    const needsAnalysis = await db
+    // Get all notices that have attachments
+    const allNoticesWithDocs = await db
       .select({
         id: lcsOpportunities.id,
         attachmentUrl: lcsOpportunities.attachmentUrl,
+        attachmentUrls: lcsOpportunities.attachmentUrls,
         aiSummary: lcsOpportunities.aiSummary,
         sourceSlug: lcsOpportunities.sourceSlug,
         contractorName: lcsOpportunities.contractorName,
         title: lcsOpportunities.title,
+        description: lcsOpportunities.description,
       })
       .from(lcsOpportunities)
-      .where(isNotNull(lcsOpportunities.attachmentUrl))
       .limit(500);
 
-    const toAnalyze = needsAnalysis.filter(n => n.attachmentUrl?.endsWith(".pdf") && !n.aiSummary);
+    // Filter: needs analysis if no aiSummary, OR if aiSummary exists but has
+    // "Unknown" contractor and we have attachments that might identify them
+    const toAnalyze = allNoticesWithDocs.filter(n => {
+      const hasAttachments = n.attachmentUrl || n.attachmentUrls;
+      if (!hasAttachments) return false;
 
-    console.log(`  Found ${toAnalyze.length} PDFs needing AI analysis\n`);
+      // No summary at all — needs analysis
+      if (!n.aiSummary) return true;
+
+      // Has summary but still "Unknown" contractor and has multi-doc attachments
+      // that weren't analyzed before (old runs only did single PDF)
+      if (n.contractorName === "Unknown" && n.attachmentUrls) {
+        try {
+          const urls = JSON.parse(n.attachmentUrls) as string[];
+          return urls.length > 1; // re-analyze if there are extra docs we missed
+        } catch { return false; }
+      }
+
+      return false;
+    });
+
+    console.log(`  Found ${toAnalyze.length} notices needing AI analysis\n`);
 
     let aiOk = 0;
     let aiSkipped = 0;
@@ -358,22 +378,56 @@ async function main() {
       const tag = `[${String(i + 1).padStart(3, " ")}/${toAnalyze.length}]`;
 
       try {
-        // Download PDF as base64
-        const pdfRes = await fetch(notice.attachmentUrl!, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; LCADesk/1.0)" },
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!pdfRes.ok) { aiSkipped++; console.log(`${tag} ⚠  HTTP ${pdfRes.status} — ${notice.sourceSlug}`); continue; }
+        // Collect ALL attachment URLs for this notice
+        let allUrls: string[] = [];
+        if (notice.attachmentUrls) {
+          try { allUrls = JSON.parse(notice.attachmentUrls) as string[]; } catch {}
+        }
+        if (allUrls.length === 0 && notice.attachmentUrl) {
+          allUrls = [notice.attachmentUrl];
+        }
 
-        const pdfBuffer = await pdfRes.arrayBuffer();
-        const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+        // Download all documents (PDFs only — Claude can read these natively)
+        // For docx/xlsx, include filename in context so Claude knows they exist
+        const pdfUrls = allUrls.filter(u => u.toLowerCase().endsWith(".pdf"));
+        const otherDocs = allUrls.filter(u => !u.toLowerCase().endsWith(".pdf"));
 
-        // Skip very large PDFs (>10MB)
-        if (pdfBuffer.byteLength > 10_000_000) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const documentBlocks: any[] = [];
+        let totalSize = 0;
+
+        for (const pdfUrl of pdfUrls) {
+          try {
+            const pdfRes = await fetch(pdfUrl, {
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; LCADesk/1.0)" },
+              signal: AbortSignal.timeout(30_000),
+            });
+            if (!pdfRes.ok) continue;
+            const buf = await pdfRes.arrayBuffer();
+            if (buf.byteLength > 8_000_000) continue; // skip files over 8MB
+            totalSize += buf.byteLength;
+            if (totalSize > 20_000_000) break; // cap total at 20MB
+            documentBlocks.push({
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: Buffer.from(buf).toString("base64") },
+            });
+          } catch { /* skip failed downloads */ }
+        }
+
+        if (documentBlocks.length === 0) {
           aiSkipped++;
-          console.log(`${tag} ⚠  PDF too large (${Math.round(pdfBuffer.byteLength / 1024 / 1024)}MB) — ${notice.sourceSlug}`);
+          console.log(`${tag} ⚠  No downloadable PDFs — ${notice.sourceSlug}`);
           continue;
         }
+
+        // Build context about the notice and non-PDF attachments
+        const otherDocsContext = otherDocs.length > 0
+          ? `\n\nAdditional non-PDF attachments available on this notice (not included but listed for reference):\n${otherDocs.map(u => `- ${decodeURIComponent(u.split("/").pop() || u)}`).join("\n")}`
+          : "";
+
+        const noticeContext = notice.description
+          ? `\n\nNotice page description: "${notice.description}"`
+          : "";
 
         const response = await claude.messages.create({
           model: "claude-sonnet-4-6",
@@ -381,15 +435,12 @@ async function main() {
           messages: [{
             role: "user",
             content: [
-              {
-                type: "document",
-                source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
-              },
+              ...documentBlocks,
               {
                 type: "text",
-                text: `You are analyzing a procurement or employment opportunity notice from Guyana's petroleum sector. Extract ALL available information from this PDF — check letterheads, headers, footers, signature blocks, tables, and body text thoroughly.
+                text: `You are analyzing ${documentBlocks.length > 1 ? documentBlocks.length + " documents from" : "a document from"} a procurement/employment opportunity notice from Guyana's petroleum sector. Extract ALL available information — check letterheads, headers, footers, signature blocks, tables, and body text thoroughly across all documents provided.${otherDocsContext}${noticeContext}
 
-Return a JSON object with these fields. Be thorough — extract every field you can find. Use null ONLY if truly not present in the document.
+Return a JSON object with these fields. Be thorough — extract every field you can find. Use null ONLY if truly not present.
 
 {
   "issuing_company": "Full legal company name from letterhead, header, or body (e.g. 'ExxonMobil Guyana Limited', 'Halliburton Guyana Inc.')",
@@ -533,6 +584,7 @@ interface ScrapedNotice {
   sourceUrl: string;
   sourceSlug: string;
   attachmentUrl: string | null;
+  attachmentUrls: string | null; // JSON array
   attachmentContent: string | null;
 }
 
@@ -696,14 +748,18 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const deadlineMatch = html.match(/(?:deadline|closing date|submit by|due date)[:\s]*([^\n<]{5,40})/i);
   const deadline = normalizeDate(deadlineMatch?.[1]?.trim() || null);
 
-  // Extract first PDF attachment URL
-  const pdfMatch = html.match(/href="(https?:\/\/[^"]+\.pdf)"/i);
-  const attachmentUrl = pdfMatch?.[1] || null;
+  // Extract ALL attachment URLs (pdf, docx, xlsx, etc.)
+  const allAttachments = [...html.matchAll(/href="(https?:\/\/[^"]+\.(?:pdf|docx?|xlsx?|csv|pptx?))/gi)]
+    .map(m => m[1])
+    .filter((v, i, arr) => arr.indexOf(v) === i); // deduplicate
+
+  const attachmentUrl = allAttachments.find(u => u.endsWith(".pdf")) || allAttachments[0] || null;
 
   return {
     contractorName, contractorSlug, type, noticeType, title, description,
     lcaCategory, postedDate, deadline, sourceUrl: url, sourceSlug: slug,
-    attachmentUrl, attachmentContent: null, // filled in Phase 4
+    attachmentUrl, attachmentUrls: allAttachments.length > 0 ? JSON.stringify(allAttachments) : null,
+    attachmentContent: null,
   };
 }
 
@@ -723,6 +779,7 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
       sourceUrl: notice.sourceUrl,
       sourceSlug: notice.sourceSlug,
       attachmentUrl: notice.attachmentUrl,
+      attachmentUrls: notice.attachmentUrls,
       attachmentContent: notice.attachmentContent,
       status,
       scrapedAt: new Date(),
@@ -735,7 +792,7 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
         description: notice.description,
         lcaCategory: notice.lcaCategory,
         attachmentUrl: notice.attachmentUrl,
-        // Don't overwrite attachmentContent if already extracted
+        attachmentUrls: notice.attachmentUrls,
         deadline: notice.deadline ?? undefined,
         status,
         scrapedAt: new Date(),
