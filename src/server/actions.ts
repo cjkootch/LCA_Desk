@@ -3257,3 +3257,132 @@ export async function fetchLcsJobs(filters?: { search?: string; category?: strin
   }
   return filtered;
 }
+
+// ─── COMPLIANCE HEALTH MONITORING ────────────────────────────────
+
+export async function fetchComplianceHealth() {
+  const { tenantId } = await getSessionTenant();
+
+  const allEntities = await db.select().from(entities)
+    .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
+
+  const allPeriods = await db.select().from(reportingPeriods)
+    .where(eq(reportingPeriods.tenantId, tenantId))
+    .orderBy(desc(reportingPeriods.periodEnd));
+
+  const allExp = await db.select().from(expenditureRecords)
+    .where(eq(expenditureRecords.tenantId, tenantId));
+  const allEmp = await db.select().from(employmentRecords)
+    .where(eq(employmentRecords.tenantId, tenantId));
+
+  // Current LC rate
+  const totalSpend = allExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const guySpend = allExp.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const lcRate = totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0;
+
+  // Employment rates by category
+  const empByCategory = (cat: string) => {
+    const filtered = allEmp.filter(e => e.employmentCategory === cat);
+    const total = filtered.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const guyanese = filtered.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+    return { total, guyanese, pct: total > 0 ? Math.round((guyanese / total) * 1000) / 10 : 0 };
+  };
+  const managerial = empByCategory("Managerial");
+  const technical = empByCategory("Technical");
+  const nonTechnical = empByCategory("Non-Technical");
+
+  // Supplier cert expiry warnings
+  const supplierCerts = [...new Set(allExp.filter(e => e.supplierCertificateId).map(e => e.supplierCertificateId))];
+  const expiringCerts: Array<{ certId: string; supplierName: string; expiresAt: string; daysLeft: number }> = [];
+  for (const certId of supplierCerts) {
+    if (!certId) continue;
+    const [reg] = await db.select({ expirationDate: lcsRegister.expirationDate, legalName: lcsRegister.legalName })
+      .from(lcsRegister).where(eq(lcsRegister.certId, certId)).limit(1);
+    if (reg?.expirationDate) {
+      const daysLeft = Math.ceil((new Date(reg.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      if (daysLeft <= 90) {
+        const supplierName = allExp.find(e => e.supplierCertificateId === certId)?.supplierName || reg.legalName;
+        expiringCerts.push({ certId, supplierName, expiresAt: reg.expirationDate, daysLeft });
+      }
+    }
+  }
+  expiringCerts.sort((a, b) => a.daysLeft - b.daysLeft);
+
+  // Upcoming deadlines
+  const now = new Date();
+  const upcomingDeadlines = allPeriods
+    .filter(p => p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) > now)
+    .map(p => ({
+      periodId: p.id,
+      entityId: p.entityId,
+      entityName: allEntities.find(e => e.id === p.entityId)?.legalName || "Unknown",
+      reportType: p.reportType,
+      dueDate: p.dueDate,
+      daysLeft: Math.ceil((new Date(p.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      status: p.status,
+    }))
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, 5);
+
+  // Overdue
+  const overduePeriods = allPeriods
+    .filter(p => p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) < now)
+    .map(p => ({
+      periodId: p.id,
+      entityName: allEntities.find(e => e.id === p.entityId)?.legalName || "Unknown",
+      reportType: p.reportType,
+      dueDate: p.dueDate,
+      daysOverdue: Math.ceil((now.getTime() - new Date(p.dueDate).getTime()) / (1000 * 60 * 60 * 24)),
+    }));
+
+  // LC rate trend (last 4 periods)
+  const periodRates = allPeriods.slice(0, 4).map(p => {
+    const periodExp = allExp.filter(e => e.reportingPeriodId === p.id);
+    const total = periodExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const guy = periodExp.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const label = p.reportType === "half_yearly_h1" ? `H1 ${p.fiscalYear}` : p.reportType === "half_yearly_h2" ? `H2 ${p.fiscalYear}` : `${p.fiscalYear}`;
+    return { period: label, rate: total > 0 ? Math.round((guy / total) * 1000) / 10 : 0 };
+  }).reverse();
+
+  // Compliance score (0-100)
+  const empMin = { managerial: 75, technical: 60, non_technical: 80 };
+  const empScore = [
+    managerial.pct >= empMin.managerial ? 25 : (managerial.pct / empMin.managerial) * 25,
+    technical.pct >= empMin.technical ? 25 : (technical.pct / empMin.technical) * 25,
+    nonTechnical.pct >= empMin.non_technical ? 25 : (nonTechnical.pct / empMin.non_technical) * 25,
+    lcRate >= 50 ? 25 : (lcRate / 50) * 25,
+  ].reduce((s, v) => s + v, 0);
+  const complianceScore = Math.round(empScore);
+
+  // New opportunities matching their procurement categories
+  const entityCategories = new Set<string>();
+  allExp.forEach(e => { if (e.relatedSector) entityCategories.add(e.relatedSector); });
+
+  let matchingOpportunities = 0;
+  if (entityCategories.size > 0) {
+    const recentOpps = await db.select({ lcaCategory: lcsOpportunities.lcaCategory })
+      .from(lcsOpportunities)
+      .where(eq(lcsOpportunities.status, "active"))
+      .limit(200);
+    matchingOpportunities = recentOpps.filter(o =>
+      o.lcaCategory && entityCategories.has(o.lcaCategory)
+    ).length;
+  }
+
+  return {
+    complianceScore,
+    lcRate,
+    lcRateTrend: periodRates,
+    employment: {
+      managerial, technical, nonTechnical,
+      minimums: empMin,
+    },
+    expiringCerts: expiringCerts.slice(0, 5),
+    upcomingDeadlines,
+    overduePeriods,
+    matchingOpportunities,
+    totalEntities: allEntities.length,
+    totalEmployees: allEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0),
+    totalExpenditure: totalSpend,
+  };
+}

@@ -6,9 +6,8 @@ import { StatsBar } from "@/components/dashboard/StatsBar";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { PortfolioCard } from "@/components/dashboard/PortfolioCard";
 import { ComplianceCalendar } from "@/components/dashboard/ComplianceCalendar";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { FilingProgress } from "@/components/dashboard/FilingProgress";
+import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Building2 } from "lucide-react";
@@ -109,9 +108,9 @@ export default function DashboardPage() {
 
             {/* Sidebar — calendar, activity, filings */}
             <div className="space-y-6">
+              <ComplianceHealthWidget />
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
-              {/* FilingProgress and AlertsPanel intentionally empty — populated by user activity */}
             </div>
           </div>
         )}
