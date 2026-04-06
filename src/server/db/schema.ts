@@ -123,6 +123,8 @@ export const tenants = pgTable("tenants", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripePriceId: text("stripe_price_id"),
+  // Feature preferences (JSON)
+  featurePreferences: text("feature_preferences"), // JSON: { smartMatching, opportunityAlerts, analytics, bidTracking }
   createdAt: timestamp("created_at").defaultNow(),
 });
 

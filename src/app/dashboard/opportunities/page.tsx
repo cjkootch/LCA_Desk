@@ -14,8 +14,9 @@ import {
   Bookmark, BookmarkCheck, ExternalLink, Filter, Megaphone,
   FileText, Clock, Search, Sparkles, ChevronDown, ChevronUp,
   Building2, MapPin, CalendarDays, DollarSign, Mail, Phone,
-  User, CheckCircle, FileDown,
+  User, CheckCircle, FileDown, BarChart3,
 } from "lucide-react";
+import Link from "next/link";
 import {
   fetchOpportunitiesFeed, fetchSavedOpportunities,
   saveOpportunity, unsaveOpportunity, fetchPlanAndUsage,
@@ -223,6 +224,15 @@ export default function OpportunitiesPage() {
       <TopBar title="Opportunities" description="Procurement and employment notices from the LCS Register" />
       <div className="p-4 sm:p-8 max-w-6xl">
         {/* Stats */}
+        {/* Analytics link */}
+        <div className="flex justify-end mb-4">
+          <Link href="/dashboard/opportunities/analytics">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <BarChart3 className="h-4 w-4" /> Market Intelligence
+            </Button>
+          </Link>
+        </div>
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <Card className="p-4">
             <p className="text-xs text-text-muted">Total Notices</p>

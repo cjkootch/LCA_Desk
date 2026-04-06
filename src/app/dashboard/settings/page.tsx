@@ -22,6 +22,7 @@ import {
   Plug,
   CheckCircle,
   ExternalLink,
+  Sliders,
 } from "lucide-react";
 import {
   fetchUserContext,
@@ -33,10 +34,13 @@ import {
   removeTeamMember,
   fetchQboStatus,
   disconnectQbo,
+  fetchFeaturePreferences,
+  updateFeaturePreferences,
 } from "@/server/actions";
+import type { FeaturePreferences } from "@/server/actions";
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = "profile" | "company" | "team" | "integrations" | "notifications";
+type Tab = "profile" | "company" | "team" | "integrations" | "notifications" | "features";
 
 interface TeamMember {
   id: string;
@@ -54,6 +58,7 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "team", label: "Team", icon: Users },
   { key: "integrations", label: "Integrations", icon: Plug },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "features", label: "Features", icon: Sliders },
 ];
 
 // ─── Main Page ───────────────────────────────────────────────────
@@ -122,6 +127,7 @@ export default function SettingsPage() {
             <RestartTour />
           </div>
         )}
+        {activeTab === "features" && <FeaturesTab />}
       </div>
     </div>
   );
@@ -731,5 +737,94 @@ function NotificationsTab() {
   );
 }
 
-// Re-export RestartTourButton usage in notifications tab would go here
-// but we add it directly to the notifications tab above
+// ─── Features Tab ───────────────────────────────────────────────
+function FeaturesTab() {
+  const [prefs, setPrefs] = useState<FeaturePreferences>({
+    smartMatching: true,
+    opportunityAlerts: true,
+    analytics: true,
+    bidTracking: true,
+  });
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchFeaturePreferences()
+      .then((p) => { setPrefs(p); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  async function handleToggle(key: keyof FeaturePreferences) {
+    const newPrefs = { ...prefs, [key]: !prefs[key] };
+    setPrefs(newPrefs);
+    setSaving(true);
+    try {
+      await updateFeaturePreferences({ [key]: newPrefs[key] });
+      toast.success("Feature preference updated");
+    } catch { toast.error("Failed to update"); }
+    setSaving(false);
+  }
+
+  const features: Array<{ key: keyof FeaturePreferences; label: string; description: string }> = [
+    {
+      key: "smartMatching",
+      label: "Smart Matching",
+      description: "Show recommended opportunities based on your company profile and service categories.",
+    },
+    {
+      key: "opportunityAlerts",
+      label: "Opportunity Alerts",
+      description: "Receive email notifications when new opportunities match your profile.",
+    },
+    {
+      key: "analytics",
+      label: "Market Intelligence",
+      description: "Access procurement analytics, contractor activity trends, and category breakdowns.",
+    },
+    {
+      key: "bidTracking",
+      label: "Bid Tracking",
+      description: "Track which opportunities you've responded to and manage your bidding pipeline.",
+    },
+  ];
+
+  if (!loaded) return <p className="text-text-muted text-sm">Loading...</p>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Feature Preferences</CardTitle>
+        <p className="text-xs text-text-muted mt-1">Toggle features on or off based on your workflow needs.</p>
+      </CardHeader>
+      <CardContent>
+        <div className="divide-y divide-border">
+          {features.map((feat) => (
+            <div key={feat.key} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+              <div>
+                <p className="text-sm font-medium text-text-primary">{feat.label}</p>
+                <p className="text-xs text-text-muted mt-0.5">{feat.description}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={prefs[feat.key]}
+                onClick={() => handleToggle(feat.key)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                  prefs[feat.key] ? "bg-accent" : "bg-border"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition-transform",
+                    prefs[feat.key] ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
