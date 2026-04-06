@@ -323,6 +323,31 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
+  // ── Phase 2.5: Backfill company names from existing AI summaries ──
+  const unknowns = await db.select({ id: lcsEmploymentNotices.id, aiSummary: lcsEmploymentNotices.aiSummary })
+    .from(lcsEmploymentNotices)
+    .where(eq(lcsEmploymentNotices.companyName, "Unknown"))
+    .limit(200);
+
+  let backfilled = 0;
+  for (const row of unknowns) {
+    if (!row.aiSummary) continue;
+    try {
+      const parsed = JSON.parse(row.aiSummary);
+      const aiName = parsed.company_name;
+      if (aiName && aiName !== "Unknown" && aiName.length > 2) {
+        const slugMatch = matchCompany(aiName);
+        await db.update(lcsEmploymentNotices).set({
+          companyName: slugMatch?.name || aiName,
+          companySlug: slugMatch?.slug || null,
+          updatedAt: new Date(),
+        }).where(eq(lcsEmploymentNotices.id, row.id));
+        backfilled++;
+      }
+    } catch {}
+  }
+  if (backfilled > 0) console.log(`\n  ✓ Backfilled ${backfilled} company names from AI summaries\n`);
+
   // ── Phase 3: AI analysis for jobs needing it ──
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) {

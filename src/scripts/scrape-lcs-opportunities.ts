@@ -320,6 +320,31 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
+  // ── Phase 3.5: Backfill company names from existing AI summaries ──
+  const unknownOpps = await db.select({ id: lcsOpportunities.id, aiSummary: lcsOpportunities.aiSummary })
+    .from(lcsOpportunities)
+    .where(eq(lcsOpportunities.contractorName, "Unknown"))
+    .limit(300);
+
+  let oppBackfilled = 0;
+  for (const row of unknownOpps) {
+    if (!row.aiSummary) continue;
+    try {
+      const parsed = JSON.parse(row.aiSummary);
+      const aiName = parsed.issuing_company;
+      if (aiName && aiName !== "Unknown" && aiName.length > 2) {
+        const slugMatch = matchContractor(aiName);
+        await db.update(lcsOpportunities).set({
+          contractorName: slugMatch?.name || aiName,
+          contractorSlug: slugMatch?.slug || null,
+          updatedAt: new Date(),
+        }).where(eq(lcsOpportunities.id, row.id));
+        oppBackfilled++;
+      }
+    } catch {}
+  }
+  if (oppBackfilled > 0) console.log(`\n  ✓ Backfilled ${oppBackfilled} company names from AI summaries\n`);
+
   // ── Phase 4: AI-powered PDF analysis ──
   console.log("\n════════════════════════════════════════════");
   console.log("  Phase 4: AI PDF Analysis (Claude)");
