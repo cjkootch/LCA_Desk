@@ -102,7 +102,8 @@ async function collectSlugs(): Promise<string[]> {
   const slugs: string[] = [];
   let page = 1;
   while (true) {
-    const url = page === 1 ? EMPLOYMENT_BASE : `${EMPLOYMENT_BASE}page/${page}/`;
+    // Pagination format: /notices-for-individual-employment/2/ (not /page/2/)
+    const url = page === 1 ? EMPLOYMENT_BASE : `${EMPLOYMENT_BASE}${page}/`;
     console.log(`  Page ${page}: ${url}`);
     const html = await fetchPage(url);
     if (!html) break;
@@ -113,7 +114,9 @@ async function collectSlugs(): Promise<string[]> {
     slugs.push(...pageSlugs);
     console.log(`  Found ${pageSlugs.length} notices on page ${page}`);
 
-    if (!html.includes(`page/${page + 1}/`) && !html.includes('rel="next"')) break;
+    // Check pagination: look for next page number in links
+    const hasNext = html.includes(`/${page + 1}/`) || html.includes('rel="next"');
+    if (!hasNext) break;
     page++;
     await sleep(DELAY_MS);
   }
