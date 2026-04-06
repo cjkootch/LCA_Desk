@@ -3,7 +3,7 @@ export type PlanCode = "starter" | "pro" | "enterprise";
 export interface PlanConfig {
   code: PlanCode;
   name: string;
-  price: number; // monthly USD, 0 = free
+  price: number;
   entityLimit: number;
   teamMemberLimit: number;
   aiDraftsPerMonth: number;
@@ -16,6 +16,13 @@ export interface PlanConfig {
     qboIntegration: boolean;
     dataExtraction: boolean;
     prioritySupport: boolean;
+    // New gated features
+    saveOpportunities: boolean;
+    companyContacts: boolean;
+    marketIntelligence: boolean;
+    firstConsiderationPdf: boolean;
+    auditTrail: boolean;
+    smartMatching: boolean;
   };
 }
 
@@ -32,10 +39,16 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       excelExport: false,
       pdfExport: false,
       complianceScan: false,
-      deadlineAlerts: false,
+      deadlineAlerts: true, // basic email reminders are free (drives engagement)
       qboIntegration: false,
       dataExtraction: false,
       prioritySupport: false,
+      saveOpportunities: false,
+      companyContacts: false,
+      marketIntelligence: false,
+      firstConsiderationPdf: false,
+      auditTrail: false,
+      smartMatching: false,
     },
   },
   pro: {
@@ -44,7 +57,7 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
     price: 99,
     entityLimit: 5,
     teamMemberLimit: 5,
-    aiDraftsPerMonth: -1, // unlimited
+    aiDraftsPerMonth: -1,
     aiChatMessagesPerMonth: -1,
     features: {
       excelExport: true,
@@ -54,13 +67,19 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       qboIntegration: true,
       dataExtraction: false,
       prioritySupport: false,
+      saveOpportunities: true,
+      companyContacts: true,
+      marketIntelligence: true,
+      firstConsiderationPdf: true,
+      auditTrail: true,
+      smartMatching: true,
     },
   },
   enterprise: {
     code: "enterprise",
     name: "Enterprise",
     price: 299,
-    entityLimit: -1, // unlimited
+    entityLimit: -1,
     teamMemberLimit: -1,
     aiDraftsPerMonth: -1,
     aiChatMessagesPerMonth: -1,
@@ -72,6 +91,12 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       qboIntegration: true,
       dataExtraction: true,
       prioritySupport: true,
+      saveOpportunities: true,
+      companyContacts: true,
+      marketIntelligence: true,
+      firstConsiderationPdf: true,
+      auditTrail: true,
+      smartMatching: true,
     },
   },
 };
@@ -93,6 +118,6 @@ export function isWithinLimit(
   currentCount: number
 ): boolean {
   const limit = getPlan(planCode)[limitKey];
-  if (limit === -1) return true; // unlimited
+  if (limit === -1) return true;
   return currentCount < limit;
 }

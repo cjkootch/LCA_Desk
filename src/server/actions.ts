@@ -35,6 +35,7 @@ import {
   lcsRegister,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
+import { getPlan } from "@/lib/plans";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -60,7 +61,15 @@ async function getSessionTenant() {
     tenantId: membership.tenantId,
     tenant: membership.tenant,
     role: membership.role,
+    plan: (membership.tenant.plan as string) || "starter",
   };
+}
+
+function requirePlan(plan: string, required: "pro" | "enterprise") {
+  const rank = { starter: 0, pro: 1, enterprise: 2 };
+  if ((rank[plan as keyof typeof rank] ?? 0) < rank[required]) {
+    throw new Error(`This feature requires the ${required === "pro" ? "Pro" : "Enterprise"} plan. Upgrade in Settings > Billing.`);
+  }
 }
 
 // ─── AUDIT LOGGING ───────────────────────────────────────────────
@@ -157,7 +166,13 @@ function mapEntityData(data: Record<string, unknown>) {
 }
 
 export async function addEntity(data: Record<string, unknown>) {
-  const { tenantId, tenant } = await getSessionTenant();
+  const { tenantId, tenant, plan } = await getSessionTenant();
+  // Check entity limit
+  const existing = await db.select({ id: entities.id }).from(entities).where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
+  const limit = getPlan(plan).entityLimit;
+  if (limit !== -1 && existing.length >= limit) {
+    throw new Error(`Entity limit reached (${limit}). Upgrade your plan to add more entities.`);
+  }
   const [entity] = await db
     .insert(entities)
     .values({
@@ -848,7 +863,13 @@ export async function fetchTeamMembers() {
 }
 
 export async function inviteTeamMember(data: { email: string; role: string }) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, plan } = await getSessionTenant();
+  // Check team member limit
+  const currentMembers = await db.select({ id: tenantMembers.id }).from(tenantMembers).where(eq(tenantMembers.tenantId, tenantId));
+  const limit = getPlan(plan).teamMemberLimit;
+  if (limit !== -1 && currentMembers.length >= limit) {
+    throw new Error(`Team member limit reached (${limit}). Upgrade your plan to add more members.`);
+  }
 
   // Check if user exists
   const [existingUser] = await db
@@ -1084,8 +1105,11 @@ export async function fetchPlanAndUsage() {
 export async function incrementUsage(
   type: "aiDraftsUsed" | "aiChatMessagesUsed"
 ) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, plan } = await getSessionTenant();
   const currentMonth = new Date().toISOString().slice(0, 7);
+  const planConfig = getPlan(plan);
+  const limitKey = type === "aiDraftsUsed" ? "aiDraftsPerMonth" : "aiChatMessagesPerMonth";
+  const limit = planConfig[limitKey];
 
   const [existing] = await db
     .select()
@@ -1099,7 +1123,11 @@ export async function incrementUsage(
     .limit(1);
 
   if (existing) {
-    const newValue = (existing[type] || 0) + 1;
+    const current = existing[type] || 0;
+    if (limit !== -1 && current >= limit) {
+      throw new Error(`Monthly ${type === "aiDraftsUsed" ? "AI draft" : "AI chat"} limit reached (${limit}). Upgrade your plan for unlimited access.`);
+    }
+    const newValue = current + 1;
     await db
       .update(usageTracking)
       .set({ [type]: newValue, updatedAt: new Date() })
