@@ -3667,9 +3667,21 @@ export async function completeModule(courseId: string, moduleId: string, quizSco
 
   const allComplete = allModules.every(m => completedModules.some(c => c.moduleId === m.id));
   if (allComplete) {
-    // Award badge — update all progress records for this course
+    // Award badge
     await db.update(userCourseProgress).set({ badgeEarnedAt: new Date() })
       .where(and(eq(userCourseProgress.userId, session.user.id), eq(userCourseProgress.courseId, courseId)));
+
+    // Send badge earned notification
+    const [courseData] = await db.select({ title: courses.title, badgeLabel: courses.badgeLabel })
+      .from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (courseData) {
+      const { notifyBadgeEarned } = await import("@/lib/email/unified-notify");
+      notifyBadgeEarned({
+        userId: session.user.id,
+        badgeLabel: courseData.badgeLabel || "Certified",
+        courseTitle: courseData.title,
+      });
+    }
   }
 
   return { passed: true, score: quizScore, badgeEarned: allComplete };

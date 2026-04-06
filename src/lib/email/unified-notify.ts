@@ -284,3 +284,38 @@ export async function notifyTeamInvite(params: {
     }),
   });
 }
+
+// ─── TRAINING NOTIFICATIONS ──────────────────────────────────────
+
+export async function notifyBadgeEarned(params: {
+  userId: string;
+  badgeLabel: string;
+  courseTitle: string;
+}) {
+  await dispatch({
+    userId: params.userId,
+    type: "badge_earned",
+    title: `Badge Earned: ${params.badgeLabel}`,
+    message: `Congratulations! You completed "${params.courseTitle}" and earned the ${params.badgeLabel} badge.`,
+    link: "/seeker/learn",
+    emailSubject: `You earned the ${params.badgeLabel} badge on LCA Desk!`,
+    emailHtml: `<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#FAFBFC;font-family:sans-serif;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><table style="max-width:560px;background:#fff;border-radius:12px;border:1px solid #E2E8F0;overflow:hidden;" width="100%"><tr><td style="background:#047857;padding:24px 32px;"><img src="https://app.lcadesk.com/logo-white-lca.png" alt="LCA Desk" width="120"/></td></tr><tr><td style="padding:32px;text-align:center;"><p style="font-size:40px;margin:0 0 8px;">🏆</p><h2 style="margin:0 0 8px;color:#0F172A;">Badge Earned!</h2><p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#047857;">${params.badgeLabel}</p><p style="margin:0 0 24px;font-size:14px;color:#475569;">You completed "${params.courseTitle}"</p><p style="margin:0 0 16px;font-size:13px;color:#475569;">This badge is visible on your profile and to employers in the Talent Pool.</p><a href="https://app.lcadesk.com/seeker/learn" style="display:inline-block;background:#047857;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View Your Badges</a></td></tr></table></td></tr></table></body></html>`,
+  });
+}
+
+export async function notifyTrainingAssigned(params: {
+  userId: string;
+  courseTitle: string;
+  companyName: string;
+  mandatory: boolean;
+}) {
+  await dispatch({
+    userId: params.userId,
+    type: "training_assigned",
+    title: `${params.mandatory ? "Required" : "New"} Training: ${params.courseTitle}`,
+    message: `${params.companyName} has ${params.mandatory ? "required you to complete" : "recommended"} "${params.courseTitle}".${params.mandatory ? " Complete before accessing filing features." : ""}`,
+    link: "/dashboard/training",
+    emailSubject: `${params.mandatory ? "Required" : "Recommended"} Training: ${params.courseTitle}`,
+    emailHtml: `<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#FAFBFC;font-family:sans-serif;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><table style="max-width:560px;background:#fff;border-radius:12px;border:1px solid #E2E8F0;overflow:hidden;" width="100%"><tr><td style="background:#047857;padding:24px 32px;"><img src="https://app.lcadesk.com/logo-white-lca.png" alt="LCA Desk" width="120"/></td></tr><tr><td style="padding:32px;"><h2 style="margin:0 0 8px;color:#0F172A;">${params.mandatory ? "Required" : "Recommended"} Training</h2><p style="margin:0 0 16px;font-size:14px;color:#475569;">${params.companyName} has ${params.mandatory ? "required you to complete" : "recommended"} the following course:</p><div style="background:#FAFBFC;border-radius:8px;padding:16px;margin:0 0 16px;"><p style="margin:0;font-size:16px;font-weight:700;color:#0F172A;">${params.courseTitle}</p>${params.mandatory ? '<p style="margin:4px 0 0;font-size:13px;color:#DC2626;font-weight:600;">Mandatory — must complete before filing</p>' : ""}</div><a href="https://app.lcadesk.com/dashboard/training" style="display:inline-block;background:#047857;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Start Training</a></td></tr></table></td></tr></table></body></html>`,
+  });
+}
