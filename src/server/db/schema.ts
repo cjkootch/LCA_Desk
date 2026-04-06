@@ -109,7 +109,7 @@ export const tenants = pgTable("tenants", {
   name: text("name").notNull(),
   slug: text("slug").unique(),
   jurisdictionId: uuid("jurisdiction_id").references(() => jurisdictions.id),
-  plan: text("plan").default("starter"),
+  plan: text("plan").default("lite"),
   planEntityLimit: integer("plan_entity_limit").default(1),
   active: boolean("active").default(true),
   trialEndsAt: timestamp("trial_ends_at"),

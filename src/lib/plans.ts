@@ -1,9 +1,12 @@
-export type PlanCode = "starter" | "pro" | "enterprise";
+export type PlanCode = "lite" | "pro" | "enterprise";
 
 export interface PlanConfig {
   code: PlanCode;
   name: string;
+  displayName: string;
   price: number;
+  annualPrice: number;
+  perReportFee: number;
   entityLimit: number;
   teamMemberLimit: number;
   aiDraftsPerMonth: number;
@@ -16,7 +19,8 @@ export interface PlanConfig {
     qboIntegration: boolean;
     dataExtraction: boolean;
     prioritySupport: boolean;
-    // New gated features
+    jobBoard: boolean;
+    supplierSearch: boolean;
     saveOpportunities: boolean;
     companyContacts: boolean;
     marketIntelligence: boolean;
@@ -27,22 +31,27 @@ export interface PlanConfig {
 }
 
 export const PLANS: Record<PlanCode, PlanConfig> = {
-  starter: {
-    code: "starter",
-    name: "Starter",
-    price: 0,
+  lite: {
+    code: "lite",
+    name: "Lite",
+    displayName: "Lite",
+    price: 99,
+    annualPrice: 990,
+    perReportFee: 25,
     entityLimit: 1,
-    teamMemberLimit: 1,
-    aiDraftsPerMonth: 3,
-    aiChatMessagesPerMonth: 10,
+    teamMemberLimit: 2,
+    aiDraftsPerMonth: 0,
+    aiChatMessagesPerMonth: 0,
     features: {
       excelExport: false,
       pdfExport: false,
       complianceScan: false,
-      deadlineAlerts: true, // basic email reminders are free (drives engagement)
+      deadlineAlerts: true,
       qboIntegration: false,
       dataExtraction: false,
       prioritySupport: false,
+      jobBoard: false,
+      supplierSearch: false,
       saveOpportunities: false,
       companyContacts: false,
       marketIntelligence: false,
@@ -54,9 +63,12 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
   pro: {
     code: "pro",
     name: "Pro",
-    price: 99,
+    displayName: "Pro",
+    price: 599,
+    annualPrice: 5990,
+    perReportFee: 0,
     entityLimit: 5,
-    teamMemberLimit: 5,
+    teamMemberLimit: 10,
     aiDraftsPerMonth: -1,
     aiChatMessagesPerMonth: -1,
     features: {
@@ -67,6 +79,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       qboIntegration: true,
       dataExtraction: false,
       prioritySupport: false,
+      jobBoard: true,
+      supplierSearch: true,
       saveOpportunities: true,
       companyContacts: true,
       marketIntelligence: true,
@@ -78,7 +92,10 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
   enterprise: {
     code: "enterprise",
     name: "Enterprise",
-    price: 299,
+    displayName: "Enterprise",
+    price: 1999,
+    annualPrice: 19990,
+    perReportFee: 0,
     entityLimit: -1,
     teamMemberLimit: -1,
     aiDraftsPerMonth: -1,
@@ -91,6 +108,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       qboIntegration: true,
       dataExtraction: true,
       prioritySupport: true,
+      jobBoard: true,
+      supplierSearch: true,
       saveOpportunities: true,
       companyContacts: true,
       marketIntelligence: true,
@@ -102,7 +121,9 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
 };
 
 export function getPlan(code: string | null | undefined): PlanConfig {
-  return PLANS[(code as PlanCode) || "starter"] || PLANS.starter;
+  // Handle legacy "starter" code from existing tenant records
+  if (code === "starter") return PLANS.lite;
+  return PLANS[(code as PlanCode)] ?? PLANS.lite;
 }
 
 export function isFeatureAvailable(
@@ -120,4 +141,12 @@ export function isWithinLimit(
   const limit = getPlan(planCode)[limitKey];
   if (limit === -1) return true;
   return currentCount < limit;
+}
+
+export function hasPerReportFee(planCode: string | null | undefined): boolean {
+  return getPlan(planCode).perReportFee > 0;
+}
+
+export function getPerReportFee(planCode: string | null | undefined): number {
+  return getPlan(planCode).perReportFee;
 }

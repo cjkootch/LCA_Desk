@@ -13,7 +13,9 @@ function getPlanFromPriceId(priceId: string): string {
   if (priceId === process.env.STRIPE_PRO_ANNUAL_PRICE_ID) return "pro";
   if (priceId === process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID) return "enterprise";
   if (priceId === process.env.STRIPE_ENTERPRISE_ANNUAL_PRICE_ID) return "enterprise";
-  return "starter";
+  if (priceId === process.env.STRIPE_LITE_MONTHLY_PRICE_ID) return "lite";
+  if (priceId === process.env.STRIPE_LITE_ANNUAL_PRICE_ID) return "lite";
+  return "lite";
 }
 
 export async function POST(req: NextRequest) {
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
       const priceId = subscription.items.data[0]?.price?.id;
-      const plan = priceId ? getPlanFromPriceId(priceId) : "starter";
+      const plan = priceId ? getPlanFromPriceId(priceId) : "lite";
 
       const [tenant] = await db
         .select()
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       if (tenant) {
         await db
           .update(tenants)
-          .set({ plan: "starter", stripeSubscriptionId: null, stripePriceId: null })
+          .set({ plan: "lite", stripeSubscriptionId: null, stripePriceId: null })
           .where(eq(tenants.id, tenant.id));
       }
       break;

@@ -73,18 +73,21 @@ export default function BillingPage() {
     return monthlyPrice;
   };
 
-  const features: { label: string; starter: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
-    { label: "Entities", starter: "1", pro: "5", enterprise: "Unlimited" },
-    { label: "Team Members", starter: "1", pro: "5", enterprise: "Unlimited" },
-    { label: "AI Narrative Drafts", starter: "3/month", pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "AI Expert Chat", starter: "10 msgs/month", pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "Excel Export", starter: false, pro: true, enterprise: true },
-    { label: "PDF Export", starter: false, pro: true, enterprise: true },
-    { label: "AI Compliance Scan", starter: false, pro: true, enterprise: true },
-    { label: "Deadline Alerts", starter: false, pro: true, enterprise: true },
-    { label: "QuickBooks Integration", starter: false, pro: true, enterprise: true },
-    { label: "Data Extraction (AI)", starter: false, pro: false, enterprise: true },
-    { label: "Priority Support", starter: false, pro: false, enterprise: true },
+  const features: { label: string; lite: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
+    { label: "Entities", lite: "1", pro: "5", enterprise: "Unlimited" },
+    { label: "Team Members", lite: "2", pro: "10", enterprise: "Unlimited" },
+    { label: "AI Narrative Drafts", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
+    { label: "AI Expert Chat", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
+    { label: "Report Export", lite: "$25/report", pro: "Included", enterprise: "Included" },
+    { label: "AI Compliance Scan", lite: false, pro: true, enterprise: true },
+    { label: "Deadline Alerts", lite: true, pro: true, enterprise: true },
+    { label: "QuickBooks Integration", lite: false, pro: true, enterprise: true },
+    { label: "Job Board Access", lite: false, pro: true, enterprise: true },
+    { label: "Supplier Search", lite: false, pro: true, enterprise: true },
+    { label: "Market Intelligence", lite: false, pro: true, enterprise: true },
+    { label: "Audit Trail", lite: false, pro: true, enterprise: true },
+    { label: "Data Extraction (AI)", lite: false, pro: false, enterprise: true },
+    { label: "Priority Support", lite: false, pro: false, enterprise: true },
   ];
 
   if (loading) {
@@ -114,7 +117,7 @@ export default function BillingPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Current Usage</CardTitle>
-                <Badge variant={currentPlan.code === "starter" ? "default" : "accent"}>
+                <Badge variant={currentPlan.code === "lite" ? "default" : "accent"}>
                   {currentPlan.name} Plan
                 </Badge>
               </div>
@@ -314,7 +317,7 @@ export default function BillingPage() {
                     </li>
                   </ul>
                   {isCurrent ? (
-                    currentPlan.code !== "starter" ? (
+                    currentPlan.code !== "lite" ? (
                       <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Manage Subscription
@@ -365,7 +368,7 @@ export default function BillingPage() {
                   {features.map((f) => (
                     <tr key={f.label} className="border-b border-border-light">
                       <td className="py-3 pr-4 text-text-primary">{f.label}</td>
-                      {(["starter", "pro", "enterprise"] as const).map((plan) => (
+                      {(["lite", "pro", "enterprise"] as const).map((plan) => (
                         <td key={plan} className="text-center py-3 px-4">
                           {typeof f[plan] === "boolean" ? (
                             f[plan] ? (
