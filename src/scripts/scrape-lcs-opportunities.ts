@@ -392,6 +392,27 @@ const COMPANY_PATTERNS: [RegExp, string, string][] = [
   [/CNOOC/i, "CNOOC Petroleum Guyana Limited", "cnooc_guyana"],
   [/SES[\s-]guyana|sustainable[\s-]?env/i, "Sustainable Environmental Solutions", "ses_guyana"],
   [/vanuatu/i, "Guyana Deepwater Operations Inc.", "sbm_offshore"],
+  // Additional patterns from attachment filenames
+  [/noble/i, "Noble Corporation", "noble_corp"],
+  [/bristow/i, "Bristow Group", "bristow"],
+  [/schlumberger/i, "SLB Guyana (Schlumberger)", "slb_guyana"],
+  [/ocean[\s-]?rig/i, "Ocean Rig", "ocean_rig"],
+  [/tullow/i, "Tullow Oil", "tullow_oil"],
+  [/CGX/i, "CGX Energy", "cgx_energy"],
+  [/repsol/i, "Repsol", "repsol"],
+  [/maersk/i, "Maersk Drilling", "maersk"],
+  [/noble[\s-]?bob/i, "Noble Corporation", "noble_corp"],
+  [/borr[\s-]?drilling/i, "Borr Drilling", "borr_drilling"],
+  [/guyana[\s-]?oil|GOCL/i, "Guyana Oil Company Ltd", "gocl"],
+  [/wood[\s-]?group|wood[\s-]?plc/i, "Wood PLC", "wood_plc"],
+  [/worley/i, "Worley", "worley"],
+  [/mcdermott/i, "McDermott International", "mcdermott"],
+  [/subsea[\s-]?7/i, "Subsea 7", "subsea7"],
+  [/diamond[\s-]?offshore/i, "Diamond Offshore", "diamond_offshore"],
+  [/trans[\s-]?ocean/i, "Transocean", "transocean"],
+  [/nabors/i, "Nabors Industries", "nabors"],
+  [/core[\s-]?labs/i, "Core Laboratories", "core_labs"],
+  [/newpark/i, "Newpark Resources", "newpark"],
 ];
 
 function matchContractor(text: string): { name: string; slug: string } | null {
@@ -428,14 +449,35 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const title = titleMatch?.[1]?.replace(/\s*[–|]\s*Local Content Register.*$/i, "").trim();
   if (!title || title.length < 4) return null;
 
-  // Try pattern matching on title + slug + HTML content
-  const searchText = `${title} ${slug} ${html.slice(0, 3000)}`;
+  // Extract attachment filenames — company name is often in the PDF filename
+  const attachmentFilenames = [...html.matchAll(/href="[^"]*\/([^/"]+\.(?:pdf|docx?|xlsx?))/gi)]
+    .map(m => decodeURIComponent(m[1]).replace(/[_\-\.]/g, " "))
+    .join(" ");
+
+  // Extract alt text from images — sometimes company logos have alt text
+  const imgAlts = [...html.matchAll(/alt="([^"]{3,80})"/gi)]
+    .map(m => m[1])
+    .join(" ");
+
+  // Try pattern matching on title + slug + attachments + full page content
+  const searchText = `${title} ${slug} ${attachmentFilenames} ${imgAlts} ${html.slice(0, 5000)}`;
   const matched = matchContractor(searchText);
 
   // Fallback: try HTML author/posted-by patterns
   let contractorName = matched?.name || "Unknown";
   let contractorSlug = matched?.slug || null;
 
+  // Second fallback: try to extract from attachment filename directly
+  if (contractorName === "Unknown" && attachmentFilenames.length > 3) {
+    // Many filenames are like "Saipem_RFI_Cleaning.pdf" or "GYSBI_EOI_2024.pdf"
+    const filenameMatch = matchContractor(attachmentFilenames);
+    if (filenameMatch) {
+      contractorName = filenameMatch.name;
+      contractorSlug = filenameMatch.slug;
+    }
+  }
+
+  // Third fallback: extract from identity links on the page
   if (contractorName === "Unknown") {
     const authorMatch =
       html.match(/class="[^"]*author[^"]*"[^>]*>([^<]{3,80})</i) ||
