@@ -41,6 +41,7 @@ import {
   submissionAcknowledgments,
   amendmentRequests,
   supplierResponses,
+  lcsCertApplications,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -5112,4 +5113,184 @@ export async function fetchSupplierAnalytics() {
       : 0,
     tier: profile.tier || "free",
   };
+}
+
+// ─── LCS CERTIFICATE APPLICATION SERVICE ────────────────────────
+
+export async function createCertApplication(data: {
+  applicationType: "individual" | "business";
+  tier: "self_service" | "managed" | "concierge";
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [app] = await db.insert(lcsCertApplications).values({
+    userId: session.user.id,
+    applicationType: data.applicationType,
+    tier: data.tier,
+    status: "draft",
+    completedStep: 0,
+  }).returning();
+  return app;
+}
+
+export async function fetchMyCertApplications() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  return db.select().from(lcsCertApplications)
+    .where(eq(lcsCertApplications.userId, session.user.id))
+    .orderBy(desc(lcsCertApplications.createdAt)).limit(20);
+}
+
+export async function fetchCertApplication(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Allow the applicant or secretariat/admin to view
+  let isAdmin = !!(session.user as Record<string, unknown>).isSuperAdmin;
+  if (!isAdmin) {
+    try { await getSecretariatContext(); isAdmin = true; } catch { /* not secretariat */ }
+  }
+
+  const conditions = isAdmin
+    ? eq(lcsCertApplications.id, id)
+    : and(eq(lcsCertApplications.id, id), eq(lcsCertApplications.userId, session.user.id));
+
+  const [app] = await db.select().from(lcsCertApplications).where(conditions).limit(1);
+  if (!app) throw new Error("Application not found");
+  return app;
+}
+
+export async function updateCertApplication(id: string, data: Record<string, unknown>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Verify ownership
+  const [app] = await db.select({ id: lcsCertApplications.id, status: lcsCertApplications.status })
+    .from(lcsCertApplications)
+    .where(and(eq(lcsCertApplications.id, id), eq(lcsCertApplications.userId, session.user.id)))
+    .limit(1);
+  if (!app) throw new Error("Application not found");
+  if (app.status !== "draft" && app.status !== "documents_pending") {
+    throw new Error("Application cannot be modified after submission");
+  }
+
+  await db.update(lcsCertApplications).set({
+    ...data,
+    updatedAt: new Date(),
+  }).where(eq(lcsCertApplications.id, id));
+}
+
+export async function submitCertApplication(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [app] = await db.select().from(lcsCertApplications)
+    .where(and(eq(lcsCertApplications.id, id), eq(lcsCertApplications.userId, session.user.id)))
+    .limit(1);
+  if (!app) throw new Error("Application not found");
+
+  // Validate required fields
+  if (!app.applicantName) throw new Error("Applicant name is required");
+  if (!app.applicantEmail) throw new Error("Email is required");
+  if (app.applicationType === "business" && !app.legalName) throw new Error("Legal business name is required");
+  if (!app.paidAt) throw new Error("Payment is required before submission");
+
+  await db.update(lcsCertApplications).set({
+    status: "under_review",
+    updatedAt: new Date(),
+  }).where(eq(lcsCertApplications.id, id));
+}
+
+// Admin: review cert applications
+export async function fetchCertApplicationQueue() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  // Allow secretariat or super admin
+  const isSuperAdmin = (session.user as Record<string, unknown>).isSuperAdmin;
+  if (!isSuperAdmin) {
+    try { await getSecretariatContext(); } catch { throw new Error("Not authorized"); }
+  }
+
+  return db.select({
+    id: lcsCertApplications.id,
+    applicationType: lcsCertApplications.applicationType,
+    tier: lcsCertApplications.tier,
+    status: lcsCertApplications.status,
+    applicantName: lcsCertApplications.applicantName,
+    applicantEmail: lcsCertApplications.applicantEmail,
+    legalName: lcsCertApplications.legalName,
+    serviceCategories: lcsCertApplications.serviceCategories,
+    amountPaid: lcsCertApplications.amountPaid,
+    paidAt: lcsCertApplications.paidAt,
+    createdAt: lcsCertApplications.createdAt,
+    completedStep: lcsCertApplications.completedStep,
+  }).from(lcsCertApplications)
+    .where(sql`${lcsCertApplications.status} != 'draft'`)
+    .orderBy(desc(lcsCertApplications.createdAt)).limit(100);
+}
+
+export async function reviewCertApplication(id: string, data: {
+  status: "submitted_to_lcs" | "approved" | "rejected";
+  reviewNotes?: string;
+  lcsCertId?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as Record<string, unknown>).isSuperAdmin;
+  if (!isSuperAdmin) {
+    try { await getSecretariatContext(); } catch { throw new Error("Not authorized"); }
+  }
+
+  const update: Record<string, unknown> = {
+    status: data.status,
+    reviewNotes: data.reviewNotes || null,
+    reviewedBy: session.user.id,
+    reviewedAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  if (data.status === "submitted_to_lcs") {
+    update.submittedToLcsAt = new Date();
+  }
+  if (data.status === "approved" && data.lcsCertId) {
+    update.lcsCertId = data.lcsCertId;
+  }
+
+  await db.update(lcsCertApplications).set(update).where(eq(lcsCertApplications.id, id));
+
+  // If approved, auto-create or update supplier/seeker profile
+  if (data.status === "approved" && data.lcsCertId) {
+    const [app] = await db.select().from(lcsCertApplications).where(eq(lcsCertApplications.id, id)).limit(1);
+    if (app) {
+      if (app.applicationType === "business") {
+        const [existing] = await db.select({ id: supplierProfiles.id }).from(supplierProfiles)
+          .where(eq(supplierProfiles.userId, app.userId)).limit(1);
+        if (existing) {
+          await db.update(supplierProfiles).set({
+            lcsCertId: data.lcsCertId, lcsVerified: true, lcsVerifiedAt: new Date(),
+            legalName: app.legalName || undefined, tradingName: app.tradingName || undefined,
+            serviceCategories: app.serviceCategories || undefined,
+          }).where(eq(supplierProfiles.id, existing.id));
+        } else {
+          await db.insert(supplierProfiles).values({
+            userId: app.userId, lcsCertId: data.lcsCertId, lcsVerified: true, lcsVerifiedAt: new Date(),
+            legalName: app.legalName, tradingName: app.tradingName,
+            serviceCategories: app.serviceCategories || [],
+            contactEmail: app.businessEmail, contactPhone: app.businessPhone,
+          });
+        }
+      } else {
+        // Individual — update seeker profile
+        const [existing] = await db.select({ id: jobSeekerProfiles.id }).from(jobSeekerProfiles)
+          .where(eq(jobSeekerProfiles.userId, app.userId)).limit(1);
+        if (existing) {
+          await db.update(jobSeekerProfiles).set({
+            lcsCertId: data.lcsCertId, lcaAttestationDate: new Date(),
+          }).where(eq(jobSeekerProfiles.id, existing.id));
+        }
+      }
+    }
+  }
 }

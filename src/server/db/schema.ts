@@ -814,6 +814,64 @@ export const supplierResponses = pgTable(
 );
 
 // ─── USAGE TRACKING ──────────────────────────────────────────────
+
+// ─── LCS CERTIFICATE APPLICATIONS ───────────────────────────────
+export const lcsCertApplications = pgTable(
+  "lcs_cert_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    applicationType: text("application_type").notNull().default("individual"), // individual | business
+    tier: text("tier").notNull().default("self_service"), // self_service ($49) | managed ($99) | concierge ($199)
+    status: text("status").notNull().default("draft"), // draft | documents_pending | under_review | submitted_to_lcs | approved | rejected
+    // Step 1: Personal / Business Info
+    applicantName: text("applicant_name"),
+    applicantEmail: text("applicant_email"),
+    applicantPhone: text("applicant_phone"),
+    nationalIdNumber: text("national_id_number"),
+    tinNumber: text("tin_number"), // Tax Identification Number
+    // Business-specific
+    legalName: text("legal_name"),
+    tradingName: text("trading_name"),
+    businessRegistrationNumber: text("business_registration_number"),
+    businessAddress: text("business_address"),
+    businessEmail: text("business_email"),
+    businessPhone: text("business_phone"),
+    businessWebsite: text("business_website"),
+    yearEstablished: integer("year_established"),
+    employeeCount: integer("employee_count"),
+    isGuyaneseOwned: boolean("is_guyanese_owned").default(true),
+    ownershipPercentage: integer("ownership_percentage"), // % Guyanese ownership
+    // Step 2: Service Categories
+    serviceCategories: text("service_categories").array(),
+    serviceDescription: text("service_description"),
+    // Step 3: Documents (JSON array of { name, key, uploadedAt })
+    documents: text("documents"), // JSON
+    documentsComplete: boolean("documents_complete").default(false),
+    // Step 4: Review & Payment
+    stripePaymentId: text("stripe_payment_id"),
+    amountPaid: integer("amount_paid"), // cents
+    paidAt: timestamp("paid_at"),
+    // Processing
+    reviewNotes: text("review_notes"), // internal notes from reviewer
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at"),
+    submittedToLcsAt: timestamp("submitted_to_lcs_at"),
+    lcsCertId: text("lcs_cert_id"), // assigned after LCS approval
+    // Metadata
+    completedStep: integer("completed_step").default(0), // 0-4 wizard progress
+    country: text("country").default("GY"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("lcs_app_user_idx").on(table.userId),
+    index("lcs_app_status_idx").on(table.status),
+    index("lcs_app_tier_idx").on(table.tier),
+  ]
+);
+
+// ─── USAGE TRACKING ──────────────────────────────────────────────
 export const usageTracking = pgTable(
   "usage_tracking",
   {
