@@ -4005,3 +4005,157 @@ export async function fetchJurisdictions() {
   return db.select({ id: jurisdictions.id, code: jurisdictions.code, name: jurisdictions.name })
     .from(jurisdictions).where(eq(jurisdictions.active, true)).orderBy(jurisdictions.name);
 }
+
+// ─── ADMIN DASHBOARD ─────────────────────────────────────────────
+
+export async function fetchAdminStats() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user?.isSuperAdmin) throw new Error("Not authorized");
+
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // Users
+  const allUsers = await db.select({ id: users.id, name: users.name, email: users.email, userRole: users.userRole, createdAt: users.createdAt }).from(users).orderBy(desc(users.createdAt)).limit(500);
+  const recentSignups = allUsers.filter(u => u.createdAt && new Date(u.createdAt) > sevenDaysAgo);
+  const filers = allUsers.filter(u => u.userRole?.includes("filer"));
+  const seekers = allUsers.filter(u => u.userRole?.includes("job_seeker"));
+  const suppliers = allUsers.filter(u => u.userRole?.includes("supplier"));
+
+  // Tenants
+  const allTenants = await db.select({
+    id: tenants.id, name: tenants.name, plan: tenants.plan, trialEndsAt: tenants.trialEndsAt,
+    stripeSubscriptionId: tenants.stripeSubscriptionId, createdAt: tenants.createdAt,
+  }).from(tenants).orderBy(desc(tenants.createdAt)).limit(200);
+  const paying = allTenants.filter(t => t.stripeSubscriptionId);
+  const trialing = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) > now && !t.stripeSubscriptionId);
+  const expired = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) <= now && !t.stripeSubscriptionId);
+
+  // Entities
+  const entityCount = (await db.select({ id: entities.id }).from(entities).limit(1000)).length;
+
+  // Reporting periods
+  const allPeriods = await db.select({ id: reportingPeriods.id, status: reportingPeriods.status, createdAt: reportingPeriods.createdAt })
+    .from(reportingPeriods).limit(1000);
+  const submitted = allPeriods.filter(p => p.status === "submitted" || p.status === "acknowledged");
+
+  // Job postings & applications
+  const jobCount = (await db.select({ id: jobPostings.id }).from(jobPostings).limit(500)).length;
+  const appCount = (await db.select({ id: jobApplications.id }).from(jobApplications).limit(1000)).length;
+
+  // LCS data
+  const registerCount = (await db.select({ id: lcsRegister.id }).from(lcsRegister).limit(2000)).length;
+  const oppCount = (await db.select({ id: lcsOpportunities.id }).from(lcsOpportunities).limit(500)).length;
+  const lcsJobCount = (await db.select({ id: lcsEmploymentNotices.id }).from(lcsEmploymentNotices).limit(200)).length;
+  const profileCount = (await db.select({ id: companyProfiles.id }).from(companyProfiles).limit(2000)).length;
+
+  // Support tickets
+  const openTickets = (await db.select({ id: supportTickets.id }).from(supportTickets).where(eq(supportTickets.status, "open")).limit(100)).length;
+
+  // Recent audit log
+  const recentAudit = await db.select({
+    id: auditLogs.id, userName: auditLogs.userName, action: auditLogs.action,
+    entityType: auditLogs.entityType, createdAt: auditLogs.createdAt,
+  }).from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(20);
+
+  // Signup trend (last 30 days)
+  const signupsByDay: Record<string, number> = {};
+  for (const u of allUsers) {
+    if (u.createdAt && new Date(u.createdAt) > thirtyDaysAgo) {
+      const day = new Date(u.createdAt).toISOString().slice(0, 10);
+      signupsByDay[day] = (signupsByDay[day] || 0) + 1;
+    }
+  }
+
+  return {
+    users: {
+      total: allUsers.length,
+      recent7d: recentSignups.length,
+      filers: filers.length,
+      seekers: seekers.length,
+      suppliers: suppliers.length,
+      latest: allUsers.slice(0, 10),
+    },
+    tenants: {
+      total: allTenants.length,
+      paying: paying.length,
+      trialing: trialing.length,
+      expired: expired.length,
+      list: allTenants.slice(0, 15),
+    },
+    content: {
+      entities: entityCount,
+      periods: allPeriods.length,
+      submitted: submitted.length,
+      jobs: jobCount,
+      applications: appCount,
+    },
+    scraped: {
+      register: registerCount,
+      opportunities: oppCount,
+      lcsJobs: lcsJobCount,
+      companyProfiles: profileCount,
+    },
+    support: { openTickets },
+    signupsByDay,
+    recentAudit,
+  };
+}
+
+export async function fetchAllTickets() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user?.isSuperAdmin) throw new Error("Not authorized");
+
+  return db
+    .select({
+      id: supportTickets.id,
+      subject: supportTickets.subject,
+      description: supportTickets.description,
+      category: supportTickets.category,
+      priority: supportTickets.priority,
+      status: supportTickets.status,
+      createdAt: supportTickets.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(supportTickets)
+    .innerJoin(users, eq(supportTickets.userId, users.id))
+    .orderBy(desc(supportTickets.createdAt))
+    .limit(50);
+}
+
+export async function adminReplyToTicket(ticketId: string, message: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user?.isSuperAdmin) throw new Error("Not authorized");
+
+  const [reply] = await db.insert(ticketReplies).values({
+    ticketId, userId: session.user.id, message, isAdmin: true,
+  }).returning();
+
+  // Update ticket status to in_progress
+  await db.update(supportTickets).set({ status: "in_progress", updatedAt: new Date() })
+    .where(eq(supportTickets.id, ticketId));
+
+  return reply;
+}
+
+export async function adminUpdateTicketStatus(ticketId: string, status: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user?.isSuperAdmin) throw new Error("Not authorized");
+
+  await db.update(supportTickets).set({
+    status,
+    resolvedAt: status === "resolved" ? new Date() : undefined,
+    resolvedBy: status === "resolved" ? session.user.id : undefined,
+    updatedAt: new Date(),
+  }).where(eq(supportTickets.id, ticketId));
+}
