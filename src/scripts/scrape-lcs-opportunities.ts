@@ -314,7 +314,9 @@ async function main() {
   }
 
   // ── Phase 4: Extract PDF content from attachments ──
-  console.log("\nPhase 4: Extracting PDF content from attachments...\n");
+  console.log("\n════════════════════════════════════════════");
+  console.log("  Phase 4: Extracting PDF attachments");
+  console.log("════════════════════════════════════════════\n");
 
   // Get all notices that have a PDF attachment URL but no extracted content yet
   const allWithAttachments = await db
@@ -634,7 +636,7 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
         description: notice.description,
         lcaCategory: notice.lcaCategory,
         attachmentUrl: notice.attachmentUrl,
-        attachmentContent: notice.attachmentContent,
+        // Don't overwrite attachmentContent if already extracted
         deadline: notice.deadline ?? undefined,
         status,
         scrapedAt: new Date(),
