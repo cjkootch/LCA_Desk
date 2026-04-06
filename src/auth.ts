@@ -9,6 +9,7 @@ import { z } from "zod";
 declare module "next-auth" {
   interface User {
     isSuperAdmin?: boolean;
+    userRole?: string;
   }
 }
 
@@ -54,6 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           isSuperAdmin: user.isSuperAdmin ?? false,
+          userRole: user.userRole ?? "filer",
         };
       },
     }),
@@ -82,6 +84,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (token as any).isSuperAdmin = user.isSuperAdmin ?? false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (token as any).userRole = (user as any).userRole ?? "filer";
       }
       return token;
     },
@@ -89,6 +93,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.id) session.user.id = token.id as string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session.user as any).isSuperAdmin = (token as any).isSuperAdmin ?? false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session.user as any).userRole = (token as any).userRole ?? "filer";
       return session;
     },
   },

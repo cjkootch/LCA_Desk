@@ -56,6 +56,7 @@ export const users = pgTable("users", {
   image: text("image"),
   passwordHash: text("password_hash"),
   isSuperAdmin: boolean("is_super_admin").default(false),
+  userRole: text("user_role").default("filer"), // filer | job_seeker | supplier | comma-separated for multi-role
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -531,6 +532,8 @@ export const jobPostings = pgTable(
     status: text("status").default("open"),
     isPublic: boolean("is_public").default(true),
     guyaneseFirstStatement: text("guyanese_first_statement"),
+    guyaneseHired: boolean("guyanese_hired"),
+    filledAt: timestamp("filled_at"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -546,81 +549,81 @@ export const jobApplications = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     jobPostingId: uuid("job_posting_id").notNull().references(() => jobPostings.id, { onDelete: "cascade" }),
+    applicantUserId: uuid("applicant_user_id").references(() => users.id, { onDelete: "set null" }),
     applicantName: text("applicant_name").notNull(),
     applicantEmail: text("applicant_email").notNull(),
     applicantPhone: text("applicant_phone"),
     isGuyanese: boolean("is_guyanese").default(true),
     nationality: text("nationality"),
+    employmentCategory: text("employment_category"),
+    employmentClassification: text("employment_classification"),
     coverNote: text("cover_note"),
     cvUrl: text("cv_url"),
     status: text("status").default("received"),
     reviewNotes: text("review_notes"),
+    employeeRecordId: uuid("employee_record_id").references(() => employees.id, { onDelete: "set null" }),
+    hiredAt: timestamp("hired_at"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [
     index("job_applications_posting_idx").on(table.jobPostingId),
     index("job_applications_email_idx").on(table.applicantEmail),
+    index("job_applications_user_idx").on(table.applicantUserId),
   ]
 );
 
-// ─── JOB SEEKERS (Public auth — lcadesk.com) ─────────────────────
-export const jobSeekers = pgTable(
-  "job_seekers",
+// ─── JOB SEEKER PROFILES (linked to unified users table) ─────────
+export const jobSeekerProfiles = pgTable(
+  "job_seeker_profiles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    email: text("email").unique().notNull(),
-    passwordHash: text("password_hash"),
-    emailVerified: timestamp("email_verified"),
-    fullName: text("full_name").notNull(),
-    phone: text("phone"),
-    isGuyanese: boolean("is_guyanese").default(true),
-    nationality: text("nationality").default("Guyanese"),
+    userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
     currentJobTitle: text("current_job_title"),
     employmentCategory: text("employment_category"),
     employmentClassification: text("employment_classification"),
     yearsExperience: integer("years_experience"),
-    skills: text("skills").array(),
+    isGuyanese: boolean("is_guyanese").default(true),
+    nationality: text("nationality").default("Guyanese"),
     cvUrl: text("cv_url"),
-    locationPreference: text("location_preference"),
+    skills: text("skills").array(),
+    locationPreference: text("location_preference").default("Any"),
     contractTypePreference: text("contract_type_preference"),
     alertsEnabled: boolean("alerts_enabled").default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [
-    index("job_seekers_email_idx").on(table.email),
-    index("job_seekers_category_idx").on(table.employmentCategory),
+    index("job_seeker_user_idx").on(table.userId),
+    index("job_seeker_category_idx").on(table.employmentCategory),
   ]
 );
 
-// ─── SUPPLIER PROFILES (Public auth — lcadesk.com) ───────────────
+// ─── SUPPLIER PROFILES (linked to unified users table) ───────────
 export const supplierProfiles = pgTable(
   "supplier_profiles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    email: text("email").unique().notNull(),
-    passwordHash: text("password_hash"),
-    emailVerified: timestamp("email_verified"),
-    legalName: text("legal_name").notNull(),
-    tradingName: text("trading_name"),
+    userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
     lcsCertId: text("lcs_cert_id"),
     lcsVerified: boolean("lcs_verified").default(false),
     lcsStatus: text("lcs_status"),
     lcsExpirationDate: date("lcs_expiration_date"),
-    contactName: text("contact_name"),
-    phone: text("phone"),
+    lcsVerifiedAt: timestamp("lcs_verified_at"),
+    legalName: text("legal_name"),
+    tradingName: text("trading_name"),
     address: text("address"),
     website: text("website"),
     serviceCategories: text("service_categories").array(),
     tier: text("tier").default("free"),
     featuredUntil: timestamp("featured_until"),
+    profileVisible: boolean("profile_visible").default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [
-    index("supplier_profiles_email_idx").on(table.email),
-    index("supplier_profiles_cert_idx").on(table.lcsCertId),
+    index("supplier_profile_user_idx").on(table.userId),
+    index("supplier_profile_cert_idx").on(table.lcsCertId),
   ]
 );
 
