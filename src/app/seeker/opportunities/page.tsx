@@ -85,11 +85,16 @@ function AiSummaryPanel({ summary }: { summary: any }) {
                 <User className="h-3.5 w-3.5 text-text-muted" /> {summary.contact_name}
               </span>
             )}
-            {summary.contact_email && (
-              <a href={`mailto:${summary.contact_email}`} className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover">
-                <Mail className="h-3.5 w-3.5" /> {summary.contact_email}
-              </a>
-            )}
+            {summary.contact_email && (() => {
+              const raw = String(summary.contact_email);
+              const emails = raw.includes(",") ? raw.split(",").map((e: string) => e.trim()) :
+                raw.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [raw];
+              return emails.map((email: string) => (
+                <a key={email} href={`mailto:${email}`} className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover">
+                  <Mail className="h-3.5 w-3.5" /> {email}
+                </a>
+              ));
+            })()}
             {summary.contact_phone && (
               <span className="flex items-center gap-1.5 text-xs text-text-secondary">
                 <Phone className="h-3.5 w-3.5 text-text-muted" /> {summary.contact_phone}

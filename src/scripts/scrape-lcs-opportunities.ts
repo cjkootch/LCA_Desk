@@ -400,7 +400,7 @@ async function main() {
   "contract_duration": "Duration if mentioned",
   "estimated_value": "Dollar amount if mentioned",
   "contact_name": "Contact person name",
-  "contact_email": "Contact email",
+  "contact_emails": ["Array of contact email addresses found"],
   "contact_phone": "Contact phone",
   "lca_categories": ["Relevant Local Content Act categories"],
   "location": "Project location",
