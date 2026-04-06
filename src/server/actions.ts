@@ -30,7 +30,14 @@ import {
   auditLogs,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
-import { notifyApplicationReceived, notifyApplicationStatusChange, notifyReportSubmitted, notifyWelcome } from "@/lib/email/notify";
+import {
+  notifyApplicationReceived as unifiedNotifyAppReceived,
+  notifyApplicationStatus as unifiedNotifyAppStatus,
+  notifyReportSubmitted as unifiedNotifyReportSubmit,
+  notifyTeamInvite as unifiedNotifyTeamInvite,
+  fetchNotificationPreferences as fetchNotifPrefs,
+  updateNotificationPreferences as updateNotifPrefs,
+} from "@/lib/email/unified-notify";
 
 async function getSessionTenant() {
   const session = await auth();
@@ -342,20 +349,18 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     newValue: "Report locked after submission",
   });
 
-  // Send confirmation email
-  const [userForEmail] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  // Send confirmation (in-app + email)
   const [entityForEmail] = await db.select({ legalName: entities.legalName }).from(entities).where(eq(entities.id, current.entityId)).limit(1);
-  if (userForEmail?.email) {
-    const reportTypeNames: Record<string, string> = { half_yearly_h1: "Half-Yearly (H1)", half_yearly_h2: "Half-Yearly (H2)", annual_plan: "Annual Plan", performance_report: "Performance Report" };
-    notifyReportSubmitted({
-      userEmail: userForEmail.email,
-      userName: userForEmail.name || "User",
-      entityName: entityForEmail?.legalName || "",
-      reportType: reportTypeNames[current.reportType] || current.reportType,
-      periodLabel: `${current.periodStart} to ${current.periodEnd}`,
-      recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length },
-    });
-  }
+  const reportTypeNames: Record<string, string> = { half_yearly_h1: "Half-Yearly (H1)", half_yearly_h2: "Half-Yearly (H2)", annual_plan: "Annual Plan", performance_report: "Performance Report" };
+  unifiedNotifyReportSubmit({
+    userId,
+    tenantId,
+    userName: user?.name || "User",
+    entityName: entityForEmail?.legalName || "",
+    reportType: reportTypeNames[current.reportType] || current.reportType,
+    periodLabel: `${current.periodStart} to ${current.periodEnd}`,
+    recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length },
+  });
 
   return updated;
 }
@@ -1662,13 +1667,13 @@ export async function updateApplicationStatus(applicationId: string, status: str
     .where(eq(jobApplications.id, applicationId))
     .returning();
 
-  // Notify applicant of status change
-  if (updated?.applicantEmail) {
+  // Notify applicant of status change (in-app + email)
+  if (updated?.applicantUserId) {
     const [posting] = await db.select({ jobTitle: jobPostings.jobTitle, tenantId: jobPostings.tenantId }).from(jobPostings).where(eq(jobPostings.id, updated.jobPostingId)).limit(1);
     if (posting) {
       const [tenant] = await db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, posting.tenantId)).limit(1);
-      notifyApplicationStatusChange({
-        applicantEmail: updated.applicantEmail,
+      unifiedNotifyAppStatus({
+        userId: updated.applicantUserId,
         applicantName: updated.applicantName,
         jobTitle: posting.jobTitle,
         companyName: tenant?.name || "",
@@ -2257,6 +2262,20 @@ export async function fetchSeekerDashboardStats() {
     ),
     profile,
   };
+}
+
+// ─── NOTIFICATION PREFERENCES ────────────────────────────────────
+
+export async function fetchUserNotificationPreferences() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return fetchNotifPrefs(session.user.id);
+}
+
+export async function updateUserNotificationPreferences(prefs: Record<string, boolean>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  return updateNotifPrefs(session.user.id, prefs);
 }
 
 // ─── FEATURE PREFERENCES ─────────────────────────────────────────
