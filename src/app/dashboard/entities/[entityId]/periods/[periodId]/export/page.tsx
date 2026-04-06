@@ -8,14 +8,24 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PeriodChecklist } from "@/components/reporting/PeriodChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Send, CheckCircle, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  FileSpreadsheet, FileText, Send, CheckCircle, Mail, Shield,
+  Lock, AlertTriangle, Clock, User,
+} from "lucide-react";
 import { FeatureGate } from "@/components/billing/FeatureGate";
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
-import { fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, markPeriodSubmitted, fetchPlanAndUsage } from "@/server/actions";
+import {
+  fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment,
+  fetchCapacity, fetchNarratives, attestAndSubmit, updatePeriodStatus,
+  fetchPlanAndUsage, fetchAuditLog,
+} from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
-import type { Entity, ReportingPeriod, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
+import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
+
+const ATTESTATION_TEXT = "I certify that the information contained in this report is true, accurate, and complete to the best of my knowledge. I understand that submitting false or misleading information is an offence under the Local Content Act 2021 and may result in penalties of up to GY$50,000,000.";
 
 export default function ExportPage() {
   const params = useParams();
@@ -25,10 +35,15 @@ export default function ExportPage() {
   const [currentPlan, setCurrentPlan] = useState("starter");
   const [entityName, setEntityName] = useState("");
   const [entity, setEntity] = useState<Entity | null>(null);
-  const [period, setPeriod] = useState<{ reportType: string; fiscalYear: number | null; periodStart: string; periodEnd: string; status: string | null; submittedAt: Date | null } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [period, setPeriod] = useState<any>(null);
   const [exportData, setExportData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [attestChecked, setAttestChecked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [auditEntries, setAuditEntries] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,6 +74,10 @@ export default function ExportPage() {
           capacity: rawNar.find((n) => n.section === "capacity_narrative")?.draftContent || "",
         },
       });
+
+      // Load audit log for this period
+      fetchAuditLog(periodId, 20).then(setAuditEntries).catch(() => {});
+
       setLoading(false);
     };
     load().catch(() => setLoading(false));
@@ -82,21 +101,48 @@ export default function ExportPage() {
     setExporting(null);
   };
 
-  const handleMarkSubmitted = async () => {
-    await markPeriodSubmitted(periodId);
-    setPeriod((prev) => prev ? { ...prev, status: "submitted", submittedAt: new Date() } : prev);
-    toast.success("Report marked as submitted");
+  const handleSubmit = async () => {
+    if (!attestChecked) {
+      toast.error("You must attest to the accuracy of this report before submitting.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await attestAndSubmit(periodId, ATTESTATION_TEXT);
+      setPeriod((prev: typeof period) => prev ? { ...prev, status: "submitted", submittedAt: new Date(), lockedAt: new Date() } : prev);
+      toast.success("Report submitted and locked. A snapshot has been saved.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Submission failed");
+    }
+    setSubmitting(false);
+  };
+
+  const handleSendForReview = async () => {
+    try {
+      await updatePeriodStatus(periodId, "in_review");
+      setPeriod((prev: typeof period) => prev ? { ...prev, status: "in_review" } : prev);
+      toast.success("Report sent for review.");
+    } catch { toast.error("Failed to update status"); }
+  };
+
+  const handleApprove = async () => {
+    try {
+      await updatePeriodStatus(periodId, "approved");
+      setPeriod((prev: typeof period) => prev ? { ...prev, status: "approved" } : prev);
+      toast.success("Report approved and ready for submission.");
+    } catch { toast.error("Failed to approve"); }
   };
 
   if (loading || !period) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>;
   }
 
+  const isLocked = !!(period.lockedAt || period.status === "submitted" || period.status === "acknowledged");
+  const isSubmitted = period.status === "submitted" || period.status === "acknowledged";
+
   const reportTypeNames: Record<string, string> = {
-    half_yearly_h1: "Half-Yearly",
-    half_yearly_h2: "Half-Yearly",
-    annual_plan: "Annual Local Content Plan",
-    performance_report: "Annual Performance",
+    half_yearly_h1: "Half-Yearly", half_yearly_h2: "Half-Yearly",
+    annual_plan: "Annual Local Content Plan", performance_report: "Annual Performance",
   };
   const periodLabel = period.reportType === "half_yearly_h1" ? "H1" : period.reportType === "half_yearly_h2" ? "H2" : "";
   const reportTypeName = reportTypeNames[period.reportType] || "Local Content";
@@ -105,12 +151,51 @@ export default function ExportPage() {
   return (
     <div>
       <TopBar title={`${entityName} — Export & Submit`} />
-      <div className="p-8">
+      <div className="p-4 sm:p-8 max-w-4xl">
         <PageHeader title="Export & Submit" description="Generate official reports and submit to the Local Content Secretariat."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Export" }]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={completedSteps} />
+
+        {/* Locked banner */}
+        {isLocked && (
+          <div className="rounded-lg border border-warning/30 bg-warning-light p-4 mb-6 flex items-center gap-3">
+            <Lock className="h-5 w-5 text-warning shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Report Locked</p>
+              <p className="text-xs text-text-secondary">
+                This report was submitted on {period.submittedAt ? new Date(period.submittedAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "N/A"} and is now read-only.
+                Data cannot be modified after submission.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Status workflow */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Submission Workflow</h3>
+            <div className="flex items-center gap-1">
+              {["not_started", "in_progress", "in_review", "approved", "submitted"].map((step, i) => {
+                const steps = ["not_started", "in_progress", "in_review", "approved", "submitted"];
+                const currentIdx = steps.indexOf(period.status || "not_started");
+                const isComplete = i <= currentIdx;
+                const labels = ["Draft", "In Progress", "In Review", "Approved", "Submitted"];
+                return (
+                  <div key={step} className="flex-1 flex flex-col items-center">
+                    <div className={`h-2 w-full rounded-full ${isComplete ? "bg-accent" : "bg-border-light"}`} />
+                    <span className={`text-[10px] mt-1 ${isComplete ? "text-accent font-medium" : "text-text-muted"}`}>
+                      {labels[i]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Export files */}
         <FeatureGate planRequired="pro" featureName="Report Export" currentPlan={currentPlan}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success-light"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
             <CardContent><Button onClick={() => handleExport("excel")} loading={exporting === "excel"} className="w-full"><FileSpreadsheet className="h-4 w-4 mr-2" />Download Excel Report</Button></CardContent>
@@ -121,39 +206,175 @@ export default function ExportPage() {
           </Card>
         </div>
         </FeatureGate>
-        <Card className="mb-8">
+
+        {/* Submission section */}
+        <Card className="mb-6">
           <CardHeader><div className="flex items-center gap-2"><Send className="h-5 w-5 text-accent" /><CardTitle className="text-base">Submit to Secretariat</CardTitle></div></CardHeader>
           <CardContent>
             <p className="text-sm text-text-secondary mb-4">
               Download both files above, then submit via email to the Local Content Secretariat.
-              Use the button below to open your email client with the correct recipient and subject line pre-filled.
             </p>
             <div className="bg-bg-primary rounded-lg p-4 space-y-2 text-sm mb-4">
               <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">localcontent@nre.gov.gy</span></div>
               <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
             </div>
-            <div className="flex gap-3">
-              <a
-                href={`mailto:localcontent@nre.gov.gy?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
-                  `Dear Local Content Secretariat,\n\nPlease find attached the Local Content ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
-                )}`}
-                className="flex-1"
-              >
-                <Button variant="primary" className="w-full">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Compose Submission Email
-                </Button>
-              </a>
-            </div>
-            <p className="text-xs text-text-muted mt-3">
-              Remember to attach both downloaded files (Excel report + PDF narrative) before sending.
+            <a
+              href={`mailto:localcontent@nre.gov.gy?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
+                `Dear Local Content Secretariat,\n\nPlease find attached the Local Content ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
+              )}`}
+            >
+              <Button variant="primary" className="w-full mb-2">
+                <Mail className="h-4 w-4 mr-2" /> Compose Submission Email
+              </Button>
+            </a>
+            <p className="text-xs text-text-muted">
+              Remember to attach both downloaded files before sending.
             </p>
           </CardContent>
         </Card>
-        {period.status !== "submitted" && period.status !== "acknowledged" ? (
-          <Button onClick={handleMarkSubmitted} size="lg" className="w-full"><CheckCircle className="h-5 w-5 mr-2" />Mark as Submitted</Button>
-        ) : (
-          <div className="flex items-center justify-center gap-2 text-success py-4"><CheckCircle className="h-5 w-5" /><span className="font-medium">Report submitted</span></div>
+
+        {/* Workflow actions */}
+        {!isSubmitted && (
+          <Card className="mb-6">
+            <CardContent className="p-5 space-y-4">
+              {/* Review/Approve buttons */}
+              {(period.status === "not_started" || period.status === "in_progress") && (
+                <div>
+                  <Button onClick={handleSendForReview} variant="outline" className="w-full gap-2">
+                    <Clock className="h-4 w-4" /> Send for Review
+                  </Button>
+                  <p className="text-[11px] text-text-muted mt-1.5">Mark this report as ready for internal review before submission.</p>
+                </div>
+              )}
+
+              {period.status === "in_review" && (
+                <div>
+                  <Button onClick={handleApprove} variant="outline" className="w-full gap-2">
+                    <CheckCircle className="h-4 w-4" /> Approve for Submission
+                  </Button>
+                  <p className="text-[11px] text-text-muted mt-1.5">Confirm this report has been reviewed and is ready to submit.</p>
+                </div>
+              )}
+
+              {/* Attestation */}
+              <div className="border-t border-border pt-4">
+                <div className="flex items-start gap-2 mb-3">
+                  <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Attestation & Submission</h3>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      This action is irreversible. The report will be locked and a snapshot saved.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-warning-light border border-warning/20 rounded-lg p-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                    <p className="text-xs text-text-secondary leading-relaxed">{ATTESTATION_TEXT}</p>
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer mb-4">
+                  <input
+                    type="checkbox"
+                    checked={attestChecked}
+                    onChange={(e) => setAttestChecked(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-text-primary font-medium">
+                    I have read and agree to the attestation above
+                  </span>
+                </label>
+
+                <Button
+                  onClick={handleSubmit}
+                  loading={submitting}
+                  disabled={!attestChecked}
+                  size="lg"
+                  className="w-full gap-2"
+                >
+                  <Lock className="h-5 w-5" />
+                  Attest & Submit Report
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Submitted state */}
+        {isSubmitted && (
+          <Card className="border-success/30 mb-6">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <CheckCircle className="h-6 w-6 text-success" />
+                <div>
+                  <p className="font-semibold text-text-primary">Report Submitted & Locked</p>
+                  <p className="text-xs text-text-muted">
+                    Submitted {period.submittedAt ? new Date(period.submittedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                  </p>
+                </div>
+              </div>
+              {period.attestation && (
+                <div className="bg-bg-primary rounded-lg p-3 text-xs text-text-secondary">
+                  <p className="font-medium text-text-primary mb-1">Attestation:</p>
+                  <p>{period.attestation}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Audit trail */}
+        {auditEntries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent" />
+                <CardTitle className="text-sm">Audit Trail</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {auditEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-start gap-3 text-xs border-b border-border-light pb-2 last:border-0">
+                    <div className="h-6 w-6 rounded-full bg-bg-primary flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="h-3 w-3 text-text-muted" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-text-primary">
+                        <span className="font-medium">{entry.userName || "System"}</span>
+                        {" "}
+                        <Badge variant={
+                          entry.action === "submit" ? "success" :
+                          entry.action === "approve" ? "accent" :
+                          entry.action === "delete" ? "danger" :
+                          "default"
+                        } className="text-[9px] px-1.5">
+                          {entry.action}
+                        </Badge>
+                        {" "}
+                        <span className="text-text-muted">{entry.entityType.replace(/_/g, " ")}</span>
+                        {entry.fieldName && (
+                          <span className="text-text-muted"> &middot; {entry.fieldName}</span>
+                        )}
+                      </p>
+                      {(entry.oldValue || entry.newValue) && (
+                        <p className="text-text-muted mt-0.5">
+                          {entry.oldValue && <span className="line-through">{entry.oldValue}</span>}
+                          {entry.oldValue && entry.newValue && " → "}
+                          {entry.newValue && <span>{entry.newValue}</span>}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-text-muted shrink-0">
+                      {entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

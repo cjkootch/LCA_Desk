@@ -27,6 +27,7 @@ import {
   supplierProfiles,
   jurisdictions,
   users,
+  auditLogs,
 } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -47,6 +48,54 @@ async function getSessionTenant() {
     tenant: membership.tenant,
     role: membership.role,
   };
+}
+
+// ─── AUDIT LOGGING ───────────────────────────────────────────────
+
+async function logAudit(params: {
+  tenantId: string;
+  userId: string;
+  userName?: string;
+  action: "create" | "update" | "delete" | "submit" | "approve" | "review" | "attest" | "lock" | "reopen";
+  entityType: string;
+  entityId: string;
+  reportingPeriodId?: string | null;
+  fieldName?: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: params.tenantId,
+      userId: params.userId,
+      userName: params.userName || null,
+      action: params.action,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      reportingPeriodId: params.reportingPeriodId || null,
+      fieldName: params.fieldName || null,
+      oldValue: params.oldValue || null,
+      newValue: params.newValue || null,
+      metadata: params.metadata ? JSON.stringify(params.metadata) : null,
+    });
+  } catch {
+    // Audit logging should never break the main operation
+    console.error("Audit log failed:", params.action, params.entityType, params.entityId);
+  }
+}
+
+export async function fetchAuditLog(periodId?: string, limit = 50) {
+  const { tenantId } = await getSessionTenant();
+  const conditions = [eq(auditLogs.tenantId, tenantId)];
+  if (periodId) conditions.push(eq(auditLogs.reportingPeriodId, periodId));
+
+  return db
+    .select()
+    .from(auditLogs)
+    .where(and(...conditions))
+    .orderBy(auditLogs.createdAt)
+    .limit(limit);
 }
 
 // ─── ENTITIES ─────────────────────────────────────────────────────
@@ -169,30 +218,164 @@ export async function addPeriod(data: {
   return period;
 }
 
-export async function markPeriodSubmitted(periodId: string) {
+// ─── SUBMISSION WORKFLOW ──────────────────────────────────────────
+// Status flow: not_started → in_progress → in_review → approved → submitted
+// After submission: locked (read-only)
+
+export async function updatePeriodStatus(periodId: string, newStatus: string) {
   const { tenantId, userId } = await getSessionTenant();
+  const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+
+  const [current] = await db
+    .select()
+    .from(reportingPeriods)
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .limit(1);
+  if (!current) throw new Error("Period not found");
+
+  const oldStatus = current.status || "not_started";
+
+  // Build update fields based on new status
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: Record<string, any> = { status: newStatus, updatedAt: new Date() };
+
+  if (newStatus === "in_review") {
+    updates.preparedBy = userId;
+    updates.preparedAt = new Date();
+  } else if (newStatus === "approved") {
+    updates.reviewedBy = userId;
+    updates.reviewedAt = new Date();
+  }
+
   const [updated] = await db
     .update(reportingPeriods)
-    .set({ status: "submitted", submittedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(
-        eq(reportingPeriods.id, periodId),
-        eq(reportingPeriods.tenantId, tenantId)
-      )
-    )
+    .set(updates)
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
     .returning();
 
-  if (updated) {
-    await db.insert(submissionLogs).values({
-      reportingPeriodId: periodId,
-      entityId: updated.entityId,
-      tenantId,
-      submittedBy: userId,
-      submissionMethod: "email",
-      submittedToEmail: "localcontent@nre.gov.gy",
-      status: "sent",
-    });
-  }
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: newStatus === "approved" ? "approve" : newStatus === "in_review" ? "review" : "update",
+    entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    fieldName: "status", oldValue: oldStatus, newValue: newStatus,
+  });
+
+  return updated;
+}
+
+export async function attestAndSubmit(periodId: string, attestationText: string) {
+  const { tenantId, userId } = await getSessionTenant();
+  const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+
+  const [current] = await db
+    .select()
+    .from(reportingPeriods)
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .limit(1);
+  if (!current) throw new Error("Period not found");
+
+  // Create data snapshot at time of submission
+  const expenditures = await db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, periodId));
+  const employment = await db.select().from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, periodId));
+  const capacity = await db.select().from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.reportingPeriodId, periodId));
+  const narratives = await db.select().from(narrativeDrafts).where(eq(narrativeDrafts.reportingPeriodId, periodId));
+
+  const snapshot = JSON.stringify({
+    submittedAt: new Date().toISOString(),
+    submittedBy: { id: userId, name: user?.name },
+    attestation: attestationText,
+    recordCounts: {
+      expenditures: expenditures.length,
+      employment: employment.length,
+      capacity: capacity.length,
+      narratives: narratives.length,
+    },
+    expenditures,
+    employment,
+    capacity,
+    narratives,
+  });
+
+  const now = new Date();
+  const [updated] = await db
+    .update(reportingPeriods)
+    .set({
+      status: "submitted",
+      submittedAt: now,
+      attestation: attestationText,
+      attestedBy: userId,
+      attestedAt: now,
+      approvedBy: current.approvedBy || userId,
+      approvedAt: current.approvedAt || now,
+      lockedAt: now,
+      snapshotData: snapshot,
+      updatedAt: now,
+    })
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .returning();
+
+  // Create submission log
+  await db.insert(submissionLogs).values({
+    reportingPeriodId: periodId,
+    entityId: current.entityId,
+    tenantId,
+    submittedBy: userId,
+    submissionMethod: "email",
+    submittedToEmail: "localcontent@nre.gov.gy",
+    status: "sent",
+  });
+
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: "submit", entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    fieldName: "status", oldValue: current.status || "not_started", newValue: "submitted",
+    metadata: { attestation: attestationText, recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length } },
+  });
+
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: "lock", entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    newValue: "Report locked after submission",
+  });
+
+  return updated;
+}
+
+// Keep backward compat
+export async function markPeriodSubmitted(periodId: string) {
+  return attestAndSubmit(periodId, "I certify that the information contained in this report is true and accurate to the best of my knowledge.");
+}
+
+export async function checkPeriodLocked(periodId: string): Promise<boolean> {
+  const { tenantId } = await getSessionTenant();
+  const [period] = await db
+    .select({ lockedAt: reportingPeriods.lockedAt, status: reportingPeriods.status })
+    .from(reportingPeriods)
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .limit(1);
+  return !!(period?.lockedAt || period?.status === "submitted");
+}
+
+export async function reopenPeriod(periodId: string) {
+  const { tenantId, userId } = await getSessionTenant();
+  const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+
+  const [updated] = await db
+    .update(reportingPeriods)
+    .set({ status: "in_progress", lockedAt: null, updatedAt: new Date() })
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .returning();
+
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: "reopen", entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    fieldName: "status", oldValue: "submitted", newValue: "in_progress",
+    metadata: { reason: "Period reopened for amendments" },
+  });
 
   return updated;
 }
@@ -217,7 +400,7 @@ export async function addExpenditure(
   entityId: string,
   data: Record<string, unknown>
 ) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
   const [record] = await db
     .insert(expenditureRecords)
     .values({
@@ -239,16 +422,19 @@ export async function addExpenditure(
       currencyOfPayment: (data.currency_of_payment as string) || "GYD",
     })
     .returning();
+  await logAudit({ tenantId, userId, action: "create", entityType: "expenditure_record", entityId: record.id, reportingPeriodId: periodId, newValue: `${data.supplier_name}: ${data.actual_payment}` });
   return record;
 }
 
 export async function removeExpenditure(id: string) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
+  const [old] = await db.select().from(expenditureRecords).where(eq(expenditureRecords.id, id)).limit(1);
   await db
     .delete(expenditureRecords)
     .where(
       and(eq(expenditureRecords.id, id), eq(expenditureRecords.tenantId, tenantId))
     );
+  if (old) await logAudit({ tenantId, userId, action: "delete", entityType: "expenditure_record", entityId: id, reportingPeriodId: old.reportingPeriodId, oldValue: `${old.supplierName}: ${old.actualPayment}` });
 }
 
 export async function updateExpenditure(id: string, data: Record<string, unknown>) {
@@ -297,7 +483,7 @@ export async function addEmployment(
   entityId: string,
   data: Record<string, unknown>
 ) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
   const [record] = await db
     .insert(employmentRecords)
     .values({
@@ -318,16 +504,19 @@ export async function addEmployment(
         : null,
     })
     .returning();
+  await logAudit({ tenantId, userId, action: "create", entityType: "employment_record", entityId: record.id, reportingPeriodId: periodId, newValue: `${data.job_title}: ${data.total_employees} employees` });
   return record;
 }
 
 export async function removeEmployment(id: string) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
+  const [old] = await db.select().from(employmentRecords).where(eq(employmentRecords.id, id)).limit(1);
   await db
     .delete(employmentRecords)
     .where(
       and(eq(employmentRecords.id, id), eq(employmentRecords.tenantId, tenantId))
     );
+  if (old) await logAudit({ tenantId, userId, action: "delete", entityType: "employment_record", entityId: id, reportingPeriodId: old.reportingPeriodId, oldValue: `${old.jobTitle}: ${old.totalEmployees} employees` });
 }
 
 export async function updateEmploymentRecord(id: string, data: Record<string, unknown>) {
