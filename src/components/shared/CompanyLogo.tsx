@@ -12,26 +12,29 @@ interface CompanyLogoProps {
 
 export function CompanyLogo({ companyName, size = 32, className }: CompanyLogoProps) {
   const [failed, setFailed] = useState(false);
-  const logoUrl = getCompanyLogoUrl(companyName, size * 2); // 2x for retina
+  const logoUrl = getCompanyLogoUrl(companyName, size * 2);
 
   if (!logoUrl || failed) {
     return (
       <div
-        className={`rounded-lg bg-bg-primary flex items-center justify-center shrink-0 ${className || ""}`}
+        className={`rounded-md bg-bg-primary border border-border-light flex items-center justify-center shrink-0 ${className || ""}`}
         style={{ width: size, height: size }}
       >
-        <Building2 className="text-text-muted" style={{ width: size * 0.5, height: size * 0.5 }} />
+        <span className="font-bold text-text-muted" style={{ fontSize: size * 0.35 }}>
+          {companyName.charAt(0).toUpperCase()}
+        </span>
       </div>
     );
   }
 
   return (
+    /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src={logoUrl}
       alt={companyName}
       width={size}
       height={size}
-      className={`rounded-lg bg-white object-contain shrink-0 ${className || ""}`}
+      className={`rounded-md border border-border-light bg-white object-contain shrink-0 ${className || ""}`}
       style={{ width: size, height: size }}
       onError={() => setFailed(true)}
     />
