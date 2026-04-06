@@ -120,6 +120,8 @@ export default function SeekerOpportunitiesPage() {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 let parsedSummary: any = null;
                 try { if (opp.aiSummary) parsedSummary = JSON.parse(opp.aiSummary); } catch {}
+                const displayName = opp.contractorName === "Unknown" && parsedSummary?.issuing_company
+                  ? parsedSummary.issuing_company : opp.contractorName;
 
                 return (
                   <Card key={opp.id} className={cn("transition-colors", isExpanded && "border-accent/30")}>
@@ -147,8 +149,8 @@ export default function SeekerOpportunitiesPage() {
 
                             <h3 className="text-sm font-medium text-text-primary line-clamp-2">{decodeHtml(opp.title)}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                              <CompanyLogo companyName={opp.contractorName} size={18} />
-                              <span className="text-xs text-text-secondary">{opp.contractorName}</span>
+                              <CompanyLogo companyName={displayName} size={18} />
+                              <span className="text-xs text-text-secondary">{displayName}</span>
                             </div>
 
                             {parsedSummary?.scope_of_work && !isExpanded && (

@@ -211,6 +211,9 @@ export default function OpportunitiesPage() {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               let parsedSummary: any = null;
               try { if (opp.aiSummary) parsedSummary = JSON.parse(opp.aiSummary); } catch {}
+              // Use AI-extracted company name if DB has "Unknown"
+              const displayName = opp.contractorName === "Unknown" && parsedSummary?.issuing_company
+                ? parsedSummary.issuing_company : opp.contractorName;
 
               return (
                 <Card key={opp.id} className={cn("transition-colors", isExpired && "opacity-60", isExpanded && "border-accent/30")}>
@@ -249,8 +252,8 @@ export default function OpportunitiesPage() {
                             {decodeHtml(opp.title)}
                           </h3>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <CompanyLogo companyName={opp.contractorName} size={20} />
-                            <p className="text-sm text-text-secondary">{opp.contractorName}</p>
+                            <CompanyLogo companyName={displayName} size={20} />
+                            <p className="text-sm text-text-secondary">{displayName}</p>
                           </div>
 
                           {/* Quick summary from AI */}
