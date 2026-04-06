@@ -54,20 +54,12 @@ const COMPANY_DOMAINS: Record<string, string> = {
 };
 
 export function getCompanyLogoUrl(companyName: string, size: number = 64): string | null {
-  // Direct match
-  if (COMPANY_DOMAINS[companyName]) {
-    return `https://logo.clearbit.com/${COMPANY_DOMAINS[companyName]}?size=${size}`;
-  }
-
-  // Fuzzy match — check if any key is contained in the company name
-  for (const [key, domain] of Object.entries(COMPANY_DOMAINS)) {
-    if (companyName.toLowerCase().includes(key.toLowerCase()) ||
-        key.toLowerCase().includes(companyName.toLowerCase())) {
-      return `https://logo.clearbit.com/${domain}?size=${size}`;
-    }
-  }
-
-  return null;
+  const domain = getCompanyDomain(companyName);
+  if (!domain) return null;
+  // Use Google's favicon service (reliable, free, no auth needed)
+  // sz parameter controls size: 16, 32, 64, 128, 256
+  const sz = size <= 32 ? 32 : size <= 64 ? 64 : 128;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=${sz}`;
 }
 
 export function getCompanyDomain(companyName: string): string | null {
