@@ -11,6 +11,10 @@ function getStripe() {
 
 // Stripe Price IDs — create these in your Stripe Dashboard
 const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+  lite: {
+    monthly: process.env.STRIPE_LITE_MONTHLY_PRICE_ID || "",
+    annual: process.env.STRIPE_LITE_ANNUAL_PRICE_ID || "",
+  },
   pro: {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
     annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || "",

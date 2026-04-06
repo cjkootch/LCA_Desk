@@ -359,7 +359,7 @@ export default function BillingPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 pr-4 font-medium text-text-secondary">Feature</th>
-                    <th className="text-center py-3 px-4 font-medium text-text-secondary">Starter</th>
+                    <th className="text-center py-3 px-4 font-medium text-text-secondary">Lite</th>
                     <th className="text-center py-3 px-4 font-medium text-accent">Pro</th>
                     <th className="text-center py-3 px-4 font-medium text-text-secondary">Enterprise</th>
                   </tr>

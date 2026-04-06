@@ -18,7 +18,7 @@ export function UpgradeButton({
   onClick,
   ...props
 }: UpgradeButtonProps) {
-  const planRank = { starter: 0, pro: 1, enterprise: 2 };
+  const planRank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
   const hasAccess =
     (planRank[currentPlan as keyof typeof planRank] ?? 0) >=
     (planRank[requiredPlan] ?? 0);

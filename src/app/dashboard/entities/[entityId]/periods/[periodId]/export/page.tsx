@@ -13,7 +13,7 @@ import {
   FileSpreadsheet, FileText, Send, CheckCircle, Mail, Shield,
   Lock, AlertTriangle, Clock, User,
 } from "lucide-react";
-import { FeatureGate } from "@/components/billing/FeatureGate";
+
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
@@ -194,7 +194,6 @@ export default function ExportPage() {
         </Card>
 
         {/* Export files */}
-        <FeatureGate planRequired="pro" featureName="Report Export" currentPlan={currentPlan}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader><div className="flex items-center gap-3"><div className="p-3 rounded-lg bg-success-light"><FileSpreadsheet className="h-6 w-6 text-success" /></div><div><CardTitle className="text-base">Excel Report</CardTitle><p className="text-sm text-text-muted mt-1">Secretariat Version 4.1 format</p></div></div></CardHeader>
@@ -205,7 +204,6 @@ export default function ExportPage() {
             <CardContent><Button onClick={() => handleExport("pdf")} variant="secondary" loading={exporting === "pdf"} className="w-full"><FileText className="h-4 w-4 mr-2" />Download Narrative PDF</Button></CardContent>
           </Card>
         </div>
-        </FeatureGate>
 
         {/* Submission section */}
         <Card className="mb-6">
