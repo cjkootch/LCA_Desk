@@ -320,7 +320,22 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
-  // ── Phase 3.5: Backfill company names from existing AI summaries ──
+  // ── Phase 3.5: Mark removed opportunities as expired ──
+  const allExistingOpps = await db.select({ id: lcsOpportunities.id, sourceSlug: lcsOpportunities.sourceSlug, status: lcsOpportunities.status })
+    .from(lcsOpportunities).limit(500);
+
+  const scrapedOppSlugs = new Set([...supplierSlugs, ...employmentSlugs]);
+  let expiredCount = 0;
+  for (const row of allExistingOpps) {
+    if (row.status === "active" && row.sourceSlug && !scrapedOppSlugs.has(row.sourceSlug)) {
+      await db.update(lcsOpportunities).set({ status: "expired", updatedAt: new Date() })
+        .where(eq(lcsOpportunities.id, row.id));
+      expiredCount++;
+    }
+  }
+  if (expiredCount > 0) console.log(`  ✓ Marked ${expiredCount} removed opportunities as expired\n`);
+
+  // ── Backfill company names from existing AI summaries ──
   const unknownOpps = await db.select({ id: lcsOpportunities.id, aiSummary: lcsOpportunities.aiSummary })
     .from(lcsOpportunities)
     .where(eq(lcsOpportunities.contractorName, "Unknown"))
