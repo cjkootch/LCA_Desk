@@ -763,7 +763,22 @@ export const supplierProfiles = pgTable(
     address: text("address"),
     website: text("website"),
     serviceCategories: text("service_categories").array(),
-    tier: text("tier").default("free"),
+    capabilityStatement: text("capability_statement"),
+    portfolio: text("portfolio"), // JSON array of { title, description, value }
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    employeeCount: integer("employee_count"),
+    yearEstablished: integer("year_established"),
+    isGuyaneseOwned: boolean("is_guyanese_owned").default(true),
+    // Billing
+    tier: text("tier").default("free"), // free | pro
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    trialEndsAt: timestamp("trial_ends_at"),
+    // Engagement
+    profileViews: integer("profile_views").default(0),
+    responsesThisMonth: integer("responses_this_month").default(0),
+    responsesResetAt: timestamp("responses_reset_at"),
     featuredUntil: timestamp("featured_until"),
     profileVisible: boolean("profile_visible").default(true),
     country: text("country").default("GY"),
@@ -773,6 +788,28 @@ export const supplierProfiles = pgTable(
   (table) => [
     index("supplier_profile_user_idx").on(table.userId),
     index("supplier_profile_cert_idx").on(table.lcsCertId),
+    index("supplier_profile_tier_idx").on(table.tier),
+  ]
+);
+
+// ─── SUPPLIER OPPORTUNITY RESPONSES ─────────────────────────────
+export const supplierResponses = pgTable(
+  "supplier_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    supplierId: uuid("supplier_id").notNull().references(() => supplierProfiles.id, { onDelete: "cascade" }),
+    opportunityId: uuid("opportunity_id").notNull().references(() => lcsOpportunities.id, { onDelete: "cascade" }),
+    status: text("status").default("interested"), // interested | contacted | shortlisted | awarded | not_selected
+    coverNote: text("cover_note"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    unique("supplier_response_unique").on(table.supplierId, table.opportunityId),
+    index("supplier_response_supplier_idx").on(table.supplierId),
+    index("supplier_response_opp_idx").on(table.opportunityId),
   ]
 );
 

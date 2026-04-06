@@ -40,6 +40,7 @@ import {
   secretariatMembers,
   submissionAcknowledgments,
   amendmentRequests,
+  supplierResponses,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -4925,4 +4926,190 @@ export async function moderateEmploymentNotice(id: string, data: {
     moderatedAt: new Date(),
     updatedAt: new Date(),
   }).where(eq(lcsEmploymentNotices.id, id));
+}
+
+// ─── SUPPLIER PORTAL ────────────────────────────────────────────
+
+async function getSupplierContext() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [profile] = await db.select().from(supplierProfiles)
+    .where(eq(supplierProfiles.userId, session.user.id)).limit(1);
+  if (!profile) throw new Error("No supplier profile found");
+  return { userId: session.user.id, profile };
+}
+
+function requireSupplierPro(tier: string | null) {
+  if (tier !== "pro") throw new Error("This feature requires the Supplier Pro plan. Upgrade in Settings.");
+}
+
+export async function fetchSupplierDashboard() {
+  const { profile } = await getSupplierContext();
+
+  // Responses
+  const responses = await db.select().from(supplierResponses)
+    .where(eq(supplierResponses.supplierId, profile.id))
+    .orderBy(desc(supplierResponses.createdAt)).limit(50);
+
+  // Matching opportunities (by service category)
+  const categories = profile.serviceCategories || [];
+  const allOpps = await db.select().from(lcsOpportunities)
+    .where(eq(lcsOpportunities.status, "active"))
+    .orderBy(desc(lcsOpportunities.postedDate)).limit(100);
+
+  const matchingOpps = categories.length > 0
+    ? allOpps.filter(o => categories.some(c => o.lcaCategory?.toLowerCase().includes(c.toLowerCase()) || o.title?.toLowerCase().includes(c.toLowerCase())))
+    : [];
+
+  const respondedIds = new Set(responses.map(r => r.opportunityId));
+
+  return {
+    profile: {
+      id: profile.id,
+      legalName: profile.legalName,
+      tradingName: profile.tradingName,
+      lcsCertId: profile.lcsCertId,
+      lcsVerified: profile.lcsVerified,
+      lcsExpirationDate: profile.lcsExpirationDate,
+      tier: profile.tier || "free",
+      serviceCategories: profile.serviceCategories || [],
+      profileViews: profile.profileViews || 0,
+      responsesThisMonth: profile.responsesThisMonth || 0,
+      capabilityStatement: profile.capabilityStatement,
+      contactEmail: profile.contactEmail,
+      contactPhone: profile.contactPhone,
+      employeeCount: profile.employeeCount,
+      yearEstablished: profile.yearEstablished,
+      isGuyaneseOwned: profile.isGuyaneseOwned,
+    },
+    stats: {
+      totalResponses: responses.length,
+      interested: responses.filter(r => r.status === "interested").length,
+      contacted: responses.filter(r => r.status === "contacted").length,
+      shortlisted: responses.filter(r => r.status === "shortlisted").length,
+      awarded: responses.filter(r => r.status === "awarded").length,
+    },
+    matchingOpportunities: matchingOpps.slice(0, 5).map(o => ({
+      id: o.id, title: o.title, company: o.contractorName, deadline: o.deadline,
+      type: o.noticeType, responded: respondedIds.has(o.id),
+    })),
+    recentResponses: responses.slice(0, 5).map(r => {
+      const opp = allOpps.find(o => o.id === r.opportunityId);
+      return { id: r.id, status: r.status, createdAt: r.createdAt, opportunityTitle: opp?.title || "", company: opp?.contractorName || "" };
+    }),
+  };
+}
+
+export async function fetchSupplierOpportunities() {
+  await getSupplierContext();
+  const opps = await db.select().from(lcsOpportunities)
+    .where(eq(lcsOpportunities.status, "active"))
+    .orderBy(desc(lcsOpportunities.postedDate)).limit(200);
+  return opps.map(o => ({
+    id: o.id, title: o.title, company: o.contractorName, type: o.noticeType,
+    category: o.lcaCategory, deadline: o.deadline, postedDate: o.postedDate,
+    pinned: o.pinned, aiSummary: o.aiSummary,
+  }));
+}
+
+export async function respondToOpportunity(opportunityId: string, data: { coverNote?: string; contactEmail?: string; contactPhone?: string }) {
+  const { profile } = await getSupplierContext();
+
+  // Check response limit for free tier
+  if (profile.tier !== "pro") {
+    const now = new Date();
+    const resetAt = profile.responsesResetAt ? new Date(profile.responsesResetAt) : null;
+    const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear();
+
+    if (needsReset) {
+      await db.update(supplierProfiles).set({ responsesThisMonth: 0, responsesResetAt: now }).where(eq(supplierProfiles.id, profile.id));
+    } else if ((profile.responsesThisMonth || 0) >= 3) {
+      throw new Error("Free plan limit: 3 responses per month. Upgrade to Pro for unlimited responses.");
+    }
+  }
+
+  const [response] = await db.insert(supplierResponses).values({
+    supplierId: profile.id,
+    opportunityId,
+    coverNote: data.coverNote || null,
+    contactEmail: data.contactEmail || profile.contactEmail || null,
+    contactPhone: data.contactPhone || profile.contactPhone || null,
+    status: "interested",
+  }).onConflictDoNothing().returning();
+
+  if (response) {
+    await db.update(supplierProfiles).set({
+      responsesThisMonth: sql`COALESCE(${supplierProfiles.responsesThisMonth}, 0) + 1`,
+    }).where(eq(supplierProfiles.id, profile.id));
+  }
+
+  return response;
+}
+
+export async function fetchSupplierResponses() {
+  const { profile } = await getSupplierContext();
+  requireSupplierPro(profile.tier);
+
+  const responses = await db.select().from(supplierResponses)
+    .where(eq(supplierResponses.supplierId, profile.id))
+    .orderBy(desc(supplierResponses.createdAt)).limit(100);
+
+  const oppIds = responses.map(r => r.opportunityId);
+  const opps = oppIds.length > 0
+    ? await db.select().from(lcsOpportunities).where(sql`${lcsOpportunities.id} = ANY(${oppIds})`)
+    : [];
+
+  return responses.map(r => {
+    const opp = opps.find(o => o.id === r.opportunityId);
+    return {
+      id: r.id, status: r.status, coverNote: r.coverNote,
+      createdAt: r.createdAt, updatedAt: r.updatedAt,
+      opportunity: opp ? { id: opp.id, title: opp.title, company: opp.contractorName, deadline: opp.deadline, type: opp.noticeType } : null,
+    };
+  });
+}
+
+export async function updateSupplierProfile(data: {
+  legalName?: string; tradingName?: string; contactEmail?: string; contactPhone?: string;
+  serviceCategories?: string[]; capabilityStatement?: string; employeeCount?: number;
+  yearEstablished?: number; isGuyaneseOwned?: boolean; website?: string;
+}) {
+  const { profile } = await getSupplierContext();
+  // Capability statement requires Pro
+  if (data.capabilityStatement !== undefined && profile.tier !== "pro") {
+    delete data.capabilityStatement;
+  }
+  await db.update(supplierProfiles).set({
+    ...data,
+    updatedAt: new Date(),
+  }).where(eq(supplierProfiles.id, profile.id));
+}
+
+export async function fetchSupplierAnalytics() {
+  const { profile } = await getSupplierContext();
+  requireSupplierPro(profile.tier);
+
+  const responses = await db.select().from(supplierResponses)
+    .where(eq(supplierResponses.supplierId, profile.id)).limit(200);
+
+  const byStatus: Record<string, number> = {};
+  const byMonth: Record<string, number> = {};
+  for (const r of responses) {
+    byStatus[r.status || "interested"] = (byStatus[r.status || "interested"] || 0) + 1;
+    if (r.createdAt) {
+      const month = r.createdAt.toISOString().slice(0, 7);
+      byMonth[month] = (byMonth[month] || 0) + 1;
+    }
+  }
+
+  return {
+    profileViews: profile.profileViews || 0,
+    totalResponses: responses.length,
+    byStatus,
+    byMonth: Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])),
+    awardRate: responses.length > 0
+      ? Math.round((responses.filter(r => r.status === "awarded").length / responses.length) * 100)
+      : 0,
+    tier: profile.tier || "free",
+  };
 }
