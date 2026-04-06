@@ -134,7 +134,7 @@ export default function ApplicationsPage() {
           a.id === hireTarget.id ? { ...a, status: "selected", hiredAt: new Date() } : a
         )
       );
-      toast.success(`${hireTarget.applicantName} has been hired and added to your employee roster.`);
+      toast.success(`${hireTarget.applicantName} hired! Added to employee roster and ready for LCA employment reporting.`, { duration: 6000 });
       setHireDialogOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to hire");
@@ -443,7 +443,8 @@ export default function ApplicationsPage() {
             <ul className="text-xs text-text-secondary space-y-1 ml-4 list-disc">
               <li>Set their application status to &ldquo;Selected&rdquo;</li>
               <li>Create an employee record in your roster</li>
-              <li>Link them to employment data for LCA filing</li>
+              <li>Auto-populate their Guyanese status in employment records</li>
+              <li>Improve your Guyanese employment % for LCA compliance</li>
               <li>Mark the posting as &ldquo;Filled&rdquo;</li>
             </ul>
             <div>

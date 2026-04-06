@@ -125,7 +125,8 @@ export const tenants = pgTable("tenants", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripePriceId: text("stripe_price_id"),
   // Feature preferences (JSON)
-  featurePreferences: text("feature_preferences"), // JSON: { smartMatching, opportunityAlerts, analytics, bidTracking }
+  featurePreferences: text("feature_preferences"),
+  stakeholderEmails: text("stakeholder_emails"), // JSON: [{ email, name, role }] for deadline escalation
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -856,6 +857,31 @@ export const submissionLogs = pgTable("submission_logs", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// ─── PAYMENT LOG (Lightweight procurement tracker) ──────────────
+export const paymentLog = pgTable(
+  "payment_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    entityId: uuid("entity_id").references(() => entities.id),
+    supplierName: text("supplier_name").notNull(),
+    supplierCertificateId: text("supplier_certificate_id"),
+    amount: text("amount").notNull(),
+    currency: text("currency").default("GYD"),
+    description: text("description"),
+    category: text("category"), // LCA sector category
+    paymentDate: date("payment_date"),
+    invoiceRef: text("invoice_ref"),
+    imported: boolean("imported").default(false), // true when pulled into a formal filing period
+    importedToPeriodId: uuid("imported_to_period_id").references(() => reportingPeriods.id),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("payment_log_tenant_idx").on(table.tenantId),
+    index("payment_log_imported_idx").on(table.imported),
+  ]
+);
 
 // ─── SUPPORT TICKETS ────────────────────────────────────────────
 export const supportTickets = pgTable(

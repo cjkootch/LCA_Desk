@@ -33,6 +33,7 @@ import {
   companyProfiles,
   lcsEmploymentNotices,
   lcsRegister,
+  paymentLog,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -3385,4 +3386,79 @@ export async function fetchComplianceHealth() {
     totalEmployees: allEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0),
     totalExpenditure: totalSpend,
   };
+}
+
+// ─── PAYMENT LOG (Lightweight Procurement Tracker) ───────────────
+
+export async function addPaymentLog(data: {
+  supplierName: string;
+  supplierCertificateId?: string;
+  amount: string;
+  currency?: string;
+  description?: string;
+  category?: string;
+  paymentDate?: string;
+  invoiceRef?: string;
+  entityId?: string;
+}) {
+  const { tenantId } = await getSessionTenant();
+  const [entry] = await db.insert(paymentLog).values({
+    tenantId,
+    entityId: data.entityId || null,
+    supplierName: data.supplierName,
+    supplierCertificateId: data.supplierCertificateId || null,
+    amount: data.amount,
+    currency: data.currency || "GYD",
+    description: data.description || null,
+    category: data.category || null,
+    paymentDate: data.paymentDate || new Date().toISOString().slice(0, 10),
+    invoiceRef: data.invoiceRef || null,
+  }).returning();
+  return entry;
+}
+
+export async function fetchPaymentLog() {
+  const { tenantId } = await getSessionTenant();
+  return db.select().from(paymentLog)
+    .where(eq(paymentLog.tenantId, tenantId))
+    .orderBy(desc(paymentLog.createdAt))
+    .limit(100);
+}
+
+export async function fetchPaymentLogStats() {
+  const { tenantId } = await getSessionTenant();
+  const entries = await db.select().from(paymentLog)
+    .where(and(eq(paymentLog.tenantId, tenantId), eq(paymentLog.imported, false)))
+    .limit(500);
+
+  const total = entries.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const guyanese = entries.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.amount || 0), 0);
+  const lcRate = total > 0 ? Math.round((guyanese / total) * 1000) / 10 : 0;
+
+  return {
+    unimportedCount: entries.length,
+    totalSpend: total,
+    guyaneseSpend: guyanese,
+    lcRate,
+    thisMonth: entries.filter(e => {
+      const d = e.paymentDate || e.createdAt?.toISOString().slice(0, 10);
+      return d && d.startsWith(new Date().toISOString().slice(0, 7));
+    }).length,
+  };
+}
+
+// ─── STAKEHOLDER MANAGEMENT ─────────────────────────────────────
+
+export async function fetchStakeholders() {
+  const { tenant } = await getSessionTenant();
+  if (!tenant.stakeholderEmails) return [];
+  try { return JSON.parse(tenant.stakeholderEmails as string); } catch { return []; }
+}
+
+export async function updateStakeholders(stakeholders: Array<{ email: string; name: string; role: string }>) {
+  const { tenantId } = await getSessionTenant();
+  await db.update(tenants).set({
+    stakeholderEmails: JSON.stringify(stakeholders),
+  }).where(eq(tenants.id, tenantId));
+  return stakeholders;
 }

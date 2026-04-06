@@ -95,7 +95,12 @@ export default function DashboardPage() {
             onAction={() => router.push("/dashboard/entities/new")}
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <>
+          <div className="lg:hidden mb-6">
+            <ComplianceHealthWidget />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Main content — entities */}
             <div className="lg:col-span-2">
               <h2 className="text-lg font-heading font-semibold mb-4">Entities</h2>
@@ -106,13 +111,16 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Sidebar — calendar, activity, filings */}
+            {/* Sidebar — desktop only (mobile version shown above) */}
             <div className="space-y-6">
-              <ComplianceHealthWidget />
+              <div className="hidden lg:block">
+                <ComplianceHealthWidget />
+              </div>
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
             </div>
           </div>
+          </>
         )}
       </div>
     </div>
