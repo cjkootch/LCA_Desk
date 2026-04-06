@@ -713,6 +713,8 @@ export const jobSeekerProfiles = pgTable(
     locationPreference: text("location_preference").default("Any"),
     contractTypePreference: text("contract_type_preference"),
     alertsEnabled: boolean("alerts_enabled").default(true),
+    profileVisible: boolean("profile_visible").default(false), // opt-in to talent pool
+    headline: text("headline"), // short pitch: "Mechanical Engineer with 5yrs offshore experience"
     country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),

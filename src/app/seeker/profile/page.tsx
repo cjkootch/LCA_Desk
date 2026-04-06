@@ -364,6 +364,45 @@ export default function SeekerProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Talent Pool Opt-In */}
+        <Card className="mt-6">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-accent-light">
+                  <User className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary">Talent Pool Visibility</h3>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    Make your profile visible to petroleum sector employers on LCA Desk.
+                    Companies searching for Guyanese talent will be able to see your skills, experience, and job title.
+                    Your email is only shared with Pro plan employers.
+                  </p>
+                </div>
+              </div>
+              <div
+                onClick={async () => {
+                  const newVal = !(profile?.profileVisible ?? false);
+                  try {
+                    const { toggleProfileVisibility } = await import("@/server/actions");
+                    await toggleProfileVisibility(newVal);
+                    setProfile((prev: typeof profile) => prev ? { ...prev, profileVisible: newVal } : prev);
+                    toast.success(newVal ? "Profile now visible to employers" : "Profile hidden from talent pool");
+                  } catch { toast.error("Failed to update"); }
+                }}
+                className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer shrink-0 ${
+                  profile?.profileVisible ? "bg-accent" : "bg-border"
+                }`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  profile?.profileVisible ? "translate-x-5" : ""
+                }`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

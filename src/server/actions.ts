@@ -3462,3 +3462,64 @@ export async function updateStakeholders(stakeholders: Array<{ email: string; na
   }).where(eq(tenants.id, tenantId));
   return stakeholders;
 }
+
+// ─── TALENT POOL ─────────────────────────────────────────────────
+
+export async function fetchTalentPool(filters?: {
+  search?: string;
+  category?: string;
+  guyaneseOnly?: boolean;
+  location?: string;
+}) {
+  const profiles = await db
+    .select({
+      id: jobSeekerProfiles.id,
+      userId: jobSeekerProfiles.userId,
+      currentJobTitle: jobSeekerProfiles.currentJobTitle,
+      employmentCategory: jobSeekerProfiles.employmentCategory,
+      yearsExperience: jobSeekerProfiles.yearsExperience,
+      isGuyanese: jobSeekerProfiles.isGuyanese,
+      nationality: jobSeekerProfiles.nationality,
+      skills: jobSeekerProfiles.skills,
+      locationPreference: jobSeekerProfiles.locationPreference,
+      contractTypePreference: jobSeekerProfiles.contractTypePreference,
+      headline: jobSeekerProfiles.headline,
+      cvUrl: jobSeekerProfiles.cvUrl,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(jobSeekerProfiles)
+    .innerJoin(users, eq(jobSeekerProfiles.userId, users.id))
+    .where(eq(jobSeekerProfiles.profileVisible, true))
+    .limit(200);
+
+  let filtered = profiles;
+
+  if (filters?.guyaneseOnly) filtered = filtered.filter(p => p.isGuyanese);
+  if (filters?.category) filtered = filtered.filter(p => p.employmentCategory === filters.category);
+  if (filters?.location) filtered = filtered.filter(p => p.locationPreference === filters.location || p.locationPreference === "Any");
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(p =>
+      p.currentJobTitle?.toLowerCase().includes(q) ||
+      p.userName?.toLowerCase().includes(q) ||
+      p.headline?.toLowerCase().includes(q) ||
+      p.skills?.some(s => s.toLowerCase().includes(q)) ||
+      p.employmentCategory?.toLowerCase().includes(q)
+    );
+  }
+
+  return filtered;
+}
+
+export async function toggleProfileVisibility(visible: boolean) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await db.update(jobSeekerProfiles).set({
+    profileVisible: visible,
+    updatedAt: new Date(),
+  }).where(eq(jobSeekerProfiles.userId, session.user.id));
+
+  return visible;
+}
