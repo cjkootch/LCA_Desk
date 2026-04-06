@@ -705,19 +705,28 @@ function matchContractor(text: string): { name: string; slug: string } | null {
 
 function normalizeDate(raw: string | null): string | null {
   if (!raw) return null;
+  const trimmed = raw.trim().replace(/[,\s]+$/, "");
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
   // DD-MM-YYYY or DD/MM/YYYY → YYYY-MM-DD
-  const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  const dmy = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (dmy) {
     const [, d, m, y] = dmy;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
-  // Already YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  // Try parsing natural dates like "January 15, 2024"
+
+  // "07 April 2026", "01 December 2025", "January 15, 2024"
+  // "7th April 2026", "1st December 2025"
+  const cleaned = trimmed.replace(/(\d+)(st|nd|rd|th)/gi, "$1");
   try {
-    const parsed = new Date(raw);
-    if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    const parsed = new Date(cleaned);
+    if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {
+      return parsed.toISOString().slice(0, 10);
+    }
   } catch {}
+
   return null;
 }
 
@@ -786,11 +795,20 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const catMatch = html.match(/supply_category\/([^/"']+)/i);
   const lcaCategory = catMatch?.[1]?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || null;
 
-  const dateMatch = html.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})|(\w+ \d{1,2},\s*\d{4})/);
-  const postedDate = normalizeDate(dateMatch?.[0] || null);
+  // Extract CLOSING DATE — the LCS site shows it prominently
+  // Formats: "CLOSING DATE: 07 April 2026", "Closing Date: 01 December 2025", "closing date: 23-01-2022"
+  const closingDateMatch =
+    html.match(/CLOSING\s*DATE[:\s]*<[^>]*>?\s*([^<\n]{5,40})/i) ||
+    html.match(/closing[\s_-]*date[:\s]*([^\n<]{5,40})/i) ||
+    html.match(/(?:deadline|submit by|due date|submission date)[:\s]*([^\n<]{5,40})/i);
+  const deadline = normalizeDate(closingDateMatch?.[1]?.trim() || null);
 
-  const deadlineMatch = html.match(/(?:deadline|closing date|submit by|due date)[:\s]*([^\n<]{5,40})/i);
-  const deadline = normalizeDate(deadlineMatch?.[1]?.trim() || null);
+  // Posted date — try multiple patterns
+  const postedDateMatch =
+    html.match(/(?:posted|published|date posted)[:\s]*([^\n<]{5,40})/i) ||
+    html.match(/class="[^"]*date[^"]*"[^>]*>([^<]{5,30})</i) ||
+    html.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
+  const postedDate = normalizeDate(postedDateMatch?.[1]?.trim() || null);
 
   // Extract ALL attachment URLs (pdf, docx, xlsx, etc.)
   const allAttachments = [...html.matchAll(/href="(https?:\/\/[^"]+\.(?:pdf|docx?|xlsx?|csv|pptx?))/gi)]
@@ -853,6 +871,8 @@ async function upsertNotice(db: ReturnType<typeof getDb>, notice: ScrapedNotice)
         lcaCategory: notice.lcaCategory,
         attachmentUrl: notice.attachmentUrl,
         attachmentUrls: notice.attachmentUrls,
+        attachmentContent: notice.attachmentContent, // update full page text
+        postedDate: notice.postedDate ?? undefined,
         deadline: notice.deadline ?? undefined,
         status,
         scrapedAt: new Date(),
