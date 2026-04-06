@@ -320,70 +320,151 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
-  // ── Phase 4: Extract PDF content from attachments ──
+  // ── Phase 4: AI-powered PDF analysis ──
   console.log("\n════════════════════════════════════════════");
-  console.log("  Phase 4: Extracting PDF attachments");
+  console.log("  Phase 4: AI PDF Analysis (Claude)");
   console.log("════════════════════════════════════════════\n");
 
-  // Get all notices that have a PDF attachment URL but no extracted content yet
-  const allWithAttachments = await db
-    .select({ id: lcsOpportunities.id, attachmentUrl: lcsOpportunities.attachmentUrl, attachmentContent: lcsOpportunities.attachmentContent, sourceSlug: lcsOpportunities.sourceSlug, contractorName: lcsOpportunities.contractorName })
-    .from(lcsOpportunities)
-    .where(isNotNull(lcsOpportunities.attachmentUrl))
-    .limit(500);
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
+    console.log("  ⚠ ANTHROPIC_API_KEY not set — skipping AI analysis\n");
+  } else {
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const claude = new Anthropic({ apiKey: anthropicKey });
 
-  const toProcess = allWithAttachments.filter(n => n.attachmentUrl?.endsWith(".pdf") && !n.attachmentContent);
+    // Get notices with PDF attachments that don't have AI summaries yet
+    const needsAnalysis = await db
+      .select({
+        id: lcsOpportunities.id,
+        attachmentUrl: lcsOpportunities.attachmentUrl,
+        aiSummary: lcsOpportunities.aiSummary,
+        sourceSlug: lcsOpportunities.sourceSlug,
+        contractorName: lcsOpportunities.contractorName,
+        title: lcsOpportunities.title,
+      })
+      .from(lcsOpportunities)
+      .where(isNotNull(lcsOpportunities.attachmentUrl))
+      .limit(500);
 
-  console.log(`  Found ${toProcess.length} notices with PDF attachments\n`);
+    const toAnalyze = needsAnalysis.filter(n => n.attachmentUrl?.endsWith(".pdf") && !n.aiSummary);
 
-  let pdfsOk = 0;
-  let pdfsSkipped = 0;
-  const BATCH_SIZE = 10;
+    console.log(`  Found ${toAnalyze.length} PDFs needing AI analysis\n`);
 
-  for (let i = 0; i < toProcess.length; i++) {
-    const notice = toProcess[i];
-    const tag = `[${String(i + 1).padStart(3, " ")}/${toProcess.length}]`;
+    let aiOk = 0;
+    let aiSkipped = 0;
 
-    try {
-      const pdfText = await extractPdfText(notice.attachmentUrl!);
-      if (pdfText && pdfText.length > 10) {
-        // Update the record with extracted content
-        await db
-          .update(lcsOpportunities)
-          .set({ attachmentContent: pdfText, updatedAt: new Date() })
-          .where(eq(lcsOpportunities.id, notice.id));
+    for (let i = 0; i < toAnalyze.length; i++) {
+      const notice = toAnalyze[i];
+      const tag = `[${String(i + 1).padStart(3, " ")}/${toAnalyze.length}]`;
 
-        // If contractor was Unknown, try to match from PDF content
-        if (notice.contractorName === "Unknown") {
-          const pdfMatch = matchContractor(pdfText);
-          if (pdfMatch) {
-            await db
-              .update(lcsOpportunities)
-              .set({ contractorName: pdfMatch.name, contractorSlug: pdfMatch.slug })
-              .where(eq(lcsOpportunities.id, notice.id));
-            console.log(`${tag} 📄 ${pdfMatch.name} (from PDF) — ${notice.sourceSlug}`);
-          } else {
-            console.log(`${tag} 📄 Extracted ${pdfText.length} chars — ${notice.sourceSlug}`);
-          }
-        } else {
-          console.log(`${tag} 📄 ${notice.contractorName} — ${pdfText.length} chars extracted`);
+      try {
+        // Download PDF as base64
+        const pdfRes = await fetch(notice.attachmentUrl!, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; LCADesk/1.0)" },
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!pdfRes.ok) { aiSkipped++; console.log(`${tag} ⚠  HTTP ${pdfRes.status} — ${notice.sourceSlug}`); continue; }
+
+        const pdfBuffer = await pdfRes.arrayBuffer();
+        const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+
+        // Skip very large PDFs (>10MB)
+        if (pdfBuffer.byteLength > 10_000_000) {
+          aiSkipped++;
+          console.log(`${tag} ⚠  PDF too large (${Math.round(pdfBuffer.byteLength / 1024 / 1024)}MB) — ${notice.sourceSlug}`);
+          continue;
         }
-        pdfsOk++;
-      } else {
-        pdfsSkipped++;
-        console.log(`${tag} ⚠  No text in PDF — ${notice.sourceSlug}`);
+
+        const response = await claude.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
+              },
+              {
+                type: "text",
+                text: `Analyze this procurement/opportunity notice PDF. Extract the following into a JSON object. Use null for any field not found. Be concise.
+
+{
+  "issuing_company": "Full company name that issued this notice",
+  "opportunity_type": "EOI | RFQ | RFP | RFI | Tender | Notice | Other",
+  "title": "Brief title of the opportunity",
+  "scope_of_work": "2-3 sentence summary of what is being procured or offered",
+  "requirements": ["List of key requirements, certifications, or qualifications"],
+  "submission_deadline": "YYYY-MM-DD or null",
+  "project_start_date": "YYYY-MM-DD or null",
+  "contract_duration": "Duration if mentioned",
+  "estimated_value": "Dollar amount if mentioned",
+  "contact_name": "Contact person name",
+  "contact_email": "Contact email",
+  "contact_phone": "Contact phone",
+  "lca_categories": ["Relevant Local Content Act categories"],
+  "location": "Project location",
+  "lcs_registration_required": true or false,
+  "key_dates": ["Any other important dates mentioned"]
+}
+
+Return ONLY the JSON object, no other text.`,
+              },
+            ],
+          }],
+        });
+
+        const aiText = response.content[0].type === "text" ? response.content[0].text : "";
+        // Extract JSON from response (handle potential markdown wrapping)
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const summary = JSON.parse(jsonMatch[0]);
+          const summaryJson = JSON.stringify(summary);
+
+          // Update DB with AI summary
+          const updates: Record<string, unknown> = {
+            aiSummary: summaryJson,
+            updatedAt: new Date(),
+          };
+
+          // Use AI-extracted company name if current is Unknown
+          if (notice.contractorName === "Unknown" && summary.issuing_company) {
+            updates.contractorName = summary.issuing_company;
+            // Also try pattern match for consistent slug
+            const slugMatch = matchContractor(summary.issuing_company);
+            if (slugMatch) {
+              updates.contractorName = slugMatch.name;
+              updates.contractorSlug = slugMatch.slug;
+            }
+          }
+
+          await db
+            .update(lcsOpportunities)
+            .set(updates)
+            .where(eq(lcsOpportunities.id, notice.id));
+
+          const company = (updates.contractorName as string) || notice.contractorName;
+          console.log(`${tag} 🤖 ${company} — ${summary.opportunity_type || "Notice"} — ${notice.sourceSlug}`);
+          aiOk++;
+        } else {
+          aiSkipped++;
+          console.log(`${tag} ⚠  No JSON in response — ${notice.sourceSlug}`);
+        }
+      } catch (err) {
+        aiSkipped++;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`${tag} ❌  ${msg.slice(0, 80)} — ${notice.sourceSlug}`);
       }
-    } catch {
-      pdfsSkipped++;
-      console.log(`${tag} ❌  PDF error — ${notice.sourceSlug}`);
+
+      // Rate limit: 1.5s between API calls
+      await sleep(1500);
+
+      if ((i + 1) % 10 === 0) {
+        console.log(`  ... ${i + 1}/${toAnalyze.length} analyzed\n`);
+      }
     }
 
-    await sleep(DELAY_MS);
-
-    // Progress update every batch
-    if ((i + 1) % BATCH_SIZE === 0) {
-      console.log(`  ... ${i + 1}/${toProcess.length} PDFs processed\n`);
-    }
+    console.log(`\n  AI analysis: ${aiOk} succeeded, ${aiSkipped} skipped`);
   }
 
   console.log("\n════════════════════════════════════════════");
@@ -395,8 +476,6 @@ async function main() {
   console.log(`  ⚠ Companies skipped:     ${skipped}`);
   console.log(`  📋 Notices scraped:       ${noticesOk}`);
   console.log(`  ⚠ Notices skipped:       ${noticesSkipped}`);
-  console.log(`  📄 PDFs extracted:        ${pdfsOk}`);
-  console.log(`  ⚠ PDFs skipped:          ${pdfsSkipped}`);
   console.log();
   process.exit(0);
 }

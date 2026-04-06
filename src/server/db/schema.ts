@@ -484,6 +484,7 @@ export const lcsOpportunities = pgTable(
     sourceSlug: text("source_slug").unique(),
     attachmentUrl: text("attachment_url"),
     attachmentContent: text("attachment_content"), // extracted PDF text
+    aiSummary: text("ai_summary"), // JSON structured summary from Claude
     status: text("status").default("active"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
