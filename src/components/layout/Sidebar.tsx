@@ -10,22 +10,51 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchUserContext } from "@/server/actions";
 import { getPlan } from "@/lib/plans";
 
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Entities", href: "/dashboard/entities", icon: Building2 },
-  { label: "Log Payment", href: "/dashboard/log-payment", icon: Receipt },
-  { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
-  { label: "Employees", href: "/dashboard/employees", icon: Users2 },
-  { label: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
-  { label: "Talent Pool", href: "/dashboard/talent", icon: UserSearch },
-  { label: "Opportunities", href: "/dashboard/opportunities", icon: Megaphone },
-  { label: "Companies", href: "/dashboard/companies", icon: Factory },
-  { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-  { label: "Training", href: "/dashboard/training", icon: GraduationCap },
-  { label: "LCA Expert", href: "/dashboard/expert", icon: Sparkles },
-  { label: "Calendar", href: "/dashboard/calendar", icon: Calendar },
-  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+interface NavSection {
+  label?: string;
+  items: { label: string; href: string; icon: React.ElementType }[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      { label: "Entities", href: "/dashboard/entities", icon: Building2 },
+      { label: "Log Payment", href: "/dashboard/log-payment", icon: Receipt },
+      { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+    ],
+  },
+  {
+    label: "Workforce",
+    items: [
+      { label: "Employees", href: "/dashboard/employees", icon: Users2 },
+      { label: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
+      { label: "Talent Pool", href: "/dashboard/talent", icon: UserSearch },
+    ],
+  },
+  {
+    label: "Market",
+    items: [
+      { label: "Opportunities", href: "/dashboard/opportunities", icon: Megaphone },
+      { label: "Companies", href: "/dashboard/companies", icon: Factory },
+      { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
+    ],
+  },
+  {
+    label: "Resources",
+    items: [
+      { label: "Training", href: "/dashboard/training", icon: GraduationCap },
+      { label: "LCA Expert", href: "/dashboard/expert", icon: Sparkles },
+      { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
+      { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?: () => void }) {
@@ -65,30 +94,39 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si} className={si > 0 ? "pt-3" : ""}>
+            {section.label && (
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text-muted">
+                {section.label}
+              </p>
+            )}
+            {section.items.map((item) => {
+              const isActive =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-active text-sidebar-text"
-                  : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-active text-sidebar-text"
+                      : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
 
         {isSuperAdmin && (
           <Link

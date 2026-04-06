@@ -78,7 +78,7 @@ export default function CalendarPage() {
   return (
     <div>
       <TopBar title="Compliance Calendar" description="Track all filing deadlines across your entities" />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <PageHeader title="Compliance Calendar" description="All filing deadlines for the current and upcoming fiscal year." />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

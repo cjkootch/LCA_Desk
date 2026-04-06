@@ -44,7 +44,7 @@ export default function EntitiesPage() {
         title="Entities"
         action={{ label: "Add Entity", onClick: () => router.push("/dashboard/entities/new") }}
       />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <PageHeader
           title="Entity Management"
           description="Manage companies and entities under your local content compliance portfolio."

@@ -86,7 +86,7 @@ export default function NarrativePage() {
   return (
     <div>
       <TopBar title={`${entityName} — AI Narrative`} />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <PageHeader title="AI Narrative Drafter" description="Generate compliance narratives powered by AI, then review and edit."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Narrative" }]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="narrative" completedSteps={completedSteps} />

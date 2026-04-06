@@ -129,7 +129,7 @@ export default function EntityDetailPage() {
   return (
     <div>
       <TopBar title={entity.legal_name} />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <PageHeader
           title=""
           breadcrumbs={[
