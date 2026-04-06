@@ -456,6 +456,56 @@ export const lcsRegister = pgTable(
   ]
 );
 
+// ─── COMPANY PROFILES (Unified, auto-generated + claimable) ─────
+export const companyProfiles = pgTable(
+  "company_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").unique().notNull(),
+    companyName: text("company_name").notNull(),
+    legalName: text("legal_name"),
+    logoUrl: text("logo_url"),
+    website: text("website"),
+    description: text("description"),
+    industry: text("industry").default("Oil & Gas"),
+    companySize: text("company_size"), // e.g. "500-1000", "10,000+"
+    headquarters: text("headquarters"),
+    guyanaOffice: text("guyana_office"),
+    // Aggregated stats (auto-calculated)
+    totalOpportunities: integer("total_opportunities").default(0),
+    activeOpportunities: integer("active_opportunities").default(0),
+    totalJobPostings: integer("total_job_postings").default(0),
+    openJobPostings: integer("open_job_postings").default(0),
+    // Contact info (aggregated from scrapes)
+    contactEmails: text("contact_emails"), // JSON array
+    contactPhones: text("contact_phones"), // JSON array
+    contactNames: text("contact_names"), // JSON array
+    // Categories
+    procurementCategories: text("procurement_categories").array(),
+    employmentCategories: text("employment_categories").array(),
+    // Claim status
+    claimed: boolean("claimed").default(false),
+    claimedBy: uuid("claimed_by").references(() => users.id),
+    claimedAt: timestamp("claimed_at"),
+    tenantId: uuid("tenant_id").references(() => tenants.id), // linked to filing tenant once claimed
+    verified: boolean("verified").default(false),
+    verifiedAt: timestamp("verified_at"),
+    // LCS register link
+    lcsCertId: text("lcs_cert_id"),
+    lcsRegistered: boolean("lcs_registered").default(false),
+    // Data sources
+    dataSource: text("data_source").default("scraped"), // scraped | claimed | manual
+    lastAggregatedAt: timestamp("last_aggregated_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("company_profiles_slug_idx").on(table.slug),
+    index("company_profiles_name_idx").on(table.companyName),
+    index("company_profiles_claimed_idx").on(table.claimed),
+  ]
+);
+
 // ─── LCS CONTRACTORS (Filing Client Prospects) ───────────────────
 // Companies that post procurement notices on the LCS opportunities board.
 // These are confirmed LCA filing clients — not suppliers.

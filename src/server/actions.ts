@@ -30,6 +30,9 @@ import {
   auditLogs,
   supportTickets,
   ticketReplies,
+  companyProfiles,
+  lcsEmploymentNotices,
+  lcsRegister,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import {
@@ -2653,4 +2656,165 @@ export async function addTicketReply(ticketId: string, message: string) {
   }
 
   return reply;
+}
+
+// ─── COMPANY PROFILES ────────────────────────────────────────────
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+}
+
+export async function aggregateCompanyProfiles() {
+  // Get all unique company names from opportunities + jobs
+  const opps = await db.select({ name: lcsOpportunities.contractorName }).from(lcsOpportunities).limit(500);
+  const jobs = await db.select({ name: lcsEmploymentNotices.companyName }).from(lcsEmploymentNotices).limit(500);
+
+  const allNames = new Set<string>();
+  for (const o of opps) if (o.name && o.name !== "Unknown") allNames.add(o.name);
+  for (const j of jobs) if (j.name && j.name !== "Unknown") allNames.add(j.name);
+
+  let created = 0;
+  let updated = 0;
+
+  for (const companyName of allNames) {
+    const slug = slugify(companyName);
+
+    // Count opportunities
+    const companyOpps = opps.filter(o => o.name === companyName);
+    const companyJobs = jobs.filter(j => j.name === companyName);
+
+    // Get active counts from full data
+    const activeOpps = await db.select({ id: lcsOpportunities.id })
+      .from(lcsOpportunities)
+      .where(and(eq(lcsOpportunities.contractorName, companyName), eq(lcsOpportunities.status, "active")))
+      .limit(200);
+    const openJobs = await db.select({ id: lcsEmploymentNotices.id })
+      .from(lcsEmploymentNotices)
+      .where(and(eq(lcsEmploymentNotices.companyName, companyName), eq(lcsEmploymentNotices.status, "open")))
+      .limit(200);
+
+    // Aggregate contact info from AI summaries
+    const emailSet = new Set<string>();
+    const phoneSet = new Set<string>();
+    const nameSet = new Set<string>();
+    const procCats = new Set<string>();
+    const empCats = new Set<string>();
+
+    const oppDetails = await db.select({ aiSummary: lcsOpportunities.aiSummary, lcaCategory: lcsOpportunities.lcaCategory })
+      .from(lcsOpportunities).where(eq(lcsOpportunities.contractorName, companyName)).limit(50);
+    for (const o of oppDetails) {
+      if (o.lcaCategory) procCats.add(o.lcaCategory);
+      if (o.aiSummary) {
+        try {
+          const s = JSON.parse(o.aiSummary);
+          if (s.contact_emails) s.contact_emails.forEach((e: string) => emailSet.add(e));
+          if (s.contact_email) {
+            const found = String(s.contact_email).match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g);
+            if (found) found.forEach(e => emailSet.add(e));
+          }
+          if (s.contact_phone) phoneSet.add(s.contact_phone);
+          if (s.contact_name) nameSet.add(s.contact_name);
+        } catch {}
+      }
+    }
+
+    const jobDetails = await db.select({ aiSummary: lcsEmploymentNotices.aiSummary, employmentCategory: lcsEmploymentNotices.employmentCategory })
+      .from(lcsEmploymentNotices).where(eq(lcsEmploymentNotices.companyName, companyName)).limit(50);
+    for (const j of jobDetails) {
+      if (j.employmentCategory) empCats.add(j.employmentCategory);
+      if (j.aiSummary) {
+        try {
+          const s = JSON.parse(j.aiSummary);
+          if (s.contact_email) emailSet.add(s.contact_email);
+        } catch {}
+      }
+    }
+
+    // Check LCS register
+    const lcsMatch = await db.select({ certId: lcsRegister.certId })
+      .from(lcsRegister)
+      .where(eq(lcsRegister.legalName, companyName))
+      .limit(1);
+
+    const profileData = {
+      companyName,
+      totalOpportunities: companyOpps.length,
+      activeOpportunities: activeOpps.length,
+      totalJobPostings: companyJobs.length,
+      openJobPostings: openJobs.length,
+      contactEmails: emailSet.size > 0 ? JSON.stringify([...emailSet]) : null,
+      contactPhones: phoneSet.size > 0 ? JSON.stringify([...phoneSet]) : null,
+      contactNames: nameSet.size > 0 ? JSON.stringify([...nameSet]) : null,
+      procurementCategories: [...procCats],
+      employmentCategories: [...empCats],
+      lcsCertId: lcsMatch[0]?.certId || null,
+      lcsRegistered: !!lcsMatch[0],
+      lastAggregatedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Upsert
+    const [existing] = await db.select({ id: companyProfiles.id })
+      .from(companyProfiles).where(eq(companyProfiles.slug, slug)).limit(1);
+
+    if (existing) {
+      await db.update(companyProfiles).set(profileData).where(eq(companyProfiles.id, existing.id));
+      updated++;
+    } else {
+      await db.insert(companyProfiles).values({ ...profileData, slug });
+      created++;
+    }
+  }
+
+  return { created, updated, total: allNames.size };
+}
+
+export async function fetchCompanyProfile(slug: string) {
+  const [profile] = await db.select().from(companyProfiles)
+    .where(eq(companyProfiles.slug, slug)).limit(1);
+  if (!profile) return null;
+
+  // Get linked data
+  const opportunities = await db.select()
+    .from(lcsOpportunities)
+    .where(eq(lcsOpportunities.contractorName, profile.companyName))
+    .orderBy(desc(lcsOpportunities.postedDate))
+    .limit(20);
+
+  const jobPostings = await db.select()
+    .from(lcsEmploymentNotices)
+    .where(eq(lcsEmploymentNotices.companyName, profile.companyName))
+    .orderBy(desc(lcsEmploymentNotices.postedDate))
+    .limit(20);
+
+  return { profile, opportunities, jobPostings };
+}
+
+export async function fetchAllCompanyProfiles() {
+  return db.select().from(companyProfiles)
+    .orderBy(desc(companyProfiles.totalOpportunities))
+    .limit(100);
+}
+
+export async function claimCompanyProfile(profileId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [profile] = await db.select().from(companyProfiles)
+    .where(eq(companyProfiles.id, profileId)).limit(1);
+  if (!profile) throw new Error("Profile not found");
+  if (profile.claimed) throw new Error("This company has already been claimed");
+
+  let tenantId: string | null = null;
+  try { const ctx = await getSessionTenant(); tenantId = ctx.tenantId; } catch {}
+
+  const [updated] = await db.update(companyProfiles).set({
+    claimed: true,
+    claimedBy: session.user.id,
+    claimedAt: new Date(),
+    tenantId,
+    updatedAt: new Date(),
+  }).where(eq(companyProfiles.id, profileId)).returning();
+
+  return updated;
 }
