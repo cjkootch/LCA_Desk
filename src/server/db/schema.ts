@@ -268,6 +268,18 @@ export const reportingPeriods = pgTable(
     acknowledgedAt: timestamp("acknowledged_at"),
     secretariatRef: text("secretariat_ref"),
     notes: text("notes"),
+    // Submission workflow
+    preparedBy: uuid("prepared_by").references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    approvedBy: uuid("approved_by").references(() => users.id),
+    preparedAt: timestamp("prepared_at"),
+    reviewedAt: timestamp("reviewed_at"),
+    approvedAt: timestamp("approved_at"),
+    attestation: text("attestation"), // "I certify..." text
+    attestedBy: uuid("attested_by").references(() => users.id),
+    attestedAt: timestamp("attested_at"),
+    lockedAt: timestamp("locked_at"), // read-only after submission
+    snapshotData: text("snapshot_data"), // JSON snapshot at submission time
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -735,6 +747,33 @@ export const submissionLogs = pgTable("submission_logs", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// ─── AUDIT LOG ──────────────────────────────────────────────────
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    userName: text("user_name"),
+    action: text("action").notNull(), // create, update, delete, submit, approve, attest, lock
+    entityType: text("entity_type").notNull(), // expenditure_record, employment_record, reporting_period, etc.
+    entityId: text("entity_id").notNull(), // ID of the affected record
+    reportingPeriodId: uuid("reporting_period_id").references(() => reportingPeriods.id, { onDelete: "set null" }),
+    fieldName: text("field_name"), // which field changed (null for create/delete)
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    metadata: text("metadata"), // JSON for extra context
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("audit_tenant_idx").on(table.tenantId),
+    index("audit_period_idx").on(table.reportingPeriodId),
+    index("audit_entity_idx").on(table.entityType, table.entityId),
+    index("audit_user_idx").on(table.userId),
+    index("audit_created_idx").on(table.createdAt),
+  ]
+);
 
 // ─── RELATIONS ────────────────────────────────────────────────────
 export const jurisdictionsRelations = relations(jurisdictions, ({ many }) => ({
