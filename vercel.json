@@ -14,6 +14,10 @@
     {
       "path": "/api/cron/deadline-reminders",
       "schedule": "0 8 * * 1,4"
+    },
+    {
+      "path": "/api/cron/aggregate-profiles",
+      "schedule": "0 5 * * 0"
     }
   ]
 }
