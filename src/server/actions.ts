@@ -362,6 +362,45 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length },
   });
 
+  // Auto-create next reporting period
+  try {
+    const nextTypeMap: Record<string, string> = {
+      half_yearly_h1: "half_yearly_h2",
+      half_yearly_h2: "half_yearly_h1",
+    };
+    const nextType = nextTypeMap[current.reportType];
+    if (nextType) {
+      const nextYear = nextType === "half_yearly_h1" ? (current.fiscalYear || new Date().getFullYear()) + 1 : current.fiscalYear || new Date().getFullYear();
+      const { calculateDeadlines } = await import("@/lib/compliance/deadlines");
+      const deadlines = calculateDeadlines("GY", nextYear);
+      const nextDeadline = deadlines.find(d => d.type === nextType);
+      if (nextDeadline) {
+        // Check if it already exists
+        const existing = await db.select({ id: reportingPeriods.id }).from(reportingPeriods)
+          .where(and(
+            eq(reportingPeriods.entityId, current.entityId),
+            eq(reportingPeriods.reportType, nextType),
+            eq(reportingPeriods.fiscalYear, nextYear),
+          )).limit(1);
+        if (existing.length === 0) {
+          await db.insert(reportingPeriods).values({
+            entityId: current.entityId,
+            tenantId,
+            jurisdictionId: current.jurisdictionId || null,
+            reportType: nextType,
+            periodStart: nextDeadline.period_start.toISOString().slice(0, 10),
+            periodEnd: nextDeadline.period_end.toISOString().slice(0, 10),
+            dueDate: nextDeadline.due_date.toISOString().slice(0, 10),
+            fiscalYear: nextYear,
+            status: "not_started",
+          });
+        }
+      }
+    }
+  } catch {
+    // Non-critical — don't fail the submission
+  }
+
   return updated;
 }
 
