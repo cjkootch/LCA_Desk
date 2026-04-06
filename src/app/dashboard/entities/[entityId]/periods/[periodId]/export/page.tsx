@@ -16,7 +16,7 @@ import {
 
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
-import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
+import { formatSubmissionSubject, getJurisdictionTemplate } from "@/lib/compliance/jurisdiction-config";
 import { useJurisdiction } from "@/hooks/useJurisdiction";
 import {
   fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment,
@@ -26,7 +26,7 @@ import {
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
 
-const ATTESTATION_TEXT = "I certify that the information contained in this report is true, accurate, and complete to the best of my knowledge. I understand that submitting false or misleading information is an offence under the Local Content Act 2021 and may result in penalties of up to GY$50,000,000.";
+// Attestation text is loaded from jurisdiction template — not hardcoded
 
 export default function ExportPage() {
   const params = useParams();
@@ -110,7 +110,7 @@ export default function ExportPage() {
     }
     setSubmitting(true);
     try {
-      await attestAndSubmit(periodId, ATTESTATION_TEXT);
+      await attestAndSubmit(periodId, getJurisdictionTemplate(jurisdictionCode).attestationText);
       setPeriod((prev: typeof period) => prev ? { ...prev, status: "submitted", submittedAt: new Date(), lockedAt: new Date() } : prev);
       toast.success("Report submitted and locked. A snapshot has been saved.");
     } catch (error) {
@@ -215,12 +215,12 @@ export default function ExportPage() {
               Download both files above, then submit via email to the Local Content Secretariat.
             </p>
             <div className="bg-bg-primary rounded-lg p-4 space-y-2 text-sm mb-4">
-              <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">localcontent@nre.gov.gy</span></div>
+              <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">{getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}</span></div>
               <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
             </div>
             <a
-              href={`mailto:localcontent@nre.gov.gy?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
-                `Dear Local Content Secretariat,\n\nPlease find attached the Local Content ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Half-Yearly Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
+              href={`mailto:${getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(
+                `Dear ${getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort},\n\nPlease find attached the ${reportTypeName} Report for ${entityName}.\n\nThis submission includes:\n1. Expenditure, Employment, and Capacity Development Report (Excel)\n2. Comparative Analysis Report (PDF)\n\nReporting Period: ${periodLabel} ${period.fiscalYear}\n\nPlease acknowledge receipt of this submission.\n\nYours faithfully,\n${entityName}`
               )}`}
             >
               <Button variant="primary" className="w-full mb-2">
@@ -271,7 +271,7 @@ export default function ExportPage() {
                 <div className="bg-warning-light border border-warning/20 rounded-lg p-3 mb-3">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                    <p className="text-xs text-text-secondary leading-relaxed">{ATTESTATION_TEXT}</p>
+                    <p className="text-xs text-text-secondary leading-relaxed">{getJurisdictionTemplate(jurisdictionCode).attestationText}</p>
                   </div>
                 </div>
 
