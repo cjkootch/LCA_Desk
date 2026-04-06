@@ -286,9 +286,15 @@ async function main() {
         noticesSkipped++;
         console.log(`${tag} ⚠  ${slug} — skipped`);
       }
-    } catch {
+    } catch (err) {
       noticesSkipped++;
-      console.log(`${tag} ❌  ${slug} — error`);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`${tag} ❌  ${slug} — ${msg.slice(0, 80)}`);
+      // If first 3 all fail, likely site is blocking — skip remaining to save time
+      if (i === 2 && noticesOk === 0 && noticesSkipped === 3) {
+        console.log("\n  ⚠ First 3 notices all failed — site may be blocking. Skipping remaining.\n");
+        break;
+      }
     }
     await sleep(DELAY_MS);
   }
@@ -304,11 +310,12 @@ async function main() {
         console.log(`${tag} 👤 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
       } else {
         noticesSkipped++;
-      console.log(`${tag} ⚠  ${slug} — skipped`);
+        console.log(`${tag} ⚠  ${slug} — skipped`);
       }
-    } catch {
+    } catch (err) {
       noticesSkipped++;
-      console.log(`${tag} ❌  ${slug} — error`);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`${tag} ❌  ${slug} — ${msg.slice(0, 80)}`);
     }
     await sleep(DELAY_MS);
   }
