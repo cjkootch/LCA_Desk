@@ -7,9 +7,13 @@ import bcrypt from "bcryptjs";
 const DEMO_PASSWORD = "demo-password-2026";
 
 export async function POST(req: NextRequest) {
-  // Gate behind demo secret
+  // Gate behind env-configured demo secret only
+  const demoSecret = process.env.DEMO_SEED_SECRET;
+  if (!demoSecret) {
+    return NextResponse.json({ error: "Demo seeding is disabled" }, { status: 403 });
+  }
   const { secret } = await req.json();
-  if (secret !== "lcadesk-demo-2026" && secret !== process.env.NEXT_PUBLIC_DEMO_PASSWORD) {
+  if (secret !== demoSecret) {
     return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
   }
 

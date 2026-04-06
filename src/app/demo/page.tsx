@@ -103,7 +103,7 @@ function DemoContent() {
 
   const handleMasterLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (masterPassword === process.env.NEXT_PUBLIC_DEMO_PASSWORD || masterPassword === "lcadesk-demo-2026") {
+    if (process.env.NEXT_PUBLIC_DEMO_PASSWORD && masterPassword === process.env.NEXT_PUBLIC_DEMO_PASSWORD) {
       setAuthenticated(true);
     } else {
       toast.error("Invalid demo password");

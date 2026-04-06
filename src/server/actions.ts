@@ -3071,15 +3071,16 @@ export async function fetchComplianceAnalytics() {
   const totalPosted = allJobPostings.length;
   const totalFilled = allJobPostings.filter(j => j.status === "filled").length;
 
-  let totalApplications = 0;
-  let guyaneseApplications = 0;
-  let guyaneseHired = 0;
-  for (const posting of allJobPostings) {
-    const apps = await db.select().from(jobApplications).where(eq(jobApplications.jobPostingId, posting.id));
-    totalApplications += apps.length;
-    guyaneseApplications += apps.filter(a => a.isGuyanese).length;
-    guyaneseHired += apps.filter(a => a.status === "selected" && a.isGuyanese).length;
-  }
+  // Fetch all applications for this tenant's postings in one query
+  const postingIds = allJobPostings.map(p => p.id);
+  const allApps = postingIds.length > 0
+    ? await db.select().from(jobApplications).where(
+        sql`${jobApplications.jobPostingId} = ANY(${postingIds})`
+      )
+    : [];
+  const totalApplications = allApps.length;
+  const guyaneseApplications = allApps.filter(a => a.isGuyanese).length;
+  const guyaneseHired = allApps.filter(a => a.status === "selected" && a.isGuyanese).length;
 
   return {
     // Overview

@@ -25,20 +25,23 @@ export default function TrainingPage() {
 
   useEffect(() => {
     Promise.all([fetchCourses("filer"), fetchUserBadges(), fetchTeamMembers()])
-      .then(([c, b, t]) => { setCourseList(c); setBadges(b); setTeamMembers(t); })
+      .then(async ([c, b, t]) => {
+        setBadges(b); setTeamMembers(t);
+        // Auto-seed courses if none exist (runs once, idempotent)
+        if (c.length === 0) {
+          try {
+            await seedLcaCourse();
+            await seedPlatformCourse();
+            c = await fetchCourses("filer");
+          } catch { /* seed failed — show empty state */ }
+        }
+        setCourseList(c);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSeed = async () => {
-    try {
-      await seedLcaCourse();
-      await seedPlatformCourse();
-      const c = await fetchCourses("filer");
-      setCourseList(c);
-      toast.success("Training courses created");
-    } catch { toast.error("Failed to create courses"); }
-  };
+  // Courses auto-seed on first visit if none exist
 
   if (loading) {
     return (
@@ -121,10 +124,8 @@ export default function TrainingPage() {
         {courseList.length === 0 ? (
           <EmptyState
             icon={GraduationCap}
-            title="No training courses available"
-            description="Set up the LCA Fundamentals course for your team."
-            actionLabel="Create LCA Course"
-            onAction={handleSeed}
+            title="Training courses loading"
+            description="Courses are being set up. Refresh this page in a moment."
           />
         ) : (
           <div className="space-y-4">
