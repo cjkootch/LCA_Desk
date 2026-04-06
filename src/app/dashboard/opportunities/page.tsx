@@ -44,6 +44,10 @@ export default function OpportunitiesPage() {
   const [search, setSearch] = useState("");
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [contractorFilter, setContractorFilter] = useState("");
+  const [noticeTypeFilter, setNoticeTypeFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "deadline" | "company">("newest");
+  const [hasAiOnly, setHasAiOnly] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -76,25 +80,48 @@ export default function OpportunitiesPage() {
     } catch { toast.error("Failed to remove"); }
   };
 
-  const filtered = opportunities.filter((o) => {
-    if (showSavedOnly && !savedIds.has(o.id)) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const aiText = o.aiSummary || "";
-      return (
-        o.title.toLowerCase().includes(q) ||
-        o.contractorName.toLowerCase().includes(q) ||
-        (o.lcaCategory || "").toLowerCase().includes(q) ||
-        (o.description || "").toLowerCase().includes(q) ||
-        aiText.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  // Extract unique contractors and notice types for filter dropdowns
+  const uniqueContractors = [...new Set(opportunities.map(o => o.contractorName))].sort();
+  const uniqueNoticeTypes = [...new Set(opportunities.map(o => o.noticeType).filter((t): t is string => !!t))].sort();
+
+  const filtered = opportunities
+    .filter((o) => {
+      if (showSavedOnly && !savedIds.has(o.id)) return false;
+      if (contractorFilter && o.contractorName !== contractorFilter) return false;
+      if (noticeTypeFilter && o.noticeType !== noticeTypeFilter) return false;
+      if (hasAiOnly && !o.aiSummary) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const aiText = o.aiSummary || "";
+        return (
+          o.title.toLowerCase().includes(q) ||
+          o.contractorName.toLowerCase().includes(q) ||
+          (o.lcaCategory || "").toLowerCase().includes(q) ||
+          (o.description || "").toLowerCase().includes(q) ||
+          aiText.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "newest": return new Date(b.postedDate || b.scrapedAt || 0).getTime() - new Date(a.postedDate || a.scrapedAt || 0).getTime();
+        case "oldest": return new Date(a.postedDate || a.scrapedAt || 0).getTime() - new Date(b.postedDate || b.scrapedAt || 0).getTime();
+        case "deadline": {
+          if (!a.deadline && !b.deadline) return 0;
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        }
+        case "company": return a.contractorName.localeCompare(b.contractorName);
+        default: return 0;
+      }
+    });
 
   const isPro = plan === "pro" || plan === "enterprise";
   const supplierCount = opportunities.filter((o) => o.type === "supplier").length;
   const activeCount = opportunities.filter((o) => o.status === "active").length;
+  const activeFilters = [contractorFilter, noticeTypeFilter, hasAiOnly, showSavedOnly].filter(Boolean).length;
 
   if (loading) {
     return (
@@ -140,11 +167,18 @@ export default function OpportunitiesPage() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <Filter className="h-4 w-4" /> Filters:
-          </div>
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+          <input
+            type="text" placeholder="Search notices, companies, scope, requirements..."
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-10 pl-9 pr-3 rounded-lg bg-white border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+
+        {/* Filters + Sort */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <Select
             id="type-filter" value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -163,20 +197,65 @@ export default function OpportunitiesPage() {
               { value: "expired", label: "Expired" },
             ]}
           />
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-            <input
-              type="text" placeholder="Search notices, companies, scope..."
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-3 rounded-lg bg-white border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
+          <select
+            value={contractorFilter}
+            onChange={(e) => setContractorFilter(e.target.value)}
+            className="h-10 rounded-lg border border-border bg-white px-3 text-sm text-text-primary"
+          >
+            <option value="">All Companies</option>
+            {uniqueContractors.filter(c => c !== "Unknown").map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            <option value="Unknown">Unknown</option>
+          </select>
+          <select
+            value={noticeTypeFilter}
+            onChange={(e) => setNoticeTypeFilter(e.target.value)}
+            className="h-10 rounded-lg border border-border bg-white px-3 text-sm text-text-primary"
+          >
+            <option value="">All Notice Types</option>
+            {uniqueNoticeTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="h-10 rounded-lg border border-border bg-white px-3 text-sm text-text-primary"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="deadline">Deadline (Soonest)</option>
+            <option value="company">Company A-Z</option>
+          </select>
+        </div>
+
+        {/* Quick filter pills */}
+        <div className="flex flex-wrap items-center gap-2 mb-6">
           <Button
             variant={showSavedOnly ? "primary" : "outline"} size="sm"
             onClick={() => setShowSavedOnly(!showSavedOnly)}
           >
-            <BookmarkCheck className="h-4 w-4 mr-1" /> Saved ({savedIds.size})
+            <BookmarkCheck className="h-3.5 w-3.5 mr-1" /> Saved ({savedIds.size})
           </Button>
+          <Button
+            variant={hasAiOnly ? "primary" : "outline"} size="sm"
+            onClick={() => setHasAiOnly(!hasAiOnly)}
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> AI Analyzed
+          </Button>
+          {activeFilters > 0 && (
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => { setContractorFilter(""); setNoticeTypeFilter(""); setHasAiOnly(false); setShowSavedOnly(false); setSearch(""); }}
+              className="text-text-muted"
+            >
+              Clear filters ({activeFilters})
+            </Button>
+          )}
+          <span className="text-xs text-text-muted ml-auto">
+            {filtered.length} of {opportunities.length} shown
+          </span>
         </div>
 
         {/* Upgrade banner */}
