@@ -2,42 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/layout/TopBar";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
-import { Pencil, Trash2, X, Eye, EyeOff, Users, Briefcase } from "lucide-react";
 import {
-  fetchJobPostings,
-  addJobPosting,
-  updateJobPosting,
-  closeJobPosting,
-  deleteJobPosting,
-  fetchApplicationsForPosting,
-  updateApplicationStatus,
-  generateFirstConsiderationRecord,
+  Pencil, Trash2, Eye, EyeOff, Users, Briefcase, Plus, MapPin,
+  Calendar, RotateCcw, AlertTriangle, CheckCircle, Clock, XCircle,
+} from "lucide-react";
+import {
+  fetchJobPostings, addJobPosting, updateJobPosting, closeJobPosting,
+  deleteJobPosting, reopenJobPosting, fetchApplicationCounts, fetchEntities,
 } from "@/server/actions";
+import Link from "next/link";
 
 type PostingRow = Awaited<ReturnType<typeof fetchJobPostings>>[number];
-type ApplicationRow = Awaited<ReturnType<typeof fetchApplicationsForPosting>>[number];
+type EntityRow = Awaited<ReturnType<typeof fetchEntities>>[number];
 
 const emptyForm = {
   job_title: "",
@@ -47,9 +33,11 @@ const emptyForm = {
   location: "Georgetown",
   description: "",
   qualifications: "",
+  guyanese_first_statement: "",
   vacancy_count: "1",
   application_deadline: "",
   start_date: "",
+  entity_id: "",
   is_public: true,
 };
 
@@ -64,76 +52,70 @@ function postingToForm(p: PostingRow): FormData {
     location: p.location ?? "Georgetown",
     description: p.description ?? "",
     qualifications: p.qualifications ?? "",
+    guyanese_first_statement: p.guyaneseFirstStatement ?? "",
     vacancy_count: String(p.vacancyCount ?? 1),
     application_deadline: p.applicationDeadline ? String(p.applicationDeadline).slice(0, 10) : "",
     start_date: p.startDate ? String(p.startDate).slice(0, 10) : "",
+    entity_id: p.entityId ?? "",
     is_public: p.isPublic !== false,
   };
 }
 
-const categoryOptions = [
-  { value: "Managerial", label: "Managerial" },
+const CATEGORIES = [
+  { value: "Management", label: "Management" },
   { value: "Technical", label: "Technical" },
-  { value: "Non-Technical", label: "Non-Technical" },
+  { value: "Administrative", label: "Administrative" },
+  { value: "Skilled Labour", label: "Skilled Labour" },
+  { value: "Semi-Skilled Labour", label: "Semi-Skilled Labour" },
+  { value: "Unskilled Labour", label: "Unskilled Labour" },
 ];
 
-const contractOptions = [
+const CONTRACT_TYPES = [
   { value: "permanent", label: "Permanent" },
+  { value: "Full-time", label: "Full-time" },
+  { value: "Part-time", label: "Part-time" },
   { value: "contract", label: "Contract" },
   { value: "temporary", label: "Temporary" },
 ];
 
-const locationOptions = [
+const LOCATIONS = [
   { value: "Georgetown", label: "Georgetown" },
   { value: "Offshore", label: "Offshore" },
   { value: "East Bank Demerara", label: "East Bank Demerara" },
+  { value: "Linden", label: "Linden" },
+  { value: "New Amsterdam", label: "New Amsterdam" },
+  { value: "Region 4", label: "Region 4" },
   { value: "Other", label: "Other" },
-];
-
-const applicationStatusOptions = [
-  { value: "received", label: "Received" },
-  { value: "reviewing", label: "Reviewing" },
-  { value: "shortlisted", label: "Shortlisted" },
-  { value: "interviewed", label: "Interviewed" },
-  { value: "selected", label: "Selected" },
-  { value: "rejected", label: "Rejected" },
 ];
 
 export default function JobsPage() {
   const [postings, setPostings] = useState<PostingRow[]>([]);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [tabFilter, setTabFilter] = useState<"active" | "closed" | "all">("active");
-
-  // Application counts per posting (postingId -> count)
   const [appCounts, setAppCounts] = useState<Record<string, number>>({});
-
-  // Applications dialog state
-  const [appsDialogOpen, setAppsDialogOpen] = useState(false);
-  const [appsPostingId, setAppsPostingId] = useState<string | null>(null);
-  const [appsPostingTitle, setAppsPostingTitle] = useState("");
-  const [applications, setApplications] = useState<ApplicationRow[]>([]);
-  const [appsLoading, setAppsLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: "close" | "delete"; id: string; title: string } | null>(null);
 
   useEffect(() => {
-    fetchJobPostings()
-      .then((data) => {
+    Promise.all([fetchJobPostings(), fetchApplicationCounts(), fetchEntities()])
+      .then(([data, counts, ents]) => {
         setPostings(data);
-        setLoading(false);
+        setAppCounts(counts);
+        setEntities(ents);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  // Derived stats
   const totalPostings = postings.length;
   const openPositions = postings.filter((p) => p.status === "open").length;
   const positionsFilled = postings.filter((p) => p.status === "filled").length;
-  const applicationsReceived = Object.values(appCounts).reduce((sum, c) => sum + c, 0);
+  const totalApps = Object.values(appCounts).reduce((sum, c) => sum + c, 0);
 
-  // Filtered postings by tab
   const filteredPostings = postings.filter((p) => {
     if (tabFilter === "active") return p.status === "open";
     if (tabFilter === "closed") return p.status === "closed" || p.status === "filled";
@@ -142,7 +124,8 @@ export default function JobsPage() {
 
   function openAdd() {
     setEditingId(null);
-    setForm(emptyForm);
+    const defaultStatement = "In accordance with Section 12 of the Local Content Act 2021, this position is advertised with first consideration given to qualified Guyanese nationals.";
+    setForm({ ...emptyForm, guyanese_first_statement: defaultStatement });
     setDialogOpen(true);
   }
 
@@ -154,10 +137,7 @@ export default function JobsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.job_title.trim()) {
-      toast.error("Job title is required.");
-      return;
-    }
+    if (!form.job_title.trim()) { toast.error("Job title is required."); return; }
     setSaving(true);
     try {
       const payload = {
@@ -171,150 +151,90 @@ export default function JobsPage() {
         toast.success("Job posting updated.");
       } else {
         const created = await addJobPosting(payload);
-        setPostings((prev) => [...prev, created]);
-        toast.success("Job posting created.");
+        setPostings((prev) => [created, ...prev]);
+        toast.success("Job posting created! It's now live for applicants.");
       }
       setDialogOpen(false);
     } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setSaving(false);
+      toast.error("Something went wrong.");
     }
+    setSaving(false);
   }
 
   async function handleClose(id: string) {
     try {
       await closeJobPosting(id);
-      setPostings((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "closed" } : p))
-      );
-      toast.success("Job posting closed.");
-    } catch {
-      toast.error("Failed to close posting.");
-    }
+      setPostings((prev) => prev.map((p) => (p.id === id ? { ...p, status: "closed" } : p)));
+      toast.success("Posting closed.");
+    } catch { toast.error("Failed to close."); }
+    setConfirmAction(null);
+  }
+
+  async function handleReopen(id: string) {
+    try {
+      const updated = await reopenJobPosting(id);
+      setPostings((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      toast.success("Posting reopened.");
+    } catch { toast.error("Failed to reopen."); }
   }
 
   async function handleDelete(id: string) {
     try {
       await deleteJobPosting(id);
       setPostings((prev) => prev.filter((p) => p.id !== id));
-      toast.success("Job posting deleted.");
-    } catch {
-      toast.error("Failed to delete posting.");
-    }
-  }
-
-  async function openApplications(posting: PostingRow) {
-    setAppsPostingId(posting.id);
-    setAppsPostingTitle(posting.jobTitle ?? "");
-    setAppsDialogOpen(true);
-    setAppsLoading(true);
-    try {
-      const apps = await fetchApplicationsForPosting(posting.id);
-      setApplications(apps);
-      setAppCounts((prev) => ({ ...prev, [posting.id]: apps.length }));
-    } catch {
-      toast.error("Failed to load applications.");
-      setApplications([]);
-    } finally {
-      setAppsLoading(false);
-    }
-  }
-
-  async function handleAppStatusChange(appId: string, status: string) {
-    try {
-      const updated = await updateApplicationStatus(appId, status);
-      setApplications((prev) => prev.map((a) => (a.id === appId ? updated : a)));
-      toast.success("Application status updated.");
-    } catch {
-      toast.error("Failed to update application status.");
-    }
-  }
-
-  async function handleAppNotesChange(appId: string, notes: string) {
-    try {
-      const updated = await updateApplicationStatus(
-        appId,
-        applications.find((a) => a.id === appId)?.status ?? "received",
-        notes
-      );
-      setApplications((prev) => prev.map((a) => (a.id === appId ? updated : a)));
-    } catch {
-      toast.error("Failed to save notes.");
-    }
-  }
-
-  async function handleGenerateRecord() {
-    if (!appsPostingId) return;
-    try {
-      await generateFirstConsiderationRecord(appsPostingId);
-      toast.success("First consideration record generated.");
-    } catch {
-      toast.error("Failed to generate record.");
-    }
+      toast.success("Posting deleted.");
+    } catch { toast.error("Failed to delete."); }
+    setConfirmAction(null);
   }
 
   function onFieldChange(field: keyof FormData, value: string | boolean) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function statusBadgeVariant(status: string): "success" | "default" | "gold" {
-    if (status === "open") return "success";
-    if (status === "filled") return "gold";
-    return "default";
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // Auto-update Guyanese First Statement when job title changes
+      if (field === "job_title" && !editingId) {
+        next.guyanese_first_statement = `In accordance with Section 12 of the Local Content Act 2021, ${value || "[position]"} position(s) are advertised with first consideration given to qualified Guyanese nationals.`;
+      }
+      return next;
+    });
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-      </div>
+      <>
+        <TopBar title="Jobs" />
+        <div className="flex justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </>
     );
   }
 
   return (
     <div>
       <TopBar title="Jobs" action={{ label: "Post a Position", onClick: openAdd }} />
-      <div className="p-8">
-        <PageHeader
-          title="Jobs"
-          description="Post positions, manage applications, and generate first consideration records."
-        />
-
-        {/* Summary stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-text-secondary">Total Postings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-text-primary">{totalPostings}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-text-secondary">Open Positions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-text-primary">{openPositions}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-text-secondary">Applications Received</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-text-primary">{applicationsReceived}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-text-secondary">Positions Filled</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-text-primary">{positionsFilled}</p>
-            </CardContent>
-          </Card>
+      <div className="p-4 sm:p-8 max-w-6xl">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          {[
+            { label: "Total Postings", value: totalPostings, icon: Briefcase, color: "text-accent" },
+            { label: "Open Positions", value: openPositions, icon: CheckCircle, color: "text-success" },
+            { label: "Applications", value: totalApps, icon: Users, color: "text-blue-600" },
+            { label: "Filled", value: positionsFilled, icon: Clock, color: "text-gold" },
+          ].map((stat) => (
+            <Card key={stat.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-bg-primary flex items-center justify-center">
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-text-primary">{stat.value}</p>
+                    <p className="text-xs text-text-muted">{stat.label}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Tab filter */}
@@ -330,11 +250,159 @@ export default function JobsPage() {
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "active" && ` (${openPositions})`}
             </button>
           ))}
         </div>
 
-        {/* Post/Edit Dialog */}
+        {/* Job cards */}
+        {filteredPostings.length === 0 ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No job postings yet"
+            description="Post your first position to start tracking applications and local content compliance."
+            actionLabel="Post a Position"
+            onAction={openAdd}
+          />
+        ) : (
+          <div className="space-y-3">
+            {filteredPostings.map((posting) => {
+              const apps = appCounts[posting.id] || 0;
+              const isOpen = posting.status === "open";
+              const isFilled = posting.status === "filled";
+              const deadlinePassed = posting.applicationDeadline && new Date(posting.applicationDeadline) < new Date();
+
+              return (
+                <Card key={posting.id} className={!isOpen ? "opacity-75" : ""}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-medium text-text-primary">{posting.jobTitle}</h3>
+                          <Badge variant={isOpen ? "success" : isFilled ? "gold" : "default"}>
+                            {posting.status ?? "open"}
+                          </Badge>
+                          {posting.isPublic ? (
+                            <Eye className="h-3.5 w-3.5 text-text-muted" />
+                          ) : (
+                            <span className="flex items-center gap-1 text-[11px] text-text-muted">
+                              <EyeOff className="h-3.5 w-3.5" /> Private
+                            </span>
+                          )}
+                        </div>
+
+                        {posting.employmentClassification && (
+                          <p className="text-xs text-text-muted mt-0.5">ISCO: {posting.employmentClassification}</p>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <Badge variant="accent" className="text-xs">{posting.employmentCategory}</Badge>
+                          <Badge variant="default" className="text-xs capitalize">{posting.contractType}</Badge>
+                          {posting.location && (
+                            <span className="flex items-center gap-1 text-xs text-text-muted">
+                              <MapPin className="h-3 w-3" /> {posting.location}
+                            </span>
+                          )}
+                          <span className="text-xs text-text-muted">
+                            {posting.vacancyCount ?? 1} position{(posting.vacancyCount ?? 1) > 1 ? "s" : ""}
+                          </span>
+                        </div>
+
+                        {posting.description && (
+                          <p className="text-xs text-text-secondary mt-2 line-clamp-1">{posting.description}</p>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-2">
+                          {posting.applicationDeadline && (
+                            <span className={`flex items-center gap-1 text-[11px] ${
+                              deadlinePassed && isOpen ? "text-danger font-medium" : "text-text-muted"
+                            }`}>
+                              <Calendar className="h-3 w-3" />
+                              Deadline: {new Date(posting.applicationDeadline).toLocaleDateString()}
+                              {deadlinePassed && isOpen && " (passed)"}
+                            </span>
+                          )}
+                          {posting.createdAt && (
+                            <span className="text-[11px] text-text-muted">
+                              Posted {new Date(posting.createdAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side: apps count + actions */}
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Link href={`/dashboard/jobs/${posting.id}/applications`}>
+                          <Button variant="outline" size="sm" className="gap-1.5">
+                            <Users className="h-4 w-4" />
+                            <span className="font-semibold">{apps}</span>
+                            <span className="hidden sm:inline text-text-muted">applicant{apps !== 1 ? "s" : ""}</span>
+                          </Button>
+                        </Link>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(posting)} title="Edit">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          {isOpen ? (
+                            <Button
+                              variant="ghost" size="sm"
+                              onClick={() => setConfirmAction({ type: "close", id: posting.id, title: posting.jobTitle || "" })}
+                              title="Close posting"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" onClick={() => handleReopen(posting.id)} title="Reopen">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => setConfirmAction({ type: "delete", id: posting.id, title: posting.jobTitle || "" })}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-danger" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Confirm dialog */}
+        <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                {confirmAction?.type === "delete" ? "Delete Posting" : "Close Posting"}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-text-secondary">
+              {confirmAction?.type === "delete"
+                ? `Permanently delete "${confirmAction.title}"? This will also remove all applications.`
+                : `Close "${confirmAction?.title}"? This will stop accepting new applications.`}
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button
+                variant={confirmAction?.type === "delete" ? "danger" : "secondary"}
+                onClick={() => {
+                  if (confirmAction?.type === "delete") handleDelete(confirmAction.id);
+                  else if (confirmAction) handleClose(confirmAction.id);
+                }}
+              >
+                {confirmAction?.type === "delete" ? "Delete" : "Close Posting"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Post/Edit dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
@@ -350,85 +418,123 @@ export default function JobsPage() {
                   required
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Employment Category</label>
-                <Select
-                  value={form.employment_category}
-                  onChange={(e) => onFieldChange("employment_category", e.target.value)}
-                  options={categoryOptions}
-                />
+
+              {entities.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Filing Entity</label>
+                  <select
+                    value={form.entity_id}
+                    onChange={(e) => onFieldChange("entity_id", e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary"
+                  >
+                    <option value="">Not linked to an entity</option>
+                    {entities.map((e) => (
+                      <option key={e.id} value={e.id}>{e.legalName}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-text-muted mt-1">Link to an entity for employment reporting</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Employment Category</label>
+                  <Select
+                    value={form.employment_category}
+                    onChange={(e) => onFieldChange("employment_category", e.target.value)}
+                    options={CATEGORIES}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-primary">ISCO-08 Code</label>
+                  <Input
+                    value={form.employment_classification}
+                    onChange={(e) => onFieldChange("employment_classification", e.target.value)}
+                    placeholder="e.g. 2145"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Employment Classification (ISCO-08)</label>
-                <Input
-                  value={form.employment_classification}
-                  onChange={(e) => onFieldChange("employment_classification", e.target.value)}
-                  placeholder="e.g. 2145"
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Contract Type</label>
+                  <Select
+                    value={form.contract_type}
+                    onChange={(e) => onFieldChange("contract_type", e.target.value)}
+                    options={CONTRACT_TYPES}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Location</label>
+                  <Select
+                    value={form.location}
+                    onChange={(e) => onFieldChange("location", e.target.value)}
+                    options={LOCATIONS}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Contract Type</label>
-                <Select
-                  value={form.contract_type}
-                  onChange={(e) => onFieldChange("contract_type", e.target.value)}
-                  options={contractOptions}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Location</label>
-                <Select
-                  value={form.location}
-                  onChange={(e) => onFieldChange("location", e.target.value)}
-                  options={locationOptions}
-                />
-              </div>
+
               <div>
                 <label className="text-sm font-medium text-text-primary">Description</label>
                 <textarea
-                  className="w-full h-24 px-3 py-2 rounded-lg bg-white border border-border text-text-primary text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent resize-none"
+                  className="w-full h-24 px-3 py-2 rounded-lg bg-white border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent resize-none"
                   value={form.description}
                   onChange={(e) => onFieldChange("description", e.target.value)}
-                  placeholder="Job description..."
+                  placeholder="Describe the role, responsibilities, and expectations..."
                 />
               </div>
+
               <div>
                 <label className="text-sm font-medium text-text-primary">Qualifications</label>
                 <textarea
-                  className="w-full h-24 px-3 py-2 rounded-lg bg-white border border-border text-text-primary text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent resize-none"
+                  className="w-full h-24 px-3 py-2 rounded-lg bg-white border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent resize-none"
                   value={form.qualifications}
                   onChange={(e) => onFieldChange("qualifications", e.target.value)}
-                  placeholder="Required qualifications..."
+                  placeholder="Required qualifications, certifications, and experience..."
                 />
               </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Vacancies</label>
+                  <Input
+                    type="number" min={1}
+                    value={form.vacancy_count}
+                    onChange={(e) => onFieldChange("vacancy_count", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Deadline</label>
+                  <Input
+                    type="date"
+                    value={form.application_deadline}
+                    onChange={(e) => onFieldChange("application_deadline", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Start Date</label>
+                  <Input
+                    type="date"
+                    value={form.start_date}
+                    onChange={(e) => onFieldChange("start_date", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Guyanese First Statement */}
               <div>
-                <label className="text-sm font-medium text-text-primary">Vacancies</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.vacancy_count}
-                  onChange={(e) => onFieldChange("vacancy_count", e.target.value)}
+                <label className="text-sm font-medium text-text-primary">Guyanese First Consideration Statement</label>
+                <textarea
+                  className="w-full h-16 px-3 py-2 rounded-lg bg-accent-light border border-accent/20 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                  value={form.guyanese_first_statement}
+                  onChange={(e) => onFieldChange("guyanese_first_statement", e.target.value)}
                 />
+                <p className="text-[11px] text-text-muted mt-1">Required by Section 12 of the Local Content Act 2021</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Application Deadline</label>
-                <Input
-                  type="date"
-                  value={form.application_deadline}
-                  onChange={(e) => onFieldChange("application_deadline", e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Start Date</label>
-                <Input
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => onFieldChange("start_date", e.target.value)}
-                />
-              </div>
+
               <div className="flex items-center gap-2">
                 <input
-                  type="checkbox"
-                  id="is_public"
+                  type="checkbox" id="is_public"
                   checked={form.is_public as boolean}
                   onChange={(e) => onFieldChange("is_public", e.target.checked)}
                   className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
@@ -436,203 +542,19 @@ export default function JobsPage() {
                 <label htmlFor="is_public" className="text-sm font-medium text-text-primary">
                   Make posting public
                 </label>
-              </div>
-
-              {/* Local Content Act info box */}
-              <div className="rounded-lg border border-accent/20 bg-accent-light p-3 text-sm text-text-secondary">
-                In accordance with Section 12 of the Local Content Act 2021,{" "}
-                <span className="font-medium text-text-primary">
-                  {form.job_title || "[job_title]"}
-                </span>{" "}
-                position(s) are advertised with first consideration given to qualified Guyanese
-                nationals...
+                <span className="text-xs text-text-muted">(visible on job board)</span>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving..." : editingId ? "Update" : "Post Position"}
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" loading={saving}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  {editingId ? "Update Posting" : "Post Position"}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
-
-        {/* Applications Dialog */}
-        <Dialog open={appsDialogOpen} onOpenChange={setAppsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Applications - {appsPostingTitle}</DialogTitle>
-            </DialogHeader>
-            {appsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-              </div>
-            ) : applications.length === 0 ? (
-              <p className="text-sm text-text-secondary py-8 text-center">
-                No applications received yet.
-              </p>
-            ) : (
-              <div className="space-y-4 mt-2">
-                {/* Summary */}
-                <div className="text-sm text-text-secondary">
-                  {applications.length} total &mdash;{" "}
-                  {applications.filter((a) => a.isGuyanese).length} Guyanese,{" "}
-                  {applications.filter((a) => !a.isGuyanese).length} International
-                </div>
-
-                <div className="space-y-3">
-                  {applications.map((app) => (
-                    <div
-                      key={app.id}
-                      className="border border-border rounded-lg p-3 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-text-primary">{app.applicantName}</p>
-                          <p className="text-xs text-text-muted">{app.applicantEmail}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={app.isGuyanese ? "success" : "default"}>
-                            {app.isGuyanese ? "Guyanese" : "International"}
-                          </Badge>
-                          <span className="text-xs text-text-muted">
-                            {app.createdAt
-                              ? new Date(app.createdAt).toLocaleDateString()
-                              : "\u2014"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Select
-                          value={app.status ?? "received"}
-                          onChange={(e) => handleAppStatusChange(app.id, e.target.value)}
-                          options={applicationStatusOptions}
-                          className="w-40"
-                        />
-                        <Input
-                          placeholder="Review notes..."
-                          defaultValue={app.reviewNotes ?? ""}
-                          onBlur={(e) => {
-                            if (e.target.value !== (app.reviewNotes ?? "")) {
-                              handleAppNotesChange(app.id, e.target.value);
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <Button onClick={handleGenerateRecord} variant="outline">
-                    Generate First Consideration Record
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Table */}
-        {filteredPostings.length === 0 ? (
-          <EmptyState
-            icon={Briefcase}
-            title="No job postings yet"
-            description="Post your first position to start tracking applications and local content compliance."
-            actionLabel="Post a Position"
-            onAction={openAdd}
-          />
-        ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Contract Type</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Vacancies</TableHead>
-                  <TableHead>Deadline</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Public</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPostings.map((posting) => (
-                  <TableRow key={posting.id}>
-                    <TableCell>
-                      <p className="font-medium">{posting.jobTitle}</p>
-                      {posting.employmentClassification && (
-                        <p className="text-xs text-text-muted">
-                          ISCO: {posting.employmentClassification}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="accent">{posting.employmentCategory}</Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">{posting.contractType ?? "\u2014"}</TableCell>
-                    <TableCell>{posting.location ?? "\u2014"}</TableCell>
-                    <TableCell>{posting.vacancyCount ?? 1}</TableCell>
-                    <TableCell>
-                      {posting.applicationDeadline
-                        ? new Date(posting.applicationDeadline).toLocaleDateString()
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusBadgeVariant(posting.status ?? "open")}>
-                        {posting.status ?? "open"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {posting.isPublic ? (
-                        <Eye className="h-4 w-4 text-text-secondary" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-text-muted" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(posting)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openApplications(posting)}
-                        >
-                          <Users className="h-4 w-4 mr-1" />
-                          <span className="text-xs">{appCounts[posting.id] ?? 0}</span>
-                        </Button>
-                        {posting.status === "open" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleClose(posting.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(posting.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
       </div>
     </div>
   );

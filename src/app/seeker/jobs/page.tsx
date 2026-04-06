@@ -16,7 +16,7 @@ const CATEGORIES = [
   "Semi-Skilled Labour", "Unskilled Labour",
 ];
 
-const CONTRACT_TYPES = ["All", "Full-time", "Part-time", "Contract", "Temporary"];
+const CONTRACT_TYPES = ["All", "permanent", "Full-time", "Part-time", "contract", "temporary"];
 
 export default function SeekerJobsPage() {
   const [jobs, setJobs] = useState<Awaited<ReturnType<typeof fetchPublicJobs>>>([]);
