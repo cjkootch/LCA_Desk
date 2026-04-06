@@ -49,6 +49,17 @@ const DEMO_USERS = [
     bgColor: "bg-accent-light",
   },
   {
+    id: "filer-expired",
+    label: "Filer (Expired Trial)",
+    description: "Trial ended — sees Lite restrictions, upgrade prompts, no AI",
+    icon: Lock,
+    plan: "lite",
+    role: "filer",
+    email: "demo-filer-expired@lcadesk.com",
+    color: "text-danger",
+    bgColor: "bg-danger-light",
+  },
+  {
     id: "seeker",
     label: "Job Seeker",
     description: "Searching for petroleum sector jobs, building resume",

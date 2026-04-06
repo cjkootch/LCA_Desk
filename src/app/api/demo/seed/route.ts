@@ -154,6 +154,11 @@ export async function POST(req: NextRequest) {
     await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "lite", 14);
     results.push(`✓ Filer Trial: ${filerTrial.email} (14-day trial)`);
 
+    // ═══ 3b. Filer (Expired Trial) ═══
+    const filerExpired = await ensureUser("demo-filer-expired@lcadesk.com", "James Rodrigues", "filer");
+    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "lite", -7); // expired 7 days ago
+    results.push(`✓ Filer Expired: ${filerExpired.email} (trial expired 7 days ago)`);
+
     // ═══ 4. Job Seeker ═══
     const seeker = await ensureUser("demo-seeker@lcadesk.com", "Devon Campbell", "job_seeker");
     const [existingSeeker] = await db.select().from(jobSeekerProfiles).where(eq(jobSeekerProfiles.userId, seeker.id)).limit(1);
