@@ -28,7 +28,28 @@ const registerSchema = z.object({
   serviceCategories: z.array(z.string()).optional(),
 });
 
+const ALLOWED_ORIGINS = ["https://lcadesk.com", "https://www.lcadesk.com"];
+
+function corsHeaders(origin: string | null) {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  const cors = corsHeaders(origin);
+
   try {
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);
@@ -36,7 +57,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400, headers: cors }
       );
     }
 
@@ -51,7 +72,7 @@ export async function POST(req: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Email already registered" },
-        { status: 409 }
+        { status: 409, headers: cors }
       );
     }
 
@@ -107,8 +128,8 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "filer",
-        redirectTo: "/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
     // ─── JOB SEEKER REGISTRATION ─────────────────────────────────
@@ -126,8 +147,8 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "job_seeker",
-        redirectTo: "/seeker/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
     // ─── SUPPLIER REGISTRATION ───────────────────────────────────
@@ -145,16 +166,19 @@ export async function POST(req: NextRequest) {
         success: true,
         userId: user.id,
         role: "supplier",
-        redirectTo: "/supplier-portal/dashboard",
-      });
+        redirectTo: "/auth/login",
+      }, { headers: cors });
     }
 
-    return NextResponse.json({ success: true, userId: user.id, role });
+    return NextResponse.json(
+      { success: true, userId: user.id, role, redirectTo: "/auth/login" },
+      { headers: cors }
+    );
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Registration failed" },
-      { status: 500 }
+      { status: 500, headers: cors }
     );
   }
 }
