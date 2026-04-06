@@ -10,6 +10,7 @@ import { NarrativeDrafter } from "@/components/reporting/NarrativeDrafter";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
 import { fetchEntity, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives, saveNarrative, fetchPeriod } from "@/server/actions";
 import type { ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
@@ -29,6 +30,7 @@ export default function NarrativePage() {
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
+  const jurisdictionCode = useJurisdiction(entityId);
   const [entityName, setEntityName] = useState("");
   const [periodLabel, setPeriodLabel] = useState("");
   const [periodStart, setPeriodStart] = useState("");
@@ -97,9 +99,9 @@ export default function NarrativePage() {
             <Card className="p-4"><h4 className="text-sm font-semibold text-text-secondary mb-3">Capacity</h4><div className="space-y-2 text-sm"><div className="flex justify-between"><span className="text-text-muted">Activities</span><span>{capMetrics.total_activities}</span></div><div className="flex justify-between"><span className="text-text-muted">Investment</span><span>{formatCurrency(capMetrics.total_cost_local, "GYD")}</span></div></div></Card>
           </div>
           <div className="lg:col-span-2 space-y-6">
-            <NarrativeDrafter section="expenditure_narrative" sectionLabel="Section A: Expenditure Narrative" data={expenditureData} jurisdictionCode="GY" initialContent={narrativeContents["expenditure_narrative"]} onSave={(content) => handleSaveNarrative("expenditure_narrative", content)} />
-            <NarrativeDrafter section="employment_narrative" sectionLabel="Section B: Employment Narrative" data={employmentData} jurisdictionCode="GY" initialContent={narrativeContents["employment_narrative"]} onSave={(content) => handleSaveNarrative("employment_narrative", content)} />
-            <NarrativeDrafter section="capacity_narrative" sectionLabel="Section C: Capacity Development Narrative" data={capacityData} jurisdictionCode="GY" initialContent={narrativeContents["capacity_narrative"]} onSave={(content) => handleSaveNarrative("capacity_narrative", content)} />
+            <NarrativeDrafter section="expenditure_narrative" sectionLabel="Section A: Expenditure Narrative" data={expenditureData} jurisdictionCode={jurisdictionCode} initialContent={narrativeContents["expenditure_narrative"]} onSave={(content) => handleSaveNarrative("expenditure_narrative", content)} />
+            <NarrativeDrafter section="employment_narrative" sectionLabel="Section B: Employment Narrative" data={employmentData} jurisdictionCode={jurisdictionCode} initialContent={narrativeContents["employment_narrative"]} onSave={(content) => handleSaveNarrative("employment_narrative", content)} />
+            <NarrativeDrafter section="capacity_narrative" sectionLabel="Section C: Capacity Development Narrative" data={capacityData} jurisdictionCode={jurisdictionCode} initialContent={narrativeContents["capacity_narrative"]} onSave={(content) => handleSaveNarrative("capacity_narrative", content)} />
           </div>
         </div>
       </div>

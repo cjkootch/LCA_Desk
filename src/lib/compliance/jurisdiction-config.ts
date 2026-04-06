@@ -15,6 +15,20 @@ const JURISDICTION_CONFIGS: Record<string, JurisdictionConfig> = {
       non_technical: 80,
     },
   },
+  NG: {
+    code: "NG",
+    name: "Nigeria",
+    regulatoryBody: "Nigerian Content Development and Monitoring Board (NCDMB)",
+    submissionEmail: "",
+    subjectFormat: "Nigerian Content Compliance Report – {period} – {company_name}",
+    currencyCode: "USD",
+    localCurrencyCode: "NGN",
+    employmentMinimums: {
+      managerial: 50,
+      technical: 50,
+      non_technical: 80,
+    },
+  },
   SR: {
     code: "SR",
     name: "Suriname",

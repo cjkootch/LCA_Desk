@@ -42,6 +42,51 @@ export function calculateDeadlines(
     ];
   }
 
+  if (jurisdictionCode === "NG") {
+    return [
+      {
+        type: "annual_nigerian_content",
+        label: "Annual Nigerian Content Report",
+        period_start: new Date(year, 0, 1),
+        period_end: new Date(year, 11, 31),
+        due_date: new Date(year + 1, 2, 31), // March 31 following year
+        days_warning: 45,
+      },
+      {
+        type: "quarterly_q1",
+        label: "Q1 Quarterly Report",
+        period_start: new Date(year, 0, 1),
+        period_end: new Date(year, 2, 31),
+        due_date: new Date(year, 3, 30), // April 30
+        days_warning: 21,
+      },
+      {
+        type: "quarterly_q2",
+        label: "Q2 Quarterly Report",
+        period_start: new Date(year, 3, 1),
+        period_end: new Date(year, 5, 30),
+        due_date: new Date(year, 6, 31), // July 31
+        days_warning: 21,
+      },
+      {
+        type: "quarterly_q3",
+        label: "Q3 Quarterly Report",
+        period_start: new Date(year, 6, 1),
+        period_end: new Date(year, 8, 30),
+        due_date: new Date(year, 9, 31), // October 31
+        days_warning: 21,
+      },
+      {
+        type: "quarterly_q4",
+        label: "Q4 Quarterly Report",
+        period_start: new Date(year, 9, 1),
+        period_end: new Date(year, 11, 31),
+        due_date: new Date(year + 1, 0, 31), // January 31
+        days_warning: 21,
+      },
+    ];
+  }
+
   return [];
 }
 

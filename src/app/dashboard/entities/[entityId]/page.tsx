@@ -20,10 +20,11 @@ import { fetchEntity, fetchPeriodsForEntity, addPeriod, updateEntity, duplicateP
 import { mapDrizzleEntity } from "@/lib/mappers";
 import { EntityForm } from "@/components/entity/EntityForm";
 import { calculateDeadlines } from "@/lib/compliance/deadlines";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 import type { Entity, PeriodStatus } from "@/types/database.types";
 
-function getAutoFillDates(reportType: string, year: number) {
-  const deadlines = calculateDeadlines("GY", year);
+function getAutoFillDates(reportType: string, year: number, jurisdiction: string) {
+  const deadlines = calculateDeadlines(jurisdiction, year);
   const match = deadlines.find((d) => d.type === reportType);
   if (!match) return null;
   return {
@@ -36,6 +37,7 @@ function getAutoFillDates(reportType: string, year: number) {
 export default function EntityDetailPage() {
   const params = useParams();
   const entityId = params.entityId as string;
+  const jurisdictionCode = useJurisdiction(entityId);
   const [entity, setEntity] = useState<Entity | null>(null);
   const [periods, setPeriods] = useState<Awaited<ReturnType<typeof fetchPeriodsForEntity>>>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,7 @@ export default function EntityDetailPage() {
     load().catch(() => setLoading(false));
   }, [entityId]);
 
-  const autoFill = getAutoFillDates(reportType, parseInt(fiscalYear));
+  const autoFill = getAutoFillDates(reportType, parseInt(fiscalYear), jurisdictionCode);
 
   const handleCreatePeriod = async () => {
     if (!entity || !autoFill) return;

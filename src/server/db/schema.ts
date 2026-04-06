@@ -881,6 +881,7 @@ export const courses = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     audience: text("audience").notNull(), // seeker | filer | all
+    jurisdictionCode: text("jurisdiction_code"), // null = all jurisdictions, "GY" = Guyana only, "NG" = Nigeria only
     moduleCount: integer("module_count").default(0),
     badgeLabel: text("badge_label"), // e.g. "LCA Certified"
     badgeColor: text("badge_color").default("accent"), // accent | gold | success

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { runFullValidation } from "@/lib/compliance/validators";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 import { ComplianceScan } from "@/components/ai/ComplianceScan";
 import { fetchEntity, fetchExpenditures, fetchEmployment, fetchCapacity, fetchNarratives } from "@/server/actions";
 import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord, NarrativeDraft } from "@/types/database.types";
@@ -21,6 +22,7 @@ export default function ReviewPage() {
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
+  const jurisdictionCode = useJurisdiction(entityId);
   const [entityName, setEntityName] = useState("");
   const [results, setResults] = useState<ValidationResult[]>([]);
   const [scanData, setScanData] = useState<Record<string, unknown>>({});
@@ -40,7 +42,7 @@ export default function ReviewPage() {
       const capacity = rawCap.map((c) => ({ id: c.id, activity: c.activity, start_date: c.startDate, total_participants: c.totalParticipants })) as CapacityDevelopmentRecord[];
       const narratives = rawNar.map((n) => ({ id: n.id, section: n.section, draft_content: n.draftContent })) as NarrativeDraft[];
 
-      setResults(runFullValidation(entity, expenditures, employment, capacity, narratives, "GY"));
+      setResults(runFullValidation(entity, expenditures, employment, capacity, narratives, jurisdictionCode));
 
       // Build scan data for AI compliance scan
       setScanData({

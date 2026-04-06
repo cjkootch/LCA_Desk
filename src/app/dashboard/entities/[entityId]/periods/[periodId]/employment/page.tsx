@@ -16,6 +16,7 @@ import { Plus, Users, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { calculateEmploymentMetrics } from "@/lib/compliance/calculators";
 import { getEmploymentMinimums } from "@/lib/compliance/jurisdiction-config";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 import { cn, formatPercentage } from "@/lib/utils";
 import { fetchEntity, fetchEmployment, addEmployment, removeEmployment, updateEmploymentRecord, checkPeriodLocked } from "@/server/actions";
 import { CsvImport } from "@/components/reporting/CsvImport";
@@ -44,6 +45,7 @@ export default function EmploymentPage() {
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
+  const jurisdictionCode = useJurisdiction(entityId);
   const [entityName, setEntityName] = useState("");
   const [records, setRecords] = useState<EmploymentRecord[]>([]);
   const [formOpen, setFormOpen] = useState(false);
@@ -105,7 +107,7 @@ export default function EmploymentPage() {
   };
 
   const metrics = calculateEmploymentMetrics(records);
-  const minimums = getEmploymentMinimums("GY");
+  const minimums = getEmploymentMinimums(jurisdictionCode);
 
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>;

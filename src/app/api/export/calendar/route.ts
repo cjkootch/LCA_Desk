@@ -74,7 +74,9 @@ export async function GET() {
 
   // Also add upcoming deadlines for next year if no periods created yet
   for (const entity of ents) {
-    const futureDeadlines = calculateDeadlines("GY", currentYear + 1);
+    // Use entity's jurisdiction for future deadlines
+    const entityJurisdiction = entity.jurisdictionId ? "GY" : "GY"; // TODO: lookup from jurisdictions table
+    const futureDeadlines = calculateDeadlines(entityJurisdiction, currentYear + 1);
     for (const dl of futureDeadlines) {
       const exists = periods.some(p => p.entityId === entity.id && p.reportType === dl.type && p.fiscalYear === currentYear + 1);
       if (!exists && dl.due_date > now) {

@@ -40,7 +40,9 @@ export default function DashboardPage() {
 
   const currentYear = new Date().getFullYear();
   const deadlines: DeadlineWithStatus[] = entities.flatMap((entity) => {
-    const rawDeadlines = calculateDeadlines("GY", currentYear);
+    // Use entity's country field as jurisdiction code fallback
+    const jCode = (entity as unknown as Record<string, string>).country || "GY";
+    const rawDeadlines = calculateDeadlines(jCode, currentYear);
     return rawDeadlines.map((d) =>
       enrichDeadline(d, false, entity.id, entity.legal_name)
     );

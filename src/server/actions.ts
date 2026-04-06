@@ -411,7 +411,8 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     if (nextType) {
       const nextYear = nextType === "half_yearly_h1" ? (current.fiscalYear || new Date().getFullYear()) + 1 : current.fiscalYear || new Date().getFullYear();
       const { calculateDeadlines } = await import("@/lib/compliance/deadlines");
-      const deadlines = calculateDeadlines("GY", nextYear);
+      const jCode = await getEntityJurisdictionCode(current.entityId);
+      const deadlines = calculateDeadlines(jCode, nextYear);
       const nextDeadline = deadlines.find(d => d.type === nextType);
       if (nextDeadline) {
         // Check if it already exists
@@ -1548,7 +1549,8 @@ export async function generateDeadlineNotifications() {
   const currentYear = now.getFullYear();
 
   for (const entity of entityList) {
-    const deadlines = calculateDeadlines("GY", currentYear);
+    const entJCode = await getEntityJurisdictionCode(entity.id);
+    const deadlines = calculateDeadlines(entJCode, currentYear);
 
     for (const deadline of deadlines) {
       const daysRemaining = Math.floor(
@@ -3967,4 +3969,29 @@ export async function seedPlatformCourse() {
   }
 
   return course.id;
+}
+
+// ─── JURISDICTION HELPERS ────────────────────────────────────────
+
+export async function getEntityJurisdictionCode(entityId: string): Promise<string> {
+  const [entity] = await db.select({ jurisdictionId: entities.jurisdictionId })
+    .from(entities).where(eq(entities.id, entityId)).limit(1);
+  if (!entity?.jurisdictionId) return "GY"; // fallback
+  const [jurisdiction] = await db.select({ code: jurisdictions.code })
+    .from(jurisdictions).where(eq(jurisdictions.id, entity.jurisdictionId)).limit(1);
+  return jurisdiction?.code || "GY";
+}
+
+export async function getTenantJurisdictionCode(tenantId: string): Promise<string> {
+  const [tenant] = await db.select({ jurisdictionId: tenants.jurisdictionId })
+    .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  if (!tenant?.jurisdictionId) return "GY";
+  const [jurisdiction] = await db.select({ code: jurisdictions.code })
+    .from(jurisdictions).where(eq(jurisdictions.id, tenant.jurisdictionId)).limit(1);
+  return jurisdiction?.code || "GY";
+}
+
+export async function fetchJurisdictions() {
+  return db.select({ id: jurisdictions.id, code: jurisdictions.code, name: jurisdictions.name })
+    .from(jurisdictions).where(eq(jurisdictions.active, true)).orderBy(jurisdictions.name);
 }

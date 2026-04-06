@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { calculateLocalContentRate, calculateEmploymentMetrics, calculateCapacityMetrics } from "@/lib/compliance/calculators";
 import { formatSubmissionSubject } from "@/lib/compliance/jurisdiction-config";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 import {
   fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment,
   fetchCapacity, fetchNarratives, attestAndSubmit, updatePeriodStatus,
@@ -32,6 +33,7 @@ export default function ExportPage() {
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
+  const jurisdictionCode = useJurisdiction(entityId);
   const [currentPlan, setCurrentPlan] = useState("lite");
   const [entityName, setEntityName] = useState("");
   const [entity, setEntity] = useState<Entity | null>(null);
@@ -64,7 +66,7 @@ export default function ExportPage() {
       setExportData({
         entity: mappedEntity,
         period: { ...rawPeriod, report_type: rawPeriod?.reportType, period_start: rawPeriod?.periodStart, period_end: rawPeriod?.periodEnd, due_date: rawPeriod?.dueDate, fiscal_year: rawPeriod?.fiscalYear },
-        expenditures, employment, capacity, sectorCategories: [], jurisdictionCode: "GY",
+        expenditures, employment, capacity, sectorCategories: [], jurisdictionCode: jurisdictionCode,
         localContentMetrics: calculateLocalContentRate(expenditures),
         employmentMetrics: calculateEmploymentMetrics(employment),
         capacityMetrics: calculateCapacityMetrics(capacity),
@@ -146,7 +148,7 @@ export default function ExportPage() {
   };
   const periodLabel = period.reportType === "half_yearly_h1" ? "H1" : period.reportType === "half_yearly_h2" ? "H2" : "";
   const reportTypeName = reportTypeNames[period.reportType] || "Local Content";
-  const subjectLine = formatSubmissionSubject("GY", `${periodLabel} ${period.fiscalYear}`, entityName);
+  const subjectLine = formatSubmissionSubject(jurisdictionCode, `${periodLabel} ${period.fiscalYear}`, entityName);
 
   return (
     <div>

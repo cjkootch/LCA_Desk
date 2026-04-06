@@ -81,6 +81,7 @@ export function EntityForm({ defaultValues, onSubmit, loading }: EntityFormProps
           <Select label="Country of Incorporation" id="country_of_incorporation" {...register("country_of_incorporation")}
             options={[
               { value: "GY", label: "Guyana" },
+              { value: "NG", label: "Nigeria" },
               { value: "US", label: "United States" },
               { value: "GB", label: "United Kingdom" },
               { value: "TT", label: "Trinidad & Tobago" },
@@ -90,6 +91,7 @@ export function EntityForm({ defaultValues, onSubmit, loading }: EntityFormProps
               { value: "CN", label: "China" },
               { value: "IN", label: "India" },
               { value: "BR", label: "Brazil" },
+              { value: "NA", label: "Namibia" },
               { value: "OTHER", label: "Other" },
             ]}
           />
