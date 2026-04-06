@@ -290,6 +290,8 @@ export const reportingPeriods = pgTable(
   (table) => [
     index("periods_entity_idx").on(table.entityId),
     index("periods_tenant_idx").on(table.tenantId),
+    index("periods_status_idx").on(table.status),
+    index("periods_due_date_idx").on(table.dueDate),
   ]
 );
 

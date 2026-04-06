@@ -1,4 +1,5 @@
 import { getAnthropicClient } from "@/lib/ai/anthropic";
+import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 
 const SYSTEM_PROMPT = `You are the LCA Desk Compliance Scanner. You analyze submission data for Local Content Half-Yearly Reports and identify issues the Secretariat is likely to scrutinize.
@@ -25,6 +26,9 @@ Return ONLY valid JSON — an array of issue objects. No markdown, no explanatio
 If no issues found, return an empty array: []`;
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
   try {
     const { data } = await req.json();
 

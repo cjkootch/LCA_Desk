@@ -1,8 +1,12 @@
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { buildNarrativePrompt } from "@/lib/ai/prompts";
+import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
   try {
     const { section, data, jurisdiction_code } = await req.json();
 
