@@ -28,6 +28,7 @@ function LoginForm() {
     if (redirect) return redirect;
     if (role === "job_seeker") return "/seeker/dashboard";
     if (role === "supplier") return "/supplier-portal/dashboard";
+    if (role === "secretariat") return "/secretariat/dashboard";
     return "/dashboard";
   };
 
@@ -53,6 +54,7 @@ function LoginForm() {
   const roleLabels: Record<string, string> = {
     job_seeker: "Job Seeker",
     supplier: "Supplier",
+    secretariat: "Regulatory Office",
     filer: "Compliance Filing",
   };
 

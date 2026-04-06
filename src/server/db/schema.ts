@@ -874,6 +874,53 @@ export const submissionLogs = pgTable("submission_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── SECRETARIAT OFFICES ─────────────────────────────────────────
+export const secretariatOffices = pgTable(
+  "secretariat_offices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    jurisdictionId: uuid("jurisdiction_id").references(() => jurisdictions.id),
+    country: text("country").default("GY"),
+    active: boolean("active").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+  }
+);
+
+export const secretariatMembers = pgTable(
+  "secretariat_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    officeId: uuid("office_id").notNull().references(() => secretariatOffices.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").default("reviewer"), // admin | reviewer | viewer
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("sec_members_office_idx").on(table.officeId),
+    index("sec_members_user_idx").on(table.userId),
+  ]
+);
+
+export const submissionAcknowledgments = pgTable(
+  "submission_acknowledgments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reportingPeriodId: uuid("reporting_period_id").notNull().references(() => reportingPeriods.id),
+    officeId: uuid("office_id").notNull().references(() => secretariatOffices.id),
+    acknowledgedBy: uuid("acknowledged_by").references(() => users.id),
+    status: text("status").default("received"), // received | under_review | approved | rejected | amendment_required
+    notes: text("notes"),
+    referenceNumber: text("reference_number"),
+    acknowledgedAt: timestamp("acknowledged_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("ack_period_idx").on(table.reportingPeriodId),
+    index("ack_office_idx").on(table.officeId),
+  ]
+);
+
 // ─── LEARNING / TRAINING ────────────────────────────────────────
 export const courses = pgTable(
   "courses",

@@ -37,6 +37,8 @@ import {
   courses,
   courseModules,
   userCourseProgress,
+  secretariatMembers,
+  submissionAcknowledgments,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -4158,4 +4160,139 @@ export async function adminUpdateTicketStatus(ticketId: string, status: string) 
     resolvedBy: status === "resolved" ? session.user.id : undefined,
     updatedAt: new Date(),
   }).where(eq(supportTickets.id, ticketId));
+}
+
+// ─── SECRETARIAT PORTAL ──────────────────────────────────────────
+
+async function getSecretariatContext() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const membership = await db.select({
+    id: secretariatMembers.id,
+    officeId: secretariatMembers.officeId,
+    role: secretariatMembers.role,
+  }).from(secretariatMembers).where(eq(secretariatMembers.userId, session.user.id)).limit(1);
+  if (!membership[0]) throw new Error("Not a secretariat member");
+  return { userId: session.user.id, officeId: membership[0].officeId, role: membership[0].role };
+}
+
+export async function fetchSecretariatDashboard() {
+  const { officeId } = await getSecretariatContext();
+
+  // Get all submissions (all tenants, all periods that are submitted)
+  const submissions = await db.select({
+    periodId: reportingPeriods.id,
+    entityId: reportingPeriods.entityId,
+    reportType: reportingPeriods.reportType,
+    periodStart: reportingPeriods.periodStart,
+    periodEnd: reportingPeriods.periodEnd,
+    fiscalYear: reportingPeriods.fiscalYear,
+    status: reportingPeriods.status,
+    submittedAt: reportingPeriods.submittedAt,
+    entityName: entities.legalName,
+    companyType: entities.companyType,
+    tenantName: tenants.name,
+  })
+    .from(reportingPeriods)
+    .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
+    .innerJoin(tenants, eq(reportingPeriods.tenantId, tenants.id))
+    .where(eq(reportingPeriods.status, "submitted"))
+    .orderBy(desc(reportingPeriods.submittedAt))
+    .limit(100);
+
+  // Get acknowledgment status for each
+  const acks = await db.select()
+    .from(submissionAcknowledgments)
+    .where(eq(submissionAcknowledgments.officeId, officeId))
+    .limit(200);
+
+  const enriched = submissions.map(s => {
+    const ack = acks.find(a => a.reportingPeriodId === s.periodId);
+    return {
+      ...s,
+      acknowledgment: ack ? {
+        status: ack.status,
+        referenceNumber: ack.referenceNumber,
+        notes: ack.notes,
+        acknowledgedAt: ack.acknowledgedAt,
+      } : null,
+    };
+  });
+
+  // Stats
+  const total = submissions.length;
+  const acknowledged = acks.filter(a => a.status !== "received").length;
+  const pending = total - acknowledged;
+
+  // Get office members
+  const members = await db.select({
+    id: secretariatMembers.id,
+    role: secretariatMembers.role,
+    userName: users.name,
+    userEmail: users.email,
+  }).from(secretariatMembers)
+    .innerJoin(users, eq(secretariatMembers.userId, users.id))
+    .where(eq(secretariatMembers.officeId, officeId));
+
+  return { submissions: enriched, stats: { total, acknowledged, pending }, members, officeId };
+}
+
+export async function acknowledgeSubmission(periodId: string, data: {
+  status: string;
+  referenceNumber?: string;
+  notes?: string;
+}) {
+  const { officeId, userId } = await getSecretariatContext();
+
+  const [existing] = await db.select({ id: submissionAcknowledgments.id })
+    .from(submissionAcknowledgments)
+    .where(and(eq(submissionAcknowledgments.reportingPeriodId, periodId), eq(submissionAcknowledgments.officeId, officeId)))
+    .limit(1);
+
+  if (existing) {
+    await db.update(submissionAcknowledgments).set({
+      status: data.status,
+      referenceNumber: data.referenceNumber || undefined,
+      notes: data.notes || undefined,
+      acknowledgedBy: userId,
+      updatedAt: new Date(),
+    }).where(eq(submissionAcknowledgments.id, existing.id));
+  } else {
+    await db.insert(submissionAcknowledgments).values({
+      reportingPeriodId: periodId,
+      officeId,
+      acknowledgedBy: userId,
+      status: data.status,
+      referenceNumber: data.referenceNumber || null,
+      notes: data.notes || null,
+    });
+  }
+
+  // Update reporting period status if approved
+  if (data.status === "approved") {
+    await db.update(reportingPeriods).set({
+      status: "acknowledged",
+      acknowledgedAt: new Date(),
+      secretariatRef: data.referenceNumber || null,
+      updatedAt: new Date(),
+    }).where(eq(reportingPeriods.id, periodId));
+  }
+}
+
+export async function addSecretariatMember(officeId: string, email: string, role: string) {
+  const ctx = await getSecretariatContext();
+  if (ctx.role !== "admin") throw new Error("Only secretariat admins can add members");
+
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (!user) throw new Error("User not found — they must register first");
+
+  // Update user role to include secretariat
+  const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, user.id)).limit(1);
+  const currentRole = userData?.userRole || "";
+  if (!currentRole.includes("secretariat")) {
+    const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
+    await db.update(users).set({ userRole: newRole }).where(eq(users.id, user.id));
+  }
+
+  await db.insert(secretariatMembers).values({ officeId, userId: user.id, role });
 }

@@ -12,6 +12,7 @@ export default auth((req) => {
   const isDashboard = nextUrl.pathname.startsWith("/dashboard");
   const isSeekerRoute = nextUrl.pathname.startsWith("/seeker");
   const isSupplierRoute = nextUrl.pathname.startsWith("/supplier-portal");
+  const isSecretariatRoute = nextUrl.pathname.startsWith("/secretariat");
 
   // Protect compliance dashboard — requires filer or super_admin role
   if (isDashboard) {
@@ -29,8 +30,15 @@ export default auth((req) => {
       if (roles.includes("supplier")) {
         return NextResponse.redirect(new URL("/supplier-portal/dashboard", nextUrl));
       }
+      if (roles.includes("secretariat")) {
+        return NextResponse.redirect(new URL("/secretariat/dashboard", nextUrl));
+      }
       return NextResponse.redirect(new URL("/auth/login", nextUrl));
     }
+  }
+
+  if (isSecretariatRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/auth/login?role=secretariat", nextUrl));
   }
 
   if (isSeekerRoute && !isLoggedIn) {
@@ -45,5 +53,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/seeker/:path*", "/supplier-portal/:path*"],
+  matcher: ["/dashboard/:path*", "/seeker/:path*", "/supplier-portal/:path*", "/secretariat/:path*"],
 };
