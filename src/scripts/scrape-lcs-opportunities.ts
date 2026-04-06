@@ -275,14 +275,19 @@ async function main() {
   for (let i = 0; i < supplierSlugs.length; i++) {
     const slug = supplierSlugs[i];
     const tag = `[${String(i + 1).padStart(3, " ")}/${supplierSlugs.length}]`;
-    const notice = await scrapeNoticeDetail(slug, "supplier");
-    if (notice) {
-      await upsertNotice(db, notice);
-      noticesOk++;
-      console.log(`${tag} 📋 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
-    } else {
+    try {
+      const notice = await scrapeNoticeDetail(slug, "supplier");
+      if (notice) {
+        await upsertNotice(db, notice);
+        noticesOk++;
+        console.log(`${tag} 📋 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
+      } else {
+        noticesSkipped++;
+        console.log(`${tag} ⚠  ${slug} — skipped`);
+      }
+    } catch {
       noticesSkipped++;
-      console.log(`${tag} ⚠  ${slug} — skipped`);
+      console.log(`${tag} ❌  ${slug} — error`);
     }
     await sleep(DELAY_MS);
   }
@@ -290,14 +295,19 @@ async function main() {
   for (let i = 0; i < employmentSlugs.length; i++) {
     const slug = employmentSlugs[i];
     const tag = `[${String(i + 1).padStart(3, " ")}/${employmentSlugs.length}]`;
-    const notice = await scrapeNoticeDetail(slug, "employment");
-    if (notice) {
-      await upsertNotice(db, notice);
-      noticesOk++;
-      console.log(`${tag} 👤 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
-    } else {
-      noticesSkipped++;
+    try {
+      const notice = await scrapeNoticeDetail(slug, "employment");
+      if (notice) {
+        await upsertNotice(db, notice);
+        noticesOk++;
+        console.log(`${tag} 👤 ${notice.contractorName} — ${notice.title.slice(0, 60)}`);
+      } else {
+        noticesSkipped++;
       console.log(`${tag} ⚠  ${slug} — skipped`);
+      }
+    } catch {
+      noticesSkipped++;
+      console.log(`${tag} ❌  ${slug} — error`);
     }
     await sleep(DELAY_MS);
   }
@@ -356,6 +366,24 @@ interface ScrapedNotice {
   sourceSlug: string;
 }
 
+function normalizeDate(raw: string | null): string | null {
+  if (!raw) return null;
+  // DD-MM-YYYY or DD/MM/YYYY → YYYY-MM-DD
+  const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmy) {
+    const [, d, m, y] = dmy;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  // Try parsing natural dates like "January 15, 2024"
+  try {
+    const parsed = new Date(raw);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  } catch {}
+  return null;
+}
+
 async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment"): Promise<ScrapedNotice | null> {
   const url = `https://lcregister.petroleum.gov.gy/supplier-notice/${slug}/`;
   const html = await fetchPage(url);
@@ -387,10 +415,10 @@ async function scrapeNoticeDetail(slug: string, type: "supplier" | "employment")
   const lcaCategory = catMatch?.[1]?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || null;
 
   const dateMatch = html.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})|(\w+ \d{1,2},\s*\d{4})/);
-  const postedDate = dateMatch?.[0] || null;
+  const postedDate = normalizeDate(dateMatch?.[0] || null);
 
   const deadlineMatch = html.match(/(?:deadline|closing date|submit by|due date)[:\s]*([^\n<]{5,40})/i);
-  const deadline = deadlineMatch?.[1]?.trim() || null;
+  const deadline = normalizeDate(deadlineMatch?.[1]?.trim() || null);
 
   return {
     contractorName, contractorSlug, type, noticeType, title, description,
