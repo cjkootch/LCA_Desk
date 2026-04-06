@@ -452,7 +452,7 @@ Return ONLY JSON.`,
               } catch {}
             }
           }
-          console.log(`${tag} 🤖 ${updates.companyName || job.companyName} — ${job.jobTitle.slice(0, 40)}`);
+          console.log(`${tag} 🤖 ${summary.company_name || job.companyName} — ${job.jobTitle.slice(0, 40)}`);
           aiOk++;
         }
       } catch (err) {
