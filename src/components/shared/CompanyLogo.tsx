@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Factory } from "lucide-react";
 import { getCompanyLogoUrl } from "@/lib/company-logos";
 
 interface CompanyLogoProps {
@@ -14,8 +15,21 @@ export function CompanyLogo({ companyName, size = 32, className }: CompanyLogoPr
   const logoUrl = getCompanyLogoUrl(companyName, size * 2);
 
   if (!logoUrl || failed) {
-    // Generate a consistent color from company name
-    const colors = ["#047857", "#2563EB", "#D97706", "#DC2626", "#7C3AED", "#0891B2", "#4F46E5", "#059669"];
+    const isUnknown = companyName === "Unknown" || !companyName;
+
+    if (isUnknown) {
+      return (
+        <div
+          className={`rounded-md bg-border-light flex items-center justify-center shrink-0 ${className || ""}`}
+          style={{ width: size, height: size }}
+        >
+          <Factory className="text-text-muted" style={{ width: size * 0.55, height: size * 0.55 }} />
+        </div>
+      );
+    }
+
+    // Known company but no domain match — show colored initial
+    const colors = ["#047857", "#2563EB", "#D97706", "#7C3AED", "#0891B2", "#4F46E5", "#059669", "#0D9488"];
     const hash = companyName.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
     const bg = colors[hash % colors.length];
 
