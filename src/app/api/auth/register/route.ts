@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { notifyWelcome } from "@/lib/email/notify";
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -99,6 +100,9 @@ export async function POST(req: NextRequest) {
       .insert(users)
       .values({ name, email, passwordHash, userRole: role })
       .returning();
+
+    // Send welcome email (fire and forget)
+    notifyWelcome({ email, name, role });
 
     // ─── FILER REGISTRATION ──────────────────────────────────────
     if (role === "filer") {

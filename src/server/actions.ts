@@ -29,7 +29,8 @@ import {
   users,
   auditLogs,
 } from "@/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
+import { notifyApplicationReceived, notifyApplicationStatusChange, notifyReportSubmitted, notifyWelcome } from "@/lib/email/notify";
 
 async function getSessionTenant() {
   const session = await auth();
@@ -340,6 +341,21 @@ export async function attestAndSubmit(periodId: string, attestationText: string)
     reportingPeriodId: periodId,
     newValue: "Report locked after submission",
   });
+
+  // Send confirmation email
+  const [userForEmail] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  const [entityForEmail] = await db.select({ legalName: entities.legalName }).from(entities).where(eq(entities.id, current.entityId)).limit(1);
+  if (userForEmail?.email) {
+    const reportTypeNames: Record<string, string> = { half_yearly_h1: "Half-Yearly (H1)", half_yearly_h2: "Half-Yearly (H2)", annual_plan: "Annual Plan", performance_report: "Performance Report" };
+    notifyReportSubmitted({
+      userEmail: userForEmail.email,
+      userName: userForEmail.name || "User",
+      entityName: entityForEmail?.legalName || "",
+      reportType: reportTypeNames[current.reportType] || current.reportType,
+      periodLabel: `${current.periodStart} to ${current.periodEnd}`,
+      recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length },
+    });
+  }
 
   return updated;
 }
@@ -1645,6 +1661,22 @@ export async function updateApplicationStatus(applicationId: string, status: str
     })
     .where(eq(jobApplications.id, applicationId))
     .returning();
+
+  // Notify applicant of status change
+  if (updated?.applicantEmail) {
+    const [posting] = await db.select({ jobTitle: jobPostings.jobTitle, tenantId: jobPostings.tenantId }).from(jobPostings).where(eq(jobPostings.id, updated.jobPostingId)).limit(1);
+    if (posting) {
+      const [tenant] = await db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, posting.tenantId)).limit(1);
+      notifyApplicationStatusChange({
+        applicantEmail: updated.applicantEmail,
+        applicantName: updated.applicantName,
+        jobTitle: posting.jobTitle,
+        companyName: tenant?.name || "",
+        newStatus: status,
+      });
+    }
+  }
+
   return updated;
 }
 
