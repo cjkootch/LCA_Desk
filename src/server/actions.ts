@@ -29,7 +29,7 @@ import {
   users,
   auditLogs,
 } from "@/server/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { notifyApplicationReceived, notifyApplicationStatusChange, notifyReportSubmitted, notifyWelcome } from "@/lib/email/notify";
 
 async function getSessionTenant() {
@@ -2256,5 +2256,232 @@ export async function fetchSeekerDashboardStats() {
       profile?.skills?.length
     ),
     profile,
+  };
+}
+
+// ─── FEATURE PREFERENCES ─────────────────────────────────────────
+
+export interface FeaturePreferences {
+  smartMatching: boolean;
+  opportunityAlerts: boolean;
+  analytics: boolean;
+  bidTracking: boolean;
+}
+
+const DEFAULT_PREFERENCES: FeaturePreferences = {
+  smartMatching: true,
+  opportunityAlerts: true,
+  analytics: true,
+  bidTracking: true,
+};
+
+export async function fetchFeaturePreferences(): Promise<FeaturePreferences> {
+  const { tenant } = await getSessionTenant();
+  if (!tenant.featurePreferences) return DEFAULT_PREFERENCES;
+  try { return { ...DEFAULT_PREFERENCES, ...JSON.parse(tenant.featurePreferences as string) }; }
+  catch { return DEFAULT_PREFERENCES; }
+}
+
+export async function updateFeaturePreferences(prefs: Partial<FeaturePreferences>) {
+  const { tenantId, tenant } = await getSessionTenant();
+  let current = DEFAULT_PREFERENCES;
+  try { if (tenant.featurePreferences) current = { ...current, ...JSON.parse(tenant.featurePreferences as string) }; } catch {}
+
+  const updated = { ...current, ...prefs };
+  await db.update(tenants).set({ featurePreferences: JSON.stringify(updated) }).where(eq(tenants.id, tenantId));
+  return updated;
+}
+
+// ─── SMART MATCHING ──────────────────────────────────────────────
+
+export async function fetchMatchedOpportunities(limit = 20) {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRole = ((session.user as any)?.userRole as string) ?? "filer";
+
+  // Get user's profile keywords for matching
+  let matchKeywords: string[] = [];
+
+  if (userRole.includes("supplier")) {
+    const profile = await db.query.supplierProfiles.findFirst({
+      where: eq(supplierProfiles.userId, session.user.id),
+    });
+    matchKeywords = profile?.serviceCategories || [];
+    if (profile?.legalName) matchKeywords.push(profile.legalName);
+  } else if (userRole.includes("job_seeker")) {
+    const profile = await db.query.jobSeekerProfiles.findFirst({
+      where: eq(jobSeekerProfiles.userId, session.user.id),
+    });
+    matchKeywords = [
+      ...(profile?.skills || []),
+      profile?.employmentCategory,
+      profile?.currentJobTitle,
+    ].filter(Boolean) as string[];
+  } else {
+    // Filer — match based on entity service types and supplier categories
+    try {
+      const { tenantId } = await getSessionTenant();
+      const ents = await db.select({ legalName: entities.legalName, companyType: entities.companyType }).from(entities).where(eq(entities.tenantId, tenantId));
+      matchKeywords = ents.map(e => e.legalName).filter(Boolean) as string[];
+    } catch { /* no tenant */ }
+  }
+
+  // Get active opportunities
+  const allOpps = await db
+    .select()
+    .from(lcsOpportunities)
+    .where(eq(lcsOpportunities.status, "active"))
+    .orderBy(desc(lcsOpportunities.postedDate))
+    .limit(200);
+
+  if (matchKeywords.length === 0) return allOpps.slice(0, limit);
+
+  // Score each opportunity by keyword match
+  const scored = allOpps.map(opp => {
+    let score = 0;
+    const searchText = [
+      opp.title, opp.description, opp.contractorName,
+      opp.lcaCategory, opp.aiSummary,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    for (const keyword of matchKeywords) {
+      if (searchText.includes(keyword.toLowerCase())) score += 10;
+      // Partial word match
+      const words = keyword.toLowerCase().split(/\s+/);
+      for (const word of words) {
+        if (word.length > 3 && searchText.includes(word)) score += 3;
+      }
+    }
+
+    return { ...opp, matchScore: score };
+  });
+
+  // Sort by score (highest first), then by date
+  scored.sort((a, b) => b.matchScore - a.matchScore || (
+    new Date(b.postedDate || 0).getTime() - new Date(a.postedDate || 0).getTime()
+  ));
+
+  return scored.slice(0, limit);
+}
+
+// ─── OPPORTUNITIES ANALYTICS ─────────────────────────────────────
+
+export async function fetchOpportunityAnalytics() {
+  const allOpps = await db.select().from(lcsOpportunities).limit(500);
+
+  // Contractor breakdown
+  const contractorCounts: Record<string, number> = {};
+  for (const opp of allOpps) {
+    contractorCounts[opp.contractorName] = (contractorCounts[opp.contractorName] || 0) + 1;
+  }
+  const topContractors = Object.entries(contractorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([name, count]) => ({ name, count }));
+
+  // Notice type breakdown
+  const typeCounts: Record<string, number> = {};
+  for (const opp of allOpps) {
+    const t = opp.noticeType || "Other";
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+
+  // Category breakdown
+  const categoryCounts: Record<string, number> = {};
+  for (const opp of allOpps) {
+    if (opp.lcaCategory) {
+      categoryCounts[opp.lcaCategory] = (categoryCounts[opp.lcaCategory] || 0) + 1;
+    }
+  }
+  const topCategories = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+
+  // Monthly trend (last 12 months)
+  const monthlyTrend: Record<string, number> = {};
+  for (const opp of allOpps) {
+    if (opp.postedDate) {
+      const month = opp.postedDate.slice(0, 7); // YYYY-MM
+      monthlyTrend[month] = (monthlyTrend[month] || 0) + 1;
+    }
+  }
+
+  // Status breakdown
+  const active = allOpps.filter(o => o.status === "active").length;
+  const expired = allOpps.filter(o => o.status === "expired").length;
+
+  // Deadline stats
+  const withDeadline = allOpps.filter(o => o.deadline);
+  const avgDeadlineDays = withDeadline.length > 0
+    ? Math.round(withDeadline.reduce((sum, o) => {
+        const posted = new Date(o.postedDate || o.scrapedAt || new Date());
+        const deadline = new Date(o.deadline!);
+        return sum + Math.max(0, (deadline.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24));
+      }, 0) / withDeadline.length)
+    : null;
+
+  return {
+    totalNotices: allOpps.length,
+    active,
+    expired,
+    topContractors,
+    typeCounts,
+    topCategories,
+    monthlyTrend,
+    avgDeadlineDays,
+    withAiSummary: allOpps.filter(o => o.aiSummary).length,
+  };
+}
+
+// ─── CONTRACTOR PROFILES ─────────────────────────────────────────
+
+export async function fetchContractorProfile(contractorName: string) {
+  const notices = await db
+    .select()
+    .from(lcsOpportunities)
+    .where(eq(lcsOpportunities.contractorName, contractorName))
+    .orderBy(desc(lcsOpportunities.postedDate));
+
+  if (notices.length === 0) return null;
+
+  // Extract unique categories
+  const categories = [...new Set(notices.map(n => n.lcaCategory).filter(Boolean))];
+  const noticeTypes = [...new Set(notices.map(n => n.noticeType).filter(Boolean))];
+
+  // Contact info from AI summaries
+  const contacts: Array<{ name?: string; email?: string; phone?: string }> = [];
+  for (const n of notices) {
+    if (n.aiSummary) {
+      try {
+        const parsed = JSON.parse(n.aiSummary);
+        if (parsed.contact_email || parsed.contact_emails || parsed.contact_name) {
+          contacts.push({
+            name: parsed.contact_name || undefined,
+            email: parsed.contact_email || (parsed.contact_emails?.[0]) || undefined,
+            phone: parsed.contact_phone || undefined,
+          });
+        }
+      } catch {}
+    }
+  }
+
+  // Deduplicate contacts by email
+  const uniqueContacts = contacts.filter((c, i, arr) =>
+    c.email ? arr.findIndex(x => x.email === c.email) === i : i === 0
+  ).slice(0, 5);
+
+  return {
+    contractorName,
+    totalNotices: notices.length,
+    activeNotices: notices.filter(n => n.status === "active").length,
+    categories,
+    noticeTypes,
+    contacts: uniqueContacts,
+    firstNotice: notices[notices.length - 1]?.postedDate,
+    latestNotice: notices[0]?.postedDate,
+    notices: notices.slice(0, 20), // Latest 20
   };
 }
