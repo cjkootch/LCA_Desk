@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { FeatureGate } from "@/components/billing/FeatureGate";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,6 +20,7 @@ import {
   Users,
   Clock,
   Search,
+  Sparkles,
 } from "lucide-react";
 import {
   fetchOpportunitiesFeed,
@@ -101,6 +101,7 @@ export default function OpportunitiesPage() {
     return true;
   });
 
+  const isPro = plan === "pro" || plan === "enterprise";
   const supplierCount = opportunities.filter((o) => o.type === "supplier").length;
   const employmentCount = opportunities.filter((o) => o.type === "employment").length;
   const activeCount = opportunities.filter((o) => o.status === "active").length;
@@ -188,6 +189,22 @@ export default function OpportunitiesPage() {
           </Button>
         </div>
 
+        {/* Upgrade banner for Starter */}
+        {!isPro && (
+          <div className="rounded-lg border border-accent/20 bg-accent-light p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bookmark className="h-5 w-5 text-accent" />
+              <div>
+                <p className="font-medium text-text-primary text-sm">Save and track opportunities</p>
+                <p className="text-xs text-text-secondary">Upgrade to Pro to bookmark opportunities and get alerts for new notices.</p>
+              </div>
+            </div>
+            <a href="/dashboard/settings/billing">
+              <Button size="sm"><Sparkles className="h-4 w-4 mr-1" />Upgrade</Button>
+            </a>
+          </div>
+        )}
+
         {/* Opportunity cards */}
         {filtered.length === 0 ? (
           <EmptyState
@@ -256,15 +273,16 @@ export default function OpportunitiesPage() {
                       </div>
 
                       <div className="flex flex-col gap-2 shrink-0">
-                        <FeatureGate planRequired="pro" featureName="Save Opportunities" currentPlan={plan}>
+                        {isPro && (
                           <Button
                             variant={isSaved ? "primary" : "outline"}
                             size="sm"
                             onClick={() => isSaved ? handleUnsave(opp.id) : handleSave(opp.id)}
+                            title={isSaved ? "Remove from saved" : "Save opportunity"}
                           >
                             {isSaved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
                           </Button>
-                        </FeatureGate>
+                        )}
                         {opp.sourceUrl && (
                           <a href={opp.sourceUrl} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="sm">
