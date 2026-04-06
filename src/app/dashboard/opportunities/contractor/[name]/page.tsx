@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fetchContractorProfile } from "@/server/actions";
 import Link from "next/link";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 
 export default function ContractorProfilePage() {
   const params = useParams();
@@ -63,9 +64,7 @@ export default function ContractorProfilePage() {
 
         {/* Header */}
         <div className="flex items-start gap-4 mb-6">
-          <div className="h-14 w-14 rounded-xl bg-accent-light flex items-center justify-center shrink-0">
-            <Building2 className="h-7 w-7 text-accent" />
-          </div>
+          <CompanyLogo companyName={profile.contractorName} size={56} className="rounded-xl" />
           <div>
             <h1 className="text-xl font-heading font-bold text-text-primary">{profile.contractorName}</h1>
             <p className="text-sm text-text-secondary">

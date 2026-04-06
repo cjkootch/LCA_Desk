@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AiSummaryPanel } from "@/components/shared/AiSummaryPanel";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import {
   fetchOpportunitiesFeed, fetchSavedOpportunities,
   saveOpportunity, unsaveOpportunity, fetchPlanAndUsage,
@@ -247,7 +248,10 @@ export default function OpportunitiesPage() {
                           <h3 className="font-semibold text-text-primary text-sm sm:text-base line-clamp-2">
                             {decodeHtml(opp.title)}
                           </h3>
-                          <p className="text-sm text-text-secondary mt-0.5">{opp.contractorName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <CompanyLogo companyName={opp.contractorName} size={20} />
+                            <p className="text-sm text-text-secondary">{opp.contractorName}</p>
+                          </div>
 
                           {/* Quick summary from AI */}
                           {parsedSummary?.scope_of_work && !isExpanded && (
