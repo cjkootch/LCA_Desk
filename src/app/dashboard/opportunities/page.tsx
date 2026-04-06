@@ -294,12 +294,21 @@ export default function OpportunitiesPage() {
               const displayName = opp.contractorName === "Unknown" && parsedSummary?.issuing_company
                 ? parsedSummary.issuing_company : opp.contractorName;
 
+              const deadlineDate = opp.deadline ? new Date(opp.deadline) : null;
+              const daysUntilDeadline = deadlineDate ? Math.ceil((deadlineDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+              const isClosingSoon = daysUntilDeadline !== null && daysUntilDeadline > 0 && daysUntilDeadline <= 7;
+
               return (
-                <Card key={opp.id} className={cn("transition-colors", isExpired && "opacity-60", isExpanded && "border-accent/30")}>
+                <Card key={opp.id} className={cn(
+                  "transition-colors",
+                  isExpired && "border-border-light bg-bg-primary/50",
+                  isExpanded && "border-accent/30",
+                  isClosingSoon && !isExpired && "border-warning/30",
+                )}>
                   <CardContent className="p-0">
                     {/* Collapsed header */}
                     <div
-                      className="p-4 sm:p-5 cursor-pointer hover:bg-bg-primary/30 transition-colors"
+                      className={cn("p-4 sm:p-5 cursor-pointer hover:bg-bg-primary/30 transition-colors", isExpired && "opacity-60")}
                       onClick={() => setExpandedId(isExpanded ? null : opp.id)}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -316,9 +325,13 @@ export default function OpportunitiesPage() {
                             <Badge variant={opp.type === "supplier" ? "accent" : "gold"}>
                               {opp.type === "supplier" ? "Procurement" : "Employment"}
                             </Badge>
-                            <Badge variant={isExpired ? "default" : "success"}>
-                              {isExpired ? "Expired" : "Active"}
-                            </Badge>
+                            {isExpired ? (
+                              <Badge variant="default" className="line-through">Closed</Badge>
+                            ) : isClosingSoon ? (
+                              <Badge variant="danger">Closing Soon</Badge>
+                            ) : (
+                              <Badge variant="success">Active</Badge>
+                            )}
                             {opp.attachmentUrl && (
                               <FileText className="h-3.5 w-3.5 text-text-muted" />
                             )}
@@ -327,7 +340,7 @@ export default function OpportunitiesPage() {
                             )}
                           </div>
 
-                          <h3 className="font-semibold text-text-primary text-sm sm:text-base line-clamp-2">
+                          <h3 className={cn("font-semibold text-sm sm:text-base line-clamp-2", isExpired ? "text-text-muted" : "text-text-primary")}>
                             {decodeHtml(opp.title)}
                           </h3>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -347,26 +360,46 @@ export default function OpportunitiesPage() {
                               <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{opp.lcaCategory}</span>
                             )}
                             {opp.postedDate && (
-                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Posted: {opp.postedDate}</span>
-                            )}
-                            {opp.deadline && (
-                              <span className={cn("flex items-center gap-1", isExpired ? "text-danger" : "text-warning")}>
-                                <Clock className="h-3 w-3" />Deadline: {opp.deadline}
-                              </span>
+                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Posted: {new Date(opp.postedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isPro && (
-                            <Button
-                              variant={isSaved ? "primary" : "outline"} size="sm"
-                              onClick={(e) => { e.stopPropagation(); isSaved ? handleUnsave(opp.id) : handleSave(opp.id); }}
-                            >
-                              {isSaved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-                            </Button>
+                        {/* Right side: closing date + actions */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {opp.deadline && (
+                            <div className={cn(
+                              "text-right px-3 py-1.5 rounded-lg",
+                              isExpired ? "bg-bg-primary" : isClosingSoon ? "bg-danger-light" : "bg-warning-light"
+                            )}>
+                              <p className="text-[10px] text-text-muted uppercase tracking-wider">
+                                {isExpired ? "Closed" : "Closes"}
+                              </p>
+                              <p className={cn(
+                                "text-sm font-semibold",
+                                isExpired ? "text-text-muted line-through" : isClosingSoon ? "text-danger" : "text-warning"
+                              )}>
+                                {new Date(opp.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </p>
+                              {!isExpired && daysUntilDeadline !== null && (
+                                <p className={cn("text-[10px] font-medium", isClosingSoon ? "text-danger" : "text-text-muted")}>
+                                  {daysUntilDeadline} day{daysUntilDeadline !== 1 ? "s" : ""} left
+                                </p>
+                              )}
+                            </div>
                           )}
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+
+                          <div className="flex items-center gap-2">
+                            {isPro && (
+                              <Button
+                                variant={isSaved ? "primary" : "outline"} size="sm"
+                                onClick={(e) => { e.stopPropagation(); isSaved ? handleUnsave(opp.id) : handleSave(opp.id); }}
+                              >
+                                {isSaved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                              </Button>
+                            )}
+                            {isExpanded ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+                          </div>
                         </div>
                       </div>
                     </div>
