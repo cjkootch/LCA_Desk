@@ -17,7 +17,7 @@ export function FeatureGate({
   children,
   currentPlan,
 }: FeatureGateProps) {
-  const planRank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
+  const planRank: Record<string, number> = { free: 0, lite: 1, starter: 1, pro: 2, enterprise: 3 };
   const hasAccess =
     (planRank[currentPlan as keyof typeof planRank] ?? 0) >=
     (planRank[planRequired] ?? 0);

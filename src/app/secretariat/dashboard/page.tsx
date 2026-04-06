@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   FileText, CheckCircle, Search, Shield, Eye,
-  AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock,
+  AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
 } from "lucide-react";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
 import { toast } from "sonner";
@@ -236,8 +236,21 @@ export default function SecretariatDashboardPage() {
                   <div className="flex justify-between"><span className="text-text-muted">Report</span><span className="font-medium">{detailData.period.reportType.replace(/_/g, " ")} — FY {detailData.period.fiscalYear}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Period</span><span>{detailData.period.periodStart} to {detailData.period.periodEnd}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Submitted</span><span>{detailData.period.submittedAt ? new Date(detailData.period.submittedAt).toLocaleString() : "—"}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">Method</span><span>{detailData.submissionMethod === "platform" ? <Badge variant="accent" className="text-[9px]">LCA Desk Platform</Badge> : <Badge variant="default" className="text-[9px]">Email</Badge>}</span></div>
+                  <div className="flex justify-between"><span className="text-text-muted">Method</span><span>{
+                    detailData.submissionMethod === "platform" ? <Badge variant="accent" className="text-[9px]">LCA Desk Platform</Badge> :
+                    detailData.submissionMethod === "upload" ? <Badge variant="accent" className="text-[9px]">File Upload</Badge> :
+                    <Badge variant="default" className="text-[9px]">Email</Badge>
+                  }</span></div>
                   {detailData.attester && <div className="flex justify-between"><span className="text-text-muted">Attested by</span><span>{detailData.attester.name} ({detailData.attester.email})</span></div>}
+                  {detailData.uploadedFile && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-muted">Attached File</span>
+                      <a href={`/api/submission/download?key=${encodeURIComponent(detailData.uploadedFile.key)}&name=${encodeURIComponent(detailData.uploadedFile.name)}`}
+                        className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium">
+                        <Download className="h-3 w-3" /> {detailData.uploadedFile.name}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Compliance metrics */}

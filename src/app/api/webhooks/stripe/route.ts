@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       if (tenant) {
         await db
           .update(tenants)
-          .set({ plan: "lite", stripeSubscriptionId: null, stripePriceId: null })
+          .set({ plan: "free", stripeSubscriptionId: null, stripePriceId: null })
           .where(eq(tenants.id, tenant.id));
       }
       break;

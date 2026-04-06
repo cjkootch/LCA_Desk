@@ -73,11 +73,12 @@ async function getSessionTenant() {
   };
 }
 
-function requirePlan(plan: string, required: "pro" | "enterprise", trialEndsAt?: Date | null) {
+function requirePlan(plan: string, required: "lite" | "pro" | "enterprise", trialEndsAt?: Date | null) {
   const effective = getEffectivePlan(plan, trialEndsAt);
-  const rank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
+  const rank: Record<string, number> = { free: 0, lite: 1, starter: 1, pro: 2, enterprise: 3 };
   if ((rank[effective.code] ?? 0) < rank[required]) {
-    throw new Error(`This feature requires the ${required === "pro" ? "Pro" : "Enterprise"} plan. Upgrade in Settings > Billing.`);
+    const planNames: Record<string, string> = { lite: "Lite", pro: "Pro", enterprise: "Enterprise" };
+    throw new Error(`This feature requires the ${planNames[required] || required} plan. Upgrade in Settings > Billing.`);
   }
 }
 
@@ -465,6 +466,90 @@ export async function attestAndSubmit(periodId: string, attestationText: string,
       });
     } catch {}
   }
+
+  return updated;
+}
+
+// Upload-based submission for free-tier users
+export async function submitWithUpload(periodId: string, attestationText: string, fileKey: string, fileName: string) {
+  const { tenantId, userId } = await getSessionTenant();
+  const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new Error("User not found");
+
+  const [current] = await db
+    .select()
+    .from(reportingPeriods)
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .limit(1);
+  if (!current) throw new Error("Period not found");
+
+  if (current.status === "submitted" || current.lockedAt) {
+    throw new Error("This period has already been submitted.");
+  }
+
+  const now = new Date();
+  const [updated] = await db
+    .update(reportingPeriods)
+    .set({
+      status: "submitted",
+      submittedAt: now,
+      attestation: attestationText,
+      attestedBy: userId,
+      attestedAt: now,
+      approvedBy: current.approvedBy || userId,
+      approvedAt: current.approvedAt || now,
+      lockedAt: now,
+      snapshotData: JSON.stringify({
+        submittedAt: now.toISOString(),
+        submittedBy: { id: userId, name: user.name },
+        attestation: attestationText,
+        uploadedFile: { key: fileKey, name: fileName },
+        submissionMethod: "upload",
+      }),
+      updatedAt: now,
+    })
+    .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+    .returning();
+
+  // Create submission log with file reference
+  await db.insert(submissionLogs).values({
+    reportingPeriodId: periodId,
+    entityId: current.entityId,
+    tenantId,
+    submittedBy: userId,
+    submissionMethod: "upload",
+    submittedToEmail: "LCA Desk Platform",
+    uploadedFileName: fileName,
+    uploadedFileKey: fileKey,
+    status: "delivered",
+  });
+
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: "submit", entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    fieldName: "status", oldValue: current.status || "not_started", newValue: "submitted",
+    metadata: { submissionMethod: "upload", fileName },
+  });
+
+  await logAudit({
+    tenantId, userId, userName: user?.name || undefined,
+    action: "lock", entityType: "reporting_period", entityId: periodId,
+    reportingPeriodId: periodId,
+    newValue: "Report locked after upload submission",
+  });
+
+  // Send confirmation
+  const [entityForEmail] = await db.select({ legalName: entities.legalName }).from(entities).where(eq(entities.id, current.entityId)).limit(1);
+  const reportTypeNames: Record<string, string> = { half_yearly_h1: "Half-Yearly (H1)", half_yearly_h2: "Half-Yearly (H2)", annual_plan: "Annual Plan", performance_report: "Performance Report" };
+  unifiedNotifyReportSubmit({
+    userId, tenantId,
+    userName: user?.name || "User",
+    entityName: entityForEmail?.legalName || "",
+    reportType: reportTypeNames[current.reportType] || current.reportType,
+    periodLabel: `${current.periodStart} to ${current.periodEnd}`,
+    recordCounts: { expenditures: 0, employment: 0, capacity: 0 },
+  });
 
   return updated;
 }
@@ -4375,8 +4460,12 @@ export async function fetchSubmissionDetail(periodId: string) {
     try { snapshot = JSON.parse(period.snapshotData as string); } catch {}
   }
 
-  // Submission method
-  const [subLog] = await db.select({ method: submissionLogs.submissionMethod })
+  // Submission method and file info
+  const [subLog] = await db.select({
+    method: submissionLogs.submissionMethod,
+    fileName: submissionLogs.uploadedFileName,
+    fileKey: submissionLogs.uploadedFileKey,
+  })
     .from(submissionLogs)
     .where(eq(submissionLogs.reportingPeriodId, periodId))
     .orderBy(desc(submissionLogs.createdAt))
@@ -4395,6 +4484,7 @@ export async function fetchSubmissionDetail(periodId: string) {
       attestedAt: period.attestedAt,
     },
     submissionMethod: subLog?.method || "email",
+    uploadedFile: subLog?.fileKey ? { key: subLog.fileKey, name: subLog.fileName } : null,
     entity: { name: entity?.legalName, type: entity?.companyType, id: entity?.id },
     tenant: { name: tenant?.name },
     attester,

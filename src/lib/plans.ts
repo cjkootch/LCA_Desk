@@ -1,4 +1,4 @@
-export type PlanCode = "lite" | "pro" | "enterprise";
+export type PlanCode = "free" | "lite" | "pro" | "enterprise";
 
 export interface PlanConfig {
   code: PlanCode;
@@ -27,10 +27,43 @@ export interface PlanConfig {
     firstConsiderationPdf: boolean;
     auditTrail: boolean;
     smartMatching: boolean;
+    fileUploadSubmit: boolean;
+    platformSubmit: boolean;
   };
 }
 
 export const PLANS: Record<PlanCode, PlanConfig> = {
+  free: {
+    code: "free",
+    name: "Free",
+    displayName: "Free",
+    price: 0,
+    annualPrice: 0,
+    perReportFee: 0,
+    entityLimit: 1,
+    teamMemberLimit: 1,
+    aiDraftsPerMonth: 0,
+    aiChatMessagesPerMonth: 0,
+    features: {
+      excelExport: false,
+      pdfExport: false,
+      complianceScan: false,
+      deadlineAlerts: true,
+      qboIntegration: false,
+      dataExtraction: false,
+      prioritySupport: false,
+      jobBoard: false,
+      supplierSearch: false,
+      saveOpportunities: false,
+      companyContacts: false,
+      marketIntelligence: false,
+      firstConsiderationPdf: false,
+      auditTrail: false,
+      smartMatching: false,
+      fileUploadSubmit: true,
+      platformSubmit: true,
+    },
+  },
   lite: {
     code: "lite",
     name: "Lite",
@@ -58,6 +91,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       firstConsiderationPdf: false,
       auditTrail: false,
       smartMatching: false,
+      fileUploadSubmit: true,
+      platformSubmit: true,
     },
   },
   pro: {
@@ -87,6 +122,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       firstConsiderationPdf: true,
       auditTrail: true,
       smartMatching: true,
+      fileUploadSubmit: true,
+      platformSubmit: true,
     },
   },
   enterprise: {
@@ -116,6 +153,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
       firstConsiderationPdf: true,
       auditTrail: true,
       smartMatching: true,
+      fileUploadSubmit: true,
+      platformSubmit: true,
     },
   },
 };
@@ -123,7 +162,7 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
 export function getPlan(code: string | null | undefined): PlanConfig {
   // Handle legacy "starter" code from existing tenant records
   if (code === "starter") return PLANS.lite;
-  return PLANS[(code as PlanCode)] ?? PLANS.lite;
+  return PLANS[(code as PlanCode)] ?? PLANS.free;
 }
 
 export function isFeatureAvailable(

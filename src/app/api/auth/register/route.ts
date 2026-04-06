@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
           name: companyName || name,
           slug,
           jurisdictionId: guyana?.id,
-          plan: "lite",
+          plan: "free",
           planEntityLimit: accountType === "others" ? 5 : 1,
           trialEndsAt,
         })

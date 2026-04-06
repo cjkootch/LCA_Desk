@@ -866,9 +866,11 @@ export const submissionLogs = pgTable("submission_logs", {
   entityId: uuid("entity_id").references(() => entities.id),
   tenantId: uuid("tenant_id").references(() => tenants.id),
   submittedBy: uuid("submitted_by").references(() => users.id),
-  submissionMethod: text("submission_method").default("email"),
+  submissionMethod: text("submission_method").default("email"), // email | platform | upload
   submittedToEmail: text("submitted_to_email"),
   emailSubject: text("email_subject"),
+  uploadedFileName: text("uploaded_file_name"),
+  uploadedFileKey: text("uploaded_file_key"), // storage key for retrieval
   status: text("status"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

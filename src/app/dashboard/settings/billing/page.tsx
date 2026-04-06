@@ -73,21 +73,24 @@ export default function BillingPage() {
     return monthlyPrice;
   };
 
-  const features: { label: string; lite: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
-    { label: "Entities", lite: "1", pro: "5", enterprise: "Unlimited" },
-    { label: "Team Members", lite: "2", pro: "10", enterprise: "Unlimited" },
-    { label: "AI Narrative Drafts", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "AI Expert Chat", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "Report Export", lite: "$25/report", pro: "Included", enterprise: "Included" },
-    { label: "AI Compliance Scan", lite: false, pro: true, enterprise: true },
-    { label: "Deadline Alerts", lite: true, pro: true, enterprise: true },
-    { label: "QuickBooks Integration", lite: false, pro: true, enterprise: true },
-    { label: "Job Board Access", lite: false, pro: true, enterprise: true },
-    { label: "Supplier Search", lite: false, pro: true, enterprise: true },
-    { label: "Market Intelligence", lite: false, pro: true, enterprise: true },
-    { label: "Audit Trail", lite: false, pro: true, enterprise: true },
-    { label: "Data Extraction (AI)", lite: false, pro: false, enterprise: true },
-    { label: "Priority Support", lite: false, pro: false, enterprise: true },
+  const features: { label: string; free: boolean | string; lite: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
+    { label: "Entities", free: "1", lite: "1", pro: "5", enterprise: "Unlimited" },
+    { label: "Team Members", free: "1", lite: "2", pro: "10", enterprise: "Unlimited" },
+    { label: "Upload & Submit", free: true, lite: true, pro: true, enterprise: true },
+    { label: "Platform Submission", free: true, lite: true, pro: true, enterprise: true },
+    { label: "Report Generation", free: false, lite: "$25/report", pro: "Included", enterprise: "Included" },
+    { label: "Data Entry & Tracking", free: false, lite: true, pro: true, enterprise: true },
+    { label: "AI Narrative Drafts", free: false, lite: false, pro: "Unlimited", enterprise: "Unlimited" },
+    { label: "AI Expert Chat", free: false, lite: false, pro: "Unlimited", enterprise: "Unlimited" },
+    { label: "AI Compliance Scan", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Deadline Alerts", free: true, lite: true, pro: true, enterprise: true },
+    { label: "QuickBooks Integration", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Job Board Access", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Supplier Search", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Market Intelligence", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Audit Trail", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Data Extraction (AI)", free: false, lite: false, pro: false, enterprise: true },
+    { label: "Priority Support", free: false, lite: false, pro: false, enterprise: true },
   ];
 
   if (loading) {
@@ -117,7 +120,7 @@ export default function BillingPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Current Usage</CardTitle>
-                <Badge variant={currentPlan.code === "lite" ? "default" : "accent"}>
+                <Badge variant={currentPlan.code === "free" || currentPlan.code === "lite" ? "default" : "accent"}>
                   {currentPlan.name} Plan
                 </Badge>
               </div>
@@ -317,7 +320,7 @@ export default function BillingPage() {
                     </li>
                   </ul>
                   {isCurrent ? (
-                    currentPlan.code !== "lite" ? (
+                    currentPlan.code !== "free" && currentPlan.code !== "lite" ? (
                       <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Manage Subscription
@@ -327,9 +330,9 @@ export default function BillingPage() {
                         Current Plan
                       </Button>
                     )
-                  ) : plan.price === 0 ? (
-                    <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
-                      Downgrade
+                  ) : plan.code === "free" ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      Free
                     </Button>
                   ) : (
                     <Button
@@ -359,17 +362,18 @@ export default function BillingPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 pr-4 font-medium text-text-secondary">Feature</th>
-                    <th className="text-center py-3 px-4 font-medium text-text-secondary">Lite</th>
-                    <th className="text-center py-3 px-4 font-medium text-accent">Pro</th>
-                    <th className="text-center py-3 px-4 font-medium text-text-secondary">Enterprise</th>
+                    <th className="text-center py-3 px-2 font-medium text-text-muted">Free</th>
+                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Lite</th>
+                    <th className="text-center py-3 px-2 font-medium text-accent">Pro</th>
+                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
                   {features.map((f) => (
                     <tr key={f.label} className="border-b border-border-light">
                       <td className="py-3 pr-4 text-text-primary">{f.label}</td>
-                      {(["lite", "pro", "enterprise"] as const).map((plan) => (
-                        <td key={plan} className="text-center py-3 px-4">
+                      {(["free", "lite", "pro", "enterprise"] as const).map((plan) => (
+                        <td key={plan} className="text-center py-3 px-2">
                           {typeof f[plan] === "boolean" ? (
                             f[plan] ? (
                               <Check className="h-4 w-4 text-success mx-auto" />
@@ -377,7 +381,7 @@ export default function BillingPage() {
                               <X className="h-4 w-4 text-text-muted mx-auto" />
                             )
                           ) : (
-                            <span className="text-text-primary font-medium">{f[plan]}</span>
+                            <span className="text-text-primary font-medium text-xs">{f[plan]}</span>
                           )}
                         </td>
                       ))}
