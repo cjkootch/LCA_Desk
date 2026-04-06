@@ -2688,6 +2688,225 @@ export async function addTicketReply(ticketId: string, message: string) {
   return reply;
 }
 
+// ─── COMPLIANCE REPORTING & ANALYTICS ────────────────────────────
+
+export async function fetchComplianceAnalytics() {
+  const { tenantId } = await getSessionTenant();
+
+  // Get all entities
+  const allEntities = await db.select().from(entities)
+    .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
+
+  // Get all periods with data
+  const allPeriods = await db.select().from(reportingPeriods)
+    .where(eq(reportingPeriods.tenantId, tenantId))
+    .orderBy(reportingPeriods.periodStart);
+
+  // Get all records across all periods
+  const allExpenditures = await db.select().from(expenditureRecords)
+    .where(eq(expenditureRecords.tenantId, tenantId));
+  const allEmployment = await db.select().from(employmentRecords)
+    .where(eq(employmentRecords.tenantId, tenantId));
+  const allCapacity = await db.select().from(capacityDevelopmentRecords)
+    .where(eq(capacityDevelopmentRecords.tenantId, tenantId));
+
+  // ── Local Content Rate by Period ──
+  const lcRateTrend = allPeriods.map(p => {
+    const periodExp = allExpenditures.filter(e => e.reportingPeriodId === p.id);
+    const total = periodExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const guyanese = periodExp.filter(e => !!e.supplierCertificateId)
+      .reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const label = p.reportType === "half_yearly_h1" ? `H1 ${p.fiscalYear}` :
+      p.reportType === "half_yearly_h2" ? `H2 ${p.fiscalYear}` :
+      `${p.fiscalYear}`;
+    return {
+      period: label,
+      periodId: p.id,
+      entityId: p.entityId,
+      totalExpenditure: total,
+      guyaneseExpenditure: guyanese,
+      lcRate: total > 0 ? Math.round((guyanese / total) * 1000) / 10 : 0,
+      status: p.status,
+    };
+  });
+
+  // ── Employment by Category across all periods ──
+  const empByCategory = ["Managerial", "Technical", "Non-Technical"].map(cat => {
+    const filtered = allEmployment.filter(e => e.employmentCategory === cat);
+    const total = filtered.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const guyanese = filtered.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+    return {
+      category: cat,
+      total,
+      guyanese,
+      pct: total > 0 ? Math.round((guyanese / total) * 1000) / 10 : 0,
+    };
+  });
+
+  // ── Employment trend by period ──
+  const empTrend = allPeriods.map(p => {
+    const periodEmp = allEmployment.filter(e => e.reportingPeriodId === p.id);
+    const total = periodEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const guyanese = periodEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+    const label = p.reportType === "half_yearly_h1" ? `H1 ${p.fiscalYear}` :
+      p.reportType === "half_yearly_h2" ? `H2 ${p.fiscalYear}` : `${p.fiscalYear}`;
+    return {
+      period: label,
+      total,
+      guyanese,
+      pct: total > 0 ? Math.round((guyanese / total) * 1000) / 10 : 0,
+    };
+  });
+
+  // ── Expenditure by sector ──
+  const sectorSpend: Record<string, number> = {};
+  for (const e of allExpenditures) {
+    const sector = e.relatedSector || "Uncategorized";
+    sectorSpend[sector] = (sectorSpend[sector] || 0) + Number(e.actualPayment || 0);
+  }
+  const topSectors = Object.entries(sectorSpend)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, amount]) => ({ name, amount }));
+
+  // ── Expenditure by payment method ──
+  const paymentMethods: Record<string, number> = {};
+  for (const e of allExpenditures) {
+    const method = e.paymentMethod || "Not specified";
+    paymentMethods[method] = (paymentMethods[method] || 0) + Number(e.actualPayment || 0);
+  }
+
+  // ── Expenditure by bank location ──
+  const bankLocations: Record<string, number> = {};
+  for (const e of allExpenditures) {
+    const loc = e.bankLocationCountry || "Not specified";
+    bankLocations[loc] = (bankLocations[loc] || 0) + Number(e.actualPayment || 0);
+  }
+
+  // ── Supplier breakdown ──
+  const guyaneseSuppliers = new Set(allExpenditures.filter(e => !!e.supplierCertificateId).map(e => e.supplierName));
+  const intlSuppliers = new Set(allExpenditures.filter(e => !e.supplierCertificateId).map(e => e.supplierName));
+
+  // ── Top suppliers by spend ──
+  const supplierSpend: Record<string, { amount: number; guyanese: boolean }> = {};
+  for (const e of allExpenditures) {
+    if (!supplierSpend[e.supplierName]) {
+      supplierSpend[e.supplierName] = { amount: 0, guyanese: !!e.supplierCertificateId };
+    }
+    supplierSpend[e.supplierName].amount += Number(e.actualPayment || 0);
+  }
+  const topSuppliers = Object.entries(supplierSpend)
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .slice(0, 10)
+    .map(([name, data]) => ({ name, amount: data.amount, guyanese: data.guyanese }));
+
+  // ── Capacity development summary ──
+  const totalTrainingSpend = allCapacity.reduce((s, c) => s + Number(c.expenditureOnCapacity || 0), 0);
+  const totalParticipants = allCapacity.reduce((s, c) => s + (c.totalParticipants || 0), 0);
+  const guyaneseParticipants = allCapacity.reduce((s, c) => s + (c.guyanaeseParticipantsOnly || 0), 0);
+  const totalTrainingDays = allCapacity.reduce((s, c) => s + (c.durationDays || 0), 0);
+
+  // ── Deadline compliance ──
+  const submittedOnTime = allPeriods.filter(p =>
+    p.status === "submitted" && p.submittedAt && new Date(p.submittedAt) <= new Date(p.dueDate)
+  ).length;
+  const submittedLate = allPeriods.filter(p =>
+    p.status === "submitted" && p.submittedAt && new Date(p.submittedAt) > new Date(p.dueDate)
+  ).length;
+  const overdue = allPeriods.filter(p =>
+    p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) < new Date()
+  ).length;
+  const upcoming = allPeriods.filter(p =>
+    p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) >= new Date()
+  ).length;
+
+  // ── Projection vs Actual ──
+  const projectionVsActual = allPeriods.map(p => {
+    const periodExp = allExpenditures.filter(e => e.reportingPeriodId === p.id);
+    const actual = periodExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const projected = periodExp.reduce((s, e) => s + Number(e.projectionNextPeriod || 0), 0);
+    const label = p.reportType === "half_yearly_h1" ? `H1 ${p.fiscalYear}` :
+      p.reportType === "half_yearly_h2" ? `H2 ${p.fiscalYear}` : `${p.fiscalYear}`;
+    return { period: label, actual, projected };
+  }).filter(p => p.actual > 0 || p.projected > 0);
+
+  // ── Entity scorecard ──
+  const entityScorecard = allEntities.map(entity => {
+    const entityPeriods = allPeriods.filter(p => p.entityId === entity.id);
+    const entityExp = allExpenditures.filter(e => e.entityId === entity.id);
+    const entityEmp = allEmployment.filter(e => e.entityId === entity.id);
+    const totalSpend = entityExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const guySpend = entityExp.filter(e => !!e.supplierCertificateId)
+      .reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const totalHead = entityEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const guyHead = entityEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+
+    return {
+      entityId: entity.id,
+      entityName: entity.legalName,
+      companyType: entity.companyType,
+      periodsCount: entityPeriods.length,
+      submittedCount: entityPeriods.filter(p => p.status === "submitted" || p.status === "acknowledged").length,
+      lcRate: totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0,
+      totalExpenditure: totalSpend,
+      totalEmployees: totalHead,
+      guyaneseEmployees: guyHead,
+      guyaneseEmployeePct: totalHead > 0 ? Math.round((guyHead / totalHead) * 1000) / 10 : 0,
+    };
+  });
+
+  // ── Hiring pipeline (from job postings) ──
+  const allJobPostings = await db.select().from(jobPostings).where(eq(jobPostings.tenantId, tenantId));
+  const totalPosted = allJobPostings.length;
+  const totalFilled = allJobPostings.filter(j => j.status === "filled").length;
+
+  let totalApplications = 0;
+  let guyaneseApplications = 0;
+  let guyaneseHired = 0;
+  for (const posting of allJobPostings) {
+    const apps = await db.select().from(jobApplications).where(eq(jobApplications.jobPostingId, posting.id));
+    totalApplications += apps.length;
+    guyaneseApplications += apps.filter(a => a.isGuyanese).length;
+    guyaneseHired += apps.filter(a => a.status === "selected" && a.isGuyanese).length;
+  }
+
+  return {
+    // Overview
+    entityCount: allEntities.length,
+    periodCount: allPeriods.length,
+    totalExpenditure: allExpenditures.reduce((s, e) => s + Number(e.actualPayment || 0), 0),
+    totalEmployees: allEmployment.reduce((s, e) => s + (e.totalEmployees || 0), 0),
+
+    // Trends
+    lcRateTrend,
+    empTrend,
+    projectionVsActual,
+
+    // Employment
+    empByCategory,
+    employmentMinimums: { managerial: 75, technical: 60, non_technical: 80 },
+
+    // Expenditure
+    topSectors,
+    topSuppliers,
+    paymentMethods,
+    bankLocations,
+    supplierCount: { guyanese: guyaneseSuppliers.size, international: intlSuppliers.size },
+
+    // Capacity
+    capacity: { totalTrainingSpend, totalParticipants, guyaneseParticipants, totalTrainingDays, activities: allCapacity.length },
+
+    // Deadline compliance
+    deadlineCompliance: { submittedOnTime, submittedLate, overdue, upcoming },
+
+    // Entity scorecard
+    entityScorecard,
+
+    // Hiring pipeline
+    hiringPipeline: { totalPosted, totalFilled, totalApplications, guyaneseApplications, guyaneseHired },
+  };
+}
+
 // ─── COMPANY PROFILES ────────────────────────────────────────────
 
 function slugify(name: string): string {
