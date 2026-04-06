@@ -754,6 +754,48 @@ export const submissionLogs = pgTable("submission_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── SUPPORT TICKETS ────────────────────────────────────────────
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+    subject: text("subject").notNull(),
+    description: text("description").notNull(),
+    category: text("category").default("general"), // general | bug | feature | billing | filing
+    priority: text("priority").default("normal"), // low | normal | high | urgent
+    status: text("status").default("open"), // open | in_progress | resolved | closed
+    screenshotUrls: text("screenshot_urls"), // JSON array of URLs
+    pageUrl: text("page_url"), // which page the user was on
+    userAgent: text("user_agent"),
+    adminNotes: text("admin_notes"),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedBy: uuid("resolved_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("support_tickets_user_idx").on(table.userId),
+    index("support_tickets_status_idx").on(table.status),
+  ]
+);
+
+export const ticketReplies = pgTable(
+  "ticket_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticketId: uuid("ticket_id").notNull().references(() => supportTickets.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    message: text("message").notNull(),
+    isAdmin: boolean("is_admin").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("ticket_replies_ticket_idx").on(table.ticketId),
+  ]
+);
+
 // ─── AUDIT LOG ──────────────────────────────────────────────────
 export const auditLogs = pgTable(
   "audit_logs",
