@@ -444,6 +444,8 @@ export const lcsRegister = pgTable(
     website: text("website"),
     phone: text("phone"),
     serviceCategories: text("service_categories").array(),
+    pageContent: text("page_content"),
+    aiSummary: text("ai_summary"),
     country: text("country").default("GY"),
     scrapedAt: timestamp("scraped_at").defaultNow(),
     scrapeError: text("scrape_error"),
