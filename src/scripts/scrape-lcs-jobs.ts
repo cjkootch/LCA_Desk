@@ -266,7 +266,9 @@ async function main() {
     try {
       const job = await scrapeJobDetail(slug);
       if (job) {
-        const status = job.closingDate && new Date(job.closingDate) < new Date() ? "closed" : "open";
+        const validClosing = job.closingDate && /^\d{4}-\d{2}-\d{2}$/.test(job.closingDate) ? job.closingDate : undefined;
+        const validPosted = job.postedDate && /^\d{4}-\d{2}-\d{2}$/.test(job.postedDate) ? job.postedDate : undefined;
+        const status = validClosing && new Date(validClosing) < new Date() ? "closed" : "open";
         await db.insert(lcsEmploymentNotices).values({
           companyName: job.companyName,
           companySlug: job.companySlug,
@@ -276,8 +278,8 @@ async function main() {
           description: job.description,
           qualifications: job.qualifications,
           location: job.location,
-          closingDate: job.closingDate ?? undefined,
-          postedDate: job.postedDate ?? undefined,
+          closingDate: validClosing,
+          postedDate: validPosted,
           sourceUrl: job.sourceUrl,
           sourceSlug: job.sourceSlug,
           attachmentUrl: job.attachmentUrl,
@@ -293,8 +295,8 @@ async function main() {
             description: job.description,
             qualifications: job.qualifications,
             location: job.location,
-            closingDate: job.closingDate ?? undefined,
-            postedDate: job.postedDate ?? undefined,
+            closingDate: validClosing,
+            postedDate: validPosted,
             attachmentUrl: job.attachmentUrl,
             attachmentUrls: job.attachmentUrls,
             pageContent: job.pageContent,
@@ -442,14 +444,14 @@ Return ONLY JSON.`,
           }
 
           if (summary.closing_date && !job.closingDate) {
-            const normalized = normalizeDate(summary.closing_date);
-            if (normalized) {
+            const normalized = normalizeDate(String(summary.closing_date));
+            if (normalized && /^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
               try {
                 await db.update(lcsEmploymentNotices).set({
                   closingDate: normalized,
                   status: new Date(normalized) < new Date() ? "closed" : "open",
                 }).where(eq(lcsEmploymentNotices.id, job.id));
-              } catch {}
+              } catch { /* invalid date despite validation — skip */ }
             }
           }
           console.log(`${tag} 🤖 ${summary.company_name || job.companyName} — ${job.jobTitle.slice(0, 40)}`);
@@ -457,7 +459,14 @@ Return ONLY JSON.`,
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.log(`${tag} ❌  ${msg.slice(0, 60)} — ${job.sourceSlug}`);
+        // If it's a DB error, try saving just the aiSummary as a fallback
+        if (msg.includes("Failed query")) {
+          try {
+            const aiText2 = `AI analysis completed but DB update failed: ${msg.slice(0, 100)}`;
+            await db.update(lcsEmploymentNotices).set({ aiSummary: aiText2, updatedAt: new Date() }).where(eq(lcsEmploymentNotices.id, job.id));
+          } catch {}
+        }
+        console.log(`${tag} ❌  ${msg.slice(0, 80)} — ${job.sourceSlug}`);
       }
 
       await sleep(1500);
