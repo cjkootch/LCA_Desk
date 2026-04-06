@@ -252,7 +252,14 @@ async function main() {
     const slug = slugs[i];
     const tag = `[${String(i + 1).padStart(4, " ")}/${slugs.length}]`;
     const profile = await scrapeProfile(slug);
-    await upsertProfile(db, profile);
+    try {
+      await upsertProfile(db, profile);
+    } catch (dbErr) {
+      errors++;
+      console.log(`${tag} ❌  ${slug} — DB error: ${dbErr instanceof Error ? dbErr.message.slice(0, 60) : "unknown"}`);
+      await sleep(2000); // wait a bit on DB errors
+      continue;
+    }
 
     if (profile.scrapeError) { errors++; console.log(`${tag} ❌  ${slug} — ${profile.scrapeError}`); }
     else if (!profile.certId) { noCert++; console.log(`${tag} ⚠   ${profile.legalName} (no cert ID)`); }
