@@ -424,30 +424,34 @@ Return ONLY JSON.`,
         if (jsonMatch) {
           const summary = JSON.parse(jsonMatch[0]);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const updates: Record<string, any> = {
+          // Save AI summary first (always safe — it's just text)
+          await db.update(lcsEmploymentNotices).set({
             aiSummary: JSON.stringify(summary),
             updatedAt: new Date(),
-          };
+          }).where(eq(lcsEmploymentNotices.id, job.id));
 
+          // Then try updating other fields individually so one bad value doesn't block the rest
           if (job.companyName === "Unknown" && summary.company_name) {
-            updates.companyName = summary.company_name;
-            const slugMatch = matchCompany(summary.company_name);
-            if (slugMatch) {
-              updates.companyName = slugMatch.name;
-              updates.companySlug = slugMatch.slug;
-            }
+            try {
+              const slugMatch = matchCompany(summary.company_name);
+              await db.update(lcsEmploymentNotices).set({
+                companyName: slugMatch?.name || summary.company_name,
+                companySlug: slugMatch?.slug || null,
+              }).where(eq(lcsEmploymentNotices.id, job.id));
+            } catch {}
           }
 
           if (summary.closing_date && !job.closingDate) {
             const normalized = normalizeDate(summary.closing_date);
             if (normalized) {
-              updates.closingDate = normalized;
-              updates.status = new Date(normalized) < new Date() ? "closed" : "open";
+              try {
+                await db.update(lcsEmploymentNotices).set({
+                  closingDate: normalized,
+                  status: new Date(normalized) < new Date() ? "closed" : "open",
+                }).where(eq(lcsEmploymentNotices.id, job.id));
+              } catch {}
             }
           }
-
-          await db.update(lcsEmploymentNotices).set(updates).where(eq(lcsEmploymentNotices.id, job.id));
           console.log(`${tag} 🤖 ${updates.companyName || job.companyName} — ${job.jobTitle.slice(0, 40)}`);
           aiOk++;
         }
