@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
@@ -16,6 +17,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-J4T660ZKK3"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-J4T660ZKK3');`}
+        </Script>
+      </head>
       <body className="min-h-full flex flex-col antialiased bg-bg-primary text-text-primary font-body">
         <SessionProvider>
           {children}
