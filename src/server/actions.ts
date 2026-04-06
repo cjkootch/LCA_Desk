@@ -3788,3 +3788,123 @@ export async function seedLcaCourse() {
 
   return course.id;
 }
+
+export async function seedPlatformCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "mastering-lca-desk")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "mastering-lca-desk",
+    title: "Mastering LCA Desk",
+    description: "Learn how to use every feature of LCA Desk — from filing your first report to managing your entire compliance workflow. Required for new team members.",
+    audience: "filer",
+    moduleCount: 8,
+    badgeLabel: "Platform Certified",
+    badgeColor: "gold",
+    estimatedMinutes: 45,
+  }).returning();
+
+  const moduleData = [
+    {
+      title: "Getting Started: Dashboard & Navigation",
+      content: `## Your Dashboard\n\nWhen you log in, the dashboard shows your **Compliance Health Score** — a 0-100 score based on your Local Content Rate and employment percentages.\n\n## Key Dashboard Elements\n- **Compliance Health Widget** — Your LC rate, employment breakdown vs LCA minimums, supplier cert expiry warnings\n- **Upcoming Deadlines** — Filing dates with countdown\n- **Recent Activity** — What your team has done recently\n- **Entity Cards** — Each company you file for\n\n## Sidebar Navigation\nThe sidebar is organized into four sections:\n- **Compliance** — Entities, Log Payment, Reports, Calendar\n- **Workforce** — Employees, Jobs, Talent Pool\n- **Market** — Opportunities, Companies, Suppliers\n- **Resources** — Training, LCA Expert, Support, Settings\n\n## First Steps\n1. Add your first entity (company)\n2. Create a reporting period\n3. Start entering expenditure data`,
+      quiz: [
+        { question: "What does the Compliance Health Score measure?", options: ["Revenue", "LC rate + employment percentages", "Number of employees", "Number of reports filed"], correctIndex: 1 },
+        { question: "Where do you add a new company to file for?", options: ["Settings", "Entities", "Reports", "Calendar"], correctIndex: 1 },
+        { question: "How many sidebar sections are there?", options: ["2", "3", "4", "5"], correctIndex: 2 },
+        { question: "What's the first thing a new user should do?", options: ["Run a report", "Add an entity", "Change settings", "Export data"], correctIndex: 1 },
+        { question: "The Calendar section shows:", options: ["Holidays", "Filing deadlines with countdown", "Team birthdays", "Meeting schedule"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Entities & Reporting Periods",
+      content: `## What is an Entity?\n\nAn entity represents a company or subsidiary that has LCA filing obligations. Each entity files its own reports.\n\n## Creating an Entity\nGo to **Entities** in the sidebar → click **Add Entity**. Fill in:\n- Legal name (must match LCS registration)\n- Company type (Contractor, Sub-Contractor, Licensee)\n- Contact information\n- LCS Certificate ID (if applicable)\n\n## Starting a Report\nFrom the entity detail page, click **Start New Report**. Select:\n- **Report type**: H1 Half-Yearly, H2 Half-Yearly, Annual Plan, or Performance Report\n- **Fiscal year**: The year being reported on\n- Dates auto-fill based on LCA filing calendar\n\n## Reporting Periods\n- H1 (Jan–Jun) — due July 30\n- H2 (Jul–Dec) — due January 30 of next year\n- When you submit one period, the next is auto-created\n\n## Filing Workflow\nEach period follows these steps:\n1. Company Info (auto-filled from entity)\n2. Expenditure records\n3. Employment records\n4. Capacity Development records\n5. AI Narrative drafts\n6. Review & Compliance Check\n7. Export & Submit`,
+      quiz: [
+        { question: "An entity represents:", options: ["A user account", "A company with filing obligations", "A report", "A supplier"], correctIndex: 1 },
+        { question: "H1 reports cover which months?", options: ["Jan–Mar", "Jan–Jun", "Jul–Dec", "Jan–Dec"], correctIndex: 1 },
+        { question: "When is the H2 report due?", options: ["December 31", "January 30 of next year", "July 30", "March 31"], correctIndex: 1 },
+        { question: "How many steps are in the filing workflow?", options: ["3", "5", "7", "10"], correctIndex: 2 },
+        { question: "After submitting H1, what happens?", options: ["Nothing", "Account is locked", "H2 is auto-created", "You must call the Secretariat"], correctIndex: 2 },
+      ],
+    },
+    {
+      title: "Expenditure & Supplier Management",
+      content: `## Recording Expenditure\n\nThe expenditure sub-report tracks all procurement spending. Each record includes:\n- Type of item procured (Goods or Services)\n- Related LCA sector category\n- Supplier name and LCS Certificate ID\n- Actual payment amount\n- Payment method and bank location\n\n## Supplier Auto-Suggest\nWhen typing a supplier name, LCA Desk searches the **787+ LCS-registered companies** and auto-fills the certificate ID. This saves time and ensures accuracy.\n\n## Local Content Rate\nYour LC Rate = (Guyanese supplier spend ÷ Total spend) × 100%\n\nA supplier counts as "Guyanese" if they have a valid LCS Certificate ID.\n\n## Log Payment (Between Filings)\nUse **Log Payment** in the sidebar to record supplier payments as they happen throughout the quarter. These entries show your running LC rate and can be imported into the formal filing period.\n\n## CSV Import\nHave data in a spreadsheet? Click **Import CSV** on the expenditure page to bulk-upload records.\n\n## Supplier Directory\nBrowse the **Suppliers** page to find LCS-registered companies by name or category.`,
+      quiz: [
+        { question: "How many LCS-registered companies are in the auto-suggest?", options: ["100+", "500+", "787+", "1000+"], correctIndex: 2 },
+        { question: "A supplier counts as Guyanese if they have:", options: ["A Guyana address", "A valid LCS Certificate ID", "Guyanese employees", "Been in business 5+ years"], correctIndex: 1 },
+        { question: "What is the Log Payment feature for?", options: ["Paying bills", "Recording payments between filing periods", "Invoicing customers", "Payroll"], correctIndex: 1 },
+        { question: "LC Rate formula is:", options: ["Employees ÷ Total × 100", "Guyanese spend ÷ Total spend × 100", "Reports filed ÷ Due × 100", "Suppliers ÷ Total × 100"], correctIndex: 1 },
+        { question: "CSV Import is used to:", options: ["Export data", "Bulk-upload records from a spreadsheet", "Create reports", "Send emails"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Employment & Workforce Compliance",
+      content: `## Recording Employment Data\n\nThe employment sub-report tracks your workforce by category. Each record includes:\n- Job title\n- Employment category (Managerial, Technical, Non-Technical)\n- ISCO-08 classification code\n- Total employees in this role\n- Number of Guyanese employed\n- Remuneration data\n\n## LCA Employment Minimums\n- **Managerial**: 75% Guyanese\n- **Technical**: 60% Guyanese\n- **Non-Technical**: 80% Guyanese\n\nThe sidebar shows pass/fail indicators for each category.\n\n## Jobs Board\nPost positions through **Jobs** in the sidebar. Each posting:\n- Auto-generates a Guyanese First Consideration statement (Section 12)\n- Links to an entity for employment reporting\n- Tracks applications with status pipeline\n\n## Talent Pool\nSearch the **Talent Pool** for Guyanese candidates who've opted in. Filter by skills, category, experience. Contact info requires Pro plan.\n\n## Hire → Employee Flow\nWhen you hire an applicant:\n1. Click "Hire" on their application\n2. Select the entity to assign them to\n3. An employee record is auto-created with Guyanese status pre-filled\n4. The record appears in your next employment filing`,
+      quiz: [
+        { question: "What is the Guyanese minimum for Technical roles?", options: ["50%", "60%", "75%", "80%"], correctIndex: 1 },
+        { question: "When you hire an applicant, what happens?", options: ["Nothing automatically", "Employee record is auto-created", "You must manually add them", "An email is sent to the Secretariat"], correctIndex: 1 },
+        { question: "The Jobs board auto-generates:", options: ["A job description", "A Guyanese First Consideration statement", "An employment contract", "A salary offer"], correctIndex: 1 },
+        { question: "ISCO-08 is:", options: ["A safety certification", "An occupation classification system", "A tax code", "A company registration number"], correctIndex: 1 },
+        { question: "Talent Pool contact info requires:", options: ["Lite plan", "Pro plan", "Enterprise plan", "No plan needed"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "AI Features: Narrative Drafting & Expert Chat",
+      content: `## AI Narrative Drafting\n\nThe LCA requires written narratives for each sub-report. LCA Desk generates these using AI:\n\n1. Go to the **Narrative** step in your filing workflow\n2. Click **Generate** for each section (Expenditure, Employment, Capacity)\n3. The AI analyzes your actual data and writes a compliant narrative\n4. Edit as needed, then save\n\nAll three narratives must be completed before the filing can be submitted.\n\n## LCA Expert Chat\n\nThe **LCA Expert** in the sidebar is an AI assistant that knows:\n- The complete Local Content Act 2021\n- Your actual compliance data (LC rate, employment percentages, deadlines)\n- LCS guidelines and templates\n\nAsk it things like:\n- "Am I on track for H2?"\n- "Which employment categories am I below minimum?"\n- "When is my next filing due?"\n- "What is Section 12 of the LCA?"\n\nIt gives personalized answers using your real numbers.\n\n## AI Compliance Scan\nOn the **Review** page, the AI scans your entire filing for compliance issues before submission.`,
+      quiz: [
+        { question: "How many narrative sections must be completed?", options: ["1", "2", "3", "5"], correctIndex: 2 },
+        { question: "The LCA Expert knows your:", options: ["Only the Act text", "Actual compliance data and the Act", "Nothing about your data", "Only deadlines"], correctIndex: 1 },
+        { question: "AI narratives are generated from:", options: ["Template text", "Your actual filing data", "Previous reports", "Manual input only"], correctIndex: 1 },
+        { question: "The AI Compliance Scan runs on which page?", options: ["Dashboard", "Entities", "Review", "Settings"], correctIndex: 2 },
+        { question: "Which AI model powers narrative drafting?", options: ["GPT-4", "Claude (Anthropic)", "Gemini", "Llama"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Review, Export & Submission",
+      content: `## Review & Validation\n\nBefore exporting, the **Review** page runs compliance checks:\n- Are all sections populated?\n- Do employment percentages meet LCA minimums?\n- Are supplier certificate IDs valid?\n- Are narratives complete?\n\n## Export Files\nTwo files are generated for the Secretariat:\n1. **Excel Report** — Matches the official LCS Template v4.1\n2. **PDF Narrative** — Comparative Analysis Report with signature block\n\n## Submission Workflow\nLCA Desk uses a formal workflow:\n1. **Draft** → data entry in progress\n2. **In Review** → "Send for Review" marks it for internal review\n3. **Approved** → "Approve" confirms it's ready\n4. **Submitted** → Attest and submit (locks the report)\n\n## Attestation\nBefore submitting, you must check the attestation box:\n> "I certify that the information contained in this report is true, accurate, and complete... penalties of up to GY$50,000,000."\n\n## After Submission\n- Report is **locked** (read-only)\n- A **data snapshot** is saved\n- A **submission receipt** PDF is downloadable\n- The **next period** is auto-created\n- A **confirmation email** is sent\n- All changes are logged in the **audit trail**`,
+      quiz: [
+        { question: "How many files are submitted to the Secretariat?", options: ["1", "2", "3", "4"], correctIndex: 1 },
+        { question: "After submission, the report is:", options: ["Editable", "Locked (read-only)", "Deleted", "Sent automatically"], correctIndex: 1 },
+        { question: "The attestation references penalties of up to:", options: ["GY$1M", "GY$10M", "GY$50M", "GY$100M"], correctIndex: 2 },
+        { question: "What happens to the next filing period?", options: ["Nothing", "You must create it manually", "It's auto-created", "It's assigned to a different user"], correctIndex: 2 },
+        { question: "The audit trail records:", options: ["Only submissions", "All changes to all records", "Only login events", "Nothing"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Reports, Calendar & Notifications",
+      content: `## Compliance Reports\n\nThe **Reports** page shows analytics across all your entities:\n- LC Rate trend over time\n- Employment by category vs LCA minimums\n- Top suppliers by spend (with LCS badges)\n- Expenditure by sector\n- Filing compliance (on-time vs late vs overdue)\n- Capacity development investment\n- Hiring pipeline (posted → applied → hired)\n- Entity compliance scorecard\n\n## Calendar\nThe **Calendar** shows all filing deadlines. You can:\n- Export to Outlook/Google Calendar (ICS download)\n- Deadlines include 14-day and 7-day reminders\n\n## Notifications\nLCA Desk sends notifications via:\n- **In-app** — bell icon in the top bar\n- **Email** — automated via Resend\n\nNotification types:\n- Deadline reminders (30, 14, 7, 3, 1 days)\n- Application received / status changed\n- Report submitted confirmation\n- Supplier cert expiry warnings\n\n## Weekly Digest\nEvery Monday, a digest email summarizes:\n- Your LC rate and employment %\n- Upcoming deadlines\n- New opportunities matching your categories\n- Expiring supplier certs\n\nManage preferences in **Settings → Notifications**.`,
+      quiz: [
+        { question: "The weekly digest is sent on:", options: ["Friday", "Monday", "Daily", "Monthly"], correctIndex: 1 },
+        { question: "Calendar deadlines can be exported as:", options: ["PDF", "CSV", "ICS (calendar file)", "Excel"], correctIndex: 2 },
+        { question: "Deadline reminders are sent at:", options: ["Only on due date", "30, 14, 7, 3, 1 days before", "Weekly only", "Never"], correctIndex: 1 },
+        { question: "The Reports page shows:", options: ["Only financial data", "Analytics across all entities", "Only deadlines", "Tax information"], correctIndex: 1 },
+        { question: "Notification preferences are managed in:", options: ["Dashboard", "Calendar", "Settings → Notifications", "Support"], correctIndex: 2 },
+      ],
+    },
+    {
+      title: "Opportunities, Companies & Market Intelligence",
+      content: `## Opportunities Feed\n\nThe **Opportunities** page shows 190+ procurement notices scraped from the LCS Register. Each notice includes:\n- AI-generated summary (scope, requirements, deadlines)\n- Company logo and contact info\n- Embedded PDF viewer for original documents\n- Save/bookmark functionality (Pro plan)\n\nFilter by: type, status, company, notice type, AI analyzed. Sort by: newest, oldest, deadline, company.\n\n## Company Directory\n**Companies** shows 700+ profiles auto-generated from:\n- LCS procurement notices\n- Employment postings\n- LCS Register (certified suppliers)\n\nEach profile aggregates opportunities, jobs, contact info, and categories. Companies can **claim their profile** to manage it.\n\n## Market Intelligence\nClick **Market Intelligence** on the Opportunities page for:\n- Top contractors by activity\n- Notice type distribution\n- Monthly activity trends\n- Procurement categories\n\n## Contractor Profiles\nClick any company to see:\n- All their procurement notices and job postings\n- Contact info (Pro plan)\n- LCS registration details\n- Service categories`,
+      quiz: [
+        { question: "How many procurement notices are in the feed?", options: ["50+", "100+", "190+", "500+"], correctIndex: 2 },
+        { question: "Company profiles are generated from:", options: ["User submissions only", "LCS Register + opportunities + jobs", "Government data only", "Manual entry"], correctIndex: 1 },
+        { question: "Companies can do what with their profile?", options: ["Delete it", "Claim it", "Hide it", "Sell it"], correctIndex: 1 },
+        { question: "Saving opportunities requires:", options: ["Free account", "Pro plan", "Enterprise plan", "No account"], correctIndex: 1 },
+        { question: "How many company profiles are in the directory?", options: ["100+", "300+", "500+", "700+"], correctIndex: 3 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < moduleData.length; i++) {
+    const m = moduleData[i];
+    await db.insert(courseModules).values({
+      courseId: course.id,
+      orderIndex: i + 1,
+      title: m.title,
+      content: m.content,
+      quizQuestions: JSON.stringify(m.quiz),
+    });
+  }
+
+  return course.id;
+}

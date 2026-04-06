@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { GraduationCap, BookOpen, CheckCircle, Clock, ArrowRight, Trophy } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse } from "@/server/actions";
 import Link from "next/link";
 import { toast } from "sonner";
 

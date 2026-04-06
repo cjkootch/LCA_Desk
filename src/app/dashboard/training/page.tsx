@@ -10,7 +10,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, Users, Trophy,
   ArrowRight, Shield,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse, fetchTeamMembers } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, fetchTeamMembers } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -33,10 +33,11 @@ export default function TrainingPage() {
   const handleSeed = async () => {
     try {
       await seedLcaCourse();
+      await seedPlatformCourse();
       const c = await fetchCourses("filer");
       setCourseList(c);
-      toast.success("LCA Fundamentals course created");
-    } catch { toast.error("Failed to create course"); }
+      toast.success("Training courses created");
+    } catch { toast.error("Failed to create courses"); }
   };
 
   if (loading) {
