@@ -35,7 +35,7 @@ import {
   lcsRegister,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
-import { getPlan } from "@/lib/plans";
+import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -61,13 +61,15 @@ async function getSessionTenant() {
     tenantId: membership.tenantId,
     tenant: membership.tenant,
     role: membership.role,
-    plan: (membership.tenant.plan as string) || "starter",
+    plan: (membership.tenant.plan as string) || "lite",
+    trialEndsAt: membership.tenant.trialEndsAt ?? null,
   };
 }
 
-function requirePlan(plan: string, required: "pro" | "enterprise") {
-  const rank = { starter: 0, pro: 1, enterprise: 2 };
-  if ((rank[plan as keyof typeof rank] ?? 0) < rank[required]) {
+function requirePlan(plan: string, required: "pro" | "enterprise", trialEndsAt?: Date | null) {
+  const effective = getEffectivePlan(plan, trialEndsAt);
+  const rank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
+  if ((rank[effective.code] ?? 0) < rank[required]) {
     throw new Error(`This feature requires the ${required === "pro" ? "Pro" : "Enterprise"} plan. Upgrade in Settings > Billing.`);
   }
 }
@@ -1060,9 +1062,10 @@ export async function deleteChatConversation(conversationId: string) {
 // ─── PLAN & USAGE ────────────────────────────────────────────────
 export async function fetchPlanAndUsage() {
   const { tenantId, tenant } = await getSessionTenant();
-  const plan = tenant.plan || "starter";
+  const plan = tenant.plan || "lite";
+  const trialEndsAt = tenant.trialEndsAt ?? null;
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+  const currentMonth = new Date().toISOString().slice(0, 7);
 
   const [usage] = await db
     .select()
@@ -1075,23 +1078,22 @@ export async function fetchPlanAndUsage() {
     )
     .limit(1);
 
-  // Count entities and team members
   const entityCount = (
-    await db
-      .select()
-      .from(entities)
+    await db.select().from(entities)
       .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)))
   ).length;
 
   const memberCount = (
-    await db
-      .select()
-      .from(tenantMembers)
+    await db.select().from(tenantMembers)
       .where(eq(tenantMembers.tenantId, tenantId))
   ).length;
 
   return {
     plan,
+    trialEndsAt,
+    isInTrial: isInTrial(trialEndsAt),
+    trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),
+    effectivePlan: getEffectivePlan(plan, trialEndsAt).code,
     usage: {
       aiDraftsUsed: usage?.aiDraftsUsed || 0,
       aiChatMessagesUsed: usage?.aiChatMessagesUsed || 0,
@@ -1105,9 +1107,9 @@ export async function fetchPlanAndUsage() {
 export async function incrementUsage(
   type: "aiDraftsUsed" | "aiChatMessagesUsed"
 ) {
-  const { tenantId, plan } = await getSessionTenant();
+  const { tenantId, plan, trialEndsAt } = await getSessionTenant();
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const planConfig = getPlan(plan);
+  const planConfig = getEffectivePlan(plan, trialEndsAt);
   const limitKey = type === "aiDraftsUsed" ? "aiDraftsPerMonth" : "aiChatMessagesPerMonth";
   const limit = planConfig[limitKey];
 

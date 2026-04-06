@@ -43,8 +43,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
     aiDraftsPerMonth: 0,
     aiChatMessagesPerMonth: 0,
     features: {
-      excelExport: false,
-      pdfExport: false,
+      excelExport: true,  // included at $25/report fee
+      pdfExport: true,    // included at $25/report fee
       complianceScan: false,
       deadlineAlerts: true,
       qboIntegration: false,
@@ -149,4 +149,30 @@ export function hasPerReportFee(planCode: string | null | undefined): boolean {
 
 export function getPerReportFee(planCode: string | null | undefined): number {
   return getPlan(planCode).perReportFee;
+}
+
+export function getEffectivePlan(
+  planCode: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined
+): PlanConfig {
+  if (trialEndsAt && new Date(trialEndsAt) > new Date()) {
+    return PLANS.pro;
+  }
+  return getPlan(planCode);
+}
+
+export function isInTrial(
+  trialEndsAt: Date | string | null | undefined
+): boolean {
+  if (!trialEndsAt) return false;
+  return new Date(trialEndsAt) > new Date();
+}
+
+export function getTrialDaysRemaining(
+  trialEndsAt: Date | string | null | undefined
+): number | null {
+  if (!trialEndsAt) return null;
+  const ms = new Date(trialEndsAt).getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }

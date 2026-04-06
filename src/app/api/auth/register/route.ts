@@ -118,13 +118,18 @@ export async function POST(req: NextRequest) {
         .replace(/[\s_]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
       const [tenant] = await db
         .insert(tenants)
         .values({
           name: companyName || name,
           slug,
           jurisdictionId: guyana?.id,
+          plan: "lite",
           planEntityLimit: accountType === "others" ? 5 : 1,
+          trialEndsAt,
         })
         .returning();
 
