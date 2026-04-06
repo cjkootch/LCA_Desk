@@ -12,10 +12,10 @@ import { LocalContentRateCard } from "@/components/reporting/LocalContentRateCar
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Plus, Receipt } from "lucide-react";
+import { Plus, Receipt, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { calculateLocalContentRate } from "@/lib/compliance/calculators";
-import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure, updateExpenditure } from "@/server/actions";
+import { fetchEntity, fetchExpenditures, addExpenditure, removeExpenditure, updateExpenditure, checkPeriodLocked } from "@/server/actions";
 import { RELATED_SECTORS } from "@/lib/compliance/sectors";
 import type { ExpenditureRecord } from "@/types/database.types";
 
@@ -54,6 +54,8 @@ export default function ExpenditurePage() {
   const [editRecord, setEditRecord] = useState<ExpenditureRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const loadData = async () => {
     const [entity, rawRecords] = await Promise.all([
@@ -62,6 +64,7 @@ export default function ExpenditurePage() {
     ]);
     setEntityName(entity?.legalName || "");
     setRecords(rawRecords.map((r) => mapExpenditure(r as unknown as Record<string, unknown>)));
+    checkPeriodLocked(periodId).then(setLocked).catch(() => {});
     setLoading(false);
   };
 
@@ -81,13 +84,19 @@ export default function ExpenditurePage() {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await removeExpenditure(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      await removeExpenditure(deleteTarget);
+      setRecords((prev) => prev.filter((r) => r.id !== deleteTarget));
       toast.success("Record deleted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
+    setDeleteTarget(null);
   };
 
   const handleEdit = async (data: Record<string, unknown>) => {
@@ -113,9 +122,16 @@ export default function ExpenditurePage() {
   return (
     <div>
       <TopBar title={`${entityName} — Expenditure`} />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
+        {locked && (
+          <div className="rounded-lg border border-warning/30 bg-warning-light p-3 mb-4 flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+            <span className="text-text-secondary">This report has been submitted and is read-only.</span>
+          </div>
+        )}
         <PageHeader title="Expenditure Sub-Report" description="Record all procurement and supplier expenditure for this reporting period."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Expenditure" }]}>
+          {!locked && (
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -123,6 +139,7 @@ export default function ExpenditurePage() {
               <ExpenditureForm sectorOptions={RELATED_SECTORS} onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
             </DialogContent>
           </Dialog>
+          )}
         </PageHeader>
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="expenditure" completedSteps={completedSteps} />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -130,7 +147,9 @@ export default function ExpenditurePage() {
             {records.length === 0 ? (
               <EmptyState icon={Receipt} title="No expenditure records" description="Add your first expenditure record to start tracking supplier procurement." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
-              <ExpenditureTable records={records} onDelete={handleDelete} onEdit={(r) => setEditRecord(r)} />
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <ExpenditureTable records={records} onDelete={locked ? () => {} : handleDelete} onEdit={locked ? () => {} : (r) => setEditRecord(r)} />
+              </div>
             )}
           </div>
           <div><LocalContentRateCard metrics={metrics} /></div>
@@ -164,6 +183,23 @@ export default function ExpenditurePage() {
                 loading={saving}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation */}
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Delete Record
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-text-secondary">Are you sure you want to delete this expenditure record? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

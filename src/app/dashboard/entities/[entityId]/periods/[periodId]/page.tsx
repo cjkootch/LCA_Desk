@@ -7,9 +7,12 @@ import { TopBar } from "@/components/layout/TopBar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PeriodChecklist } from "@/components/reporting/PeriodChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ArrowRight, Receipt, Users, GraduationCap, FileText, Send } from "lucide-react";
 import { format } from "date-fns";
 import { fetchEntity, fetchPeriod } from "@/server/actions";
+import Link from "next/link";
 import type { PeriodStatus } from "@/types/database.types";
 
 export default function PeriodOverviewPage() {
@@ -46,7 +49,7 @@ export default function PeriodOverviewPage() {
           { label: "Filing" },
         ]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="company_info" completedSteps={completedSteps} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
             <CardContent>
@@ -65,6 +68,35 @@ export default function PeriodOverviewPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Next Steps */}
+        <h3 className="text-sm font-heading font-semibold text-text-primary mb-3">Next Steps</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: "Expenditure", description: "Record supplier payments", icon: Receipt, href: "expenditure", step: "expenditure" },
+            { label: "Employment", description: "Enter workforce data", icon: Users, href: "employment", step: "employment" },
+            { label: "Capacity", description: "Log training activities", icon: GraduationCap, href: "capacity", step: "capacity" },
+            { label: "Review & Export", description: "Validate and submit", icon: Send, href: "review", step: "review" },
+          ].map((item) => {
+            const done = completedSteps.includes(item.step);
+            return (
+              <Link key={item.href} href={`/dashboard/entities/${entityId}/periods/${periodId}/${item.href}`}>
+                <Card className={`hover:border-accent/30 transition-colors cursor-pointer h-full ${done ? "border-success/20 bg-success-light/30" : ""}`}>
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${done ? "bg-success-light" : "bg-bg-primary"}`}>
+                      <item.icon className={`h-5 w-5 ${done ? "text-success" : "text-text-muted"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text-primary">{item.label}</p>
+                      <p className="text-xs text-text-muted">{item.description}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-text-muted shrink-0 mt-1" />
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

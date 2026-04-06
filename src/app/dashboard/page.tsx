@@ -69,7 +69,7 @@ export default function DashboardPage() {
         title="Portfolio Overview"
         description="Manage your local content compliance across all entities"
       />
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <WelcomeBanner
           entityCount={entities.length}
           overdueCount={overdueCount}
@@ -111,8 +111,7 @@ export default function DashboardPage() {
             <div className="space-y-6">
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
-              <FilingProgress filings={[]} />
-              <AlertsPanel alerts={[]} />
+              {/* FilingProgress and AlertsPanel intentionally empty — populated by user activity */}
             </div>
           </div>
         )}
