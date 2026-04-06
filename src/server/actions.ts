@@ -4296,3 +4296,156 @@ export async function addSecretariatMember(officeId: string, email: string, role
 
   await db.insert(secretariatMembers).values({ officeId, userId: user.id, role });
 }
+
+export async function fetchSubmissionDetail(periodId: string) {
+  await getSecretariatContext(); // auth check
+
+  const [period] = await db.select().from(reportingPeriods)
+    .where(eq(reportingPeriods.id, periodId)).limit(1);
+  if (!period) throw new Error("Submission not found");
+
+  const [entity] = await db.select().from(entities)
+    .where(eq(entities.id, period.entityId)).limit(1);
+  const [tenant] = await db.select().from(tenants)
+    .where(eq(tenants.id, period.tenantId)).limit(1);
+
+  // Get actual records (live data)
+  const expenditures = await db.select().from(expenditureRecords)
+    .where(eq(expenditureRecords.reportingPeriodId, periodId));
+  const employment = await db.select().from(employmentRecords)
+    .where(eq(employmentRecords.reportingPeriodId, periodId));
+  const capacity = await db.select().from(capacityDevelopmentRecords)
+    .where(eq(capacityDevelopmentRecords.reportingPeriodId, periodId));
+
+  // Calculate metrics
+  const totalSpend = expenditures.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const guySpend = expenditures.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const lcRate = totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0;
+
+  const totalEmp = employment.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+  const guyEmp = employment.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+  const empPct = totalEmp > 0 ? Math.round((guyEmp / totalEmp) * 1000) / 10 : 0;
+
+  const byCategory = (cat: string) => {
+    const filtered = employment.filter(e => e.employmentCategory === cat);
+    const total = filtered.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+    const gy = filtered.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+    return { total, guyanese: gy, pct: total > 0 ? Math.round((gy / total) * 1000) / 10 : 0 };
+  };
+
+  // Supplier breakdown
+  const guySuppliers = new Set(expenditures.filter(e => !!e.supplierCertificateId).map(e => e.supplierName)).size;
+  const intlSuppliers = new Set(expenditures.filter(e => !e.supplierCertificateId).map(e => e.supplierName)).size;
+
+  // Previous submissions for this entity
+  const history = await db.select({
+    id: reportingPeriods.id,
+    reportType: reportingPeriods.reportType,
+    fiscalYear: reportingPeriods.fiscalYear,
+    status: reportingPeriods.status,
+    submittedAt: reportingPeriods.submittedAt,
+  }).from(reportingPeriods)
+    .where(and(eq(reportingPeriods.entityId, period.entityId), eq(reportingPeriods.status, "submitted")))
+    .orderBy(desc(reportingPeriods.submittedAt))
+    .limit(10);
+
+  // Attestation info
+  let attester = null;
+  if (period.attestedBy) {
+    const [u] = await db.select({ name: users.name, email: users.email })
+      .from(users).where(eq(users.id, period.attestedBy)).limit(1);
+    attester = u;
+  }
+
+  // Snapshot data (frozen at submission time)
+  let snapshot = null;
+  if (period.snapshotData) {
+    try { snapshot = JSON.parse(period.snapshotData as string); } catch {}
+  }
+
+  return {
+    period: {
+      id: period.id,
+      reportType: period.reportType,
+      periodStart: period.periodStart,
+      periodEnd: period.periodEnd,
+      fiscalYear: period.fiscalYear,
+      status: period.status,
+      submittedAt: period.submittedAt,
+      attestation: period.attestation,
+      attestedAt: period.attestedAt,
+    },
+    entity: { name: entity?.legalName, type: entity?.companyType, id: entity?.id },
+    tenant: { name: tenant?.name },
+    attester,
+    metrics: {
+      lcRate,
+      totalExpenditure: totalSpend,
+      guyaneseExpenditure: guySpend,
+      totalEmployees: totalEmp,
+      guyaneseEmployees: guyEmp,
+      employmentPct: empPct,
+      managerial: byCategory("Managerial"),
+      technical: byCategory("Technical"),
+      nonTechnical: byCategory("Non-Technical"),
+      guyaneseSuppliers: guySuppliers,
+      internationalSuppliers: intlSuppliers,
+      expenditureRecords: expenditures.length,
+      employmentRecords: employment.length,
+      capacityRecords: capacity.length,
+    },
+    records: {
+      expenditures: expenditures.map(e => ({
+        supplier: e.supplierName, amount: Number(e.actualPayment || 0),
+        sector: e.relatedSector, certId: e.supplierCertificateId,
+      })),
+      employment: employment.map(e => ({
+        title: e.jobTitle, category: e.employmentCategory,
+        total: e.totalEmployees, guyanese: e.guyanaeseEmployed,
+      })),
+    },
+    history,
+    snapshotRecordCounts: snapshot?.recordCounts || null,
+  };
+}
+
+export async function fetchSecretariatAnalytics() {
+  await getSecretariatContext();
+
+  // All submitted periods with data
+  const allSubmitted = await db.select({
+    id: reportingPeriods.id,
+    entityId: reportingPeriods.entityId,
+    tenantId: reportingPeriods.tenantId,
+  }).from(reportingPeriods)
+    .where(eq(reportingPeriods.status, "submitted"))
+    .limit(500);
+
+  const allExp = await db.select().from(expenditureRecords).limit(5000);
+  const allEmp = await db.select().from(employmentRecords).limit(5000);
+
+  // Aggregate LC rate across all filers
+  const totalSpend = allExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const guySpend = allExp.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const overallLcRate = totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0;
+
+  // Aggregate employment
+  const totalEmp = allEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+  const guyEmp = allEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+
+  // Unique filers
+  const uniqueTenants = new Set(allSubmitted.map(p => p.tenantId)).size;
+  const uniqueEntities = new Set(allSubmitted.map(p => p.entityId)).size;
+
+  return {
+    totalSubmissions: allSubmitted.length,
+    uniqueFilers: uniqueTenants,
+    uniqueEntities: uniqueEntities,
+    overallLcRate,
+    totalExpenditure: totalSpend,
+    guyaneseExpenditure: guySpend,
+    totalEmployees: totalEmp,
+    guyaneseEmployees: guyEmp,
+    employmentPct: totalEmp > 0 ? Math.round((guyEmp / totalEmp) * 1000) / 10 : 0,
+  };
+}
