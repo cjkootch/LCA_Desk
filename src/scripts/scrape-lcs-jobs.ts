@@ -440,8 +440,11 @@ Return ONLY JSON.`,
           }
 
           if (summary.closing_date && !job.closingDate) {
-            updates.closingDate = summary.closing_date;
-            updates.status = new Date(summary.closing_date) < new Date() ? "closed" : "open";
+            const normalized = normalizeDate(summary.closing_date);
+            if (normalized) {
+              updates.closingDate = normalized;
+              updates.status = new Date(normalized) < new Date() ? "closed" : "open";
+            }
           }
 
           await db.update(lcsEmploymentNotices).set(updates).where(eq(lcsEmploymentNotices.id, job.id));
