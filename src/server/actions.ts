@@ -235,6 +235,16 @@ export async function addPeriod(data: {
   fiscal_year: number;
 }) {
   const { tenantId } = await getSessionTenant();
+
+  // Validate jurisdiction is configured before creating period
+  const jCode = await getEntityJurisdictionCode(data.entity_id);
+  try {
+    const { assertJurisdictionReady } = await import("@/lib/compliance/validate-jurisdictions");
+    assertJurisdictionReady(jCode);
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : "Jurisdiction not configured");
+  }
+
   const [period] = await db
     .insert(reportingPeriods)
     .values({
