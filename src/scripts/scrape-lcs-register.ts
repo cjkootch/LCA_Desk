@@ -291,7 +291,7 @@ async function main() {
       serviceCategories: lcsRegister.serviceCategories,
     }).from(lcsRegister).limit(2000);
 
-    const needsEnrichment = allCompanies.filter(c => !c.aiSummary && c.pageContent);
+    const needsEnrichment = allCompanies.filter(c => !c.aiSummary);
     console.log(`  Found ${needsEnrichment.length} companies needing AI enrichment\n`);
 
     let aiOk = 0;
@@ -300,20 +300,22 @@ async function main() {
       const tag = `[${String(i + 1).padStart(4, " ")}/${needsEnrichment.length}]`;
 
       try {
+        const context = [
+          `Company: ${company.legalName}`,
+          company.certId ? `LCS Certificate: ${company.certId}` : null,
+          company.status ? `Registration Status: ${company.status}` : null,
+          company.serviceCategories?.length ? `Service Categories: ${company.serviceCategories.join(", ")}` : null,
+          company.pageContent ? `\nProfile page content:\n${company.pageContent}` : null,
+        ].filter(Boolean).join("\n");
+
         const response = await claude.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 512,
           messages: [{
             role: "user",
-            content: `Analyze this LCS-registered company profile from Guyana's petroleum sector.
+            content: `Analyze this LCS-registered company from Guyana's petroleum sector. Based on the company name, service categories, and any available profile data, provide a structured analysis.
 
-Company: ${company.legalName}
-Cert: ${company.certId || "N/A"}
-Status: ${company.status || "N/A"}
-Categories: ${company.serviceCategories?.join(", ") || "N/A"}
-
-Profile page content:
-${company.pageContent}
+${context}
 
 Return JSON:
 {
