@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchOpportunityAnalytics } from "@/server/actions";
 import Link from "next/link";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 
 export default function OpportunityAnalyticsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,6 +99,7 @@ export default function OpportunityAnalyticsPage() {
                   <Link key={c.name} href={`/dashboard/opportunities/contractor/${encodeURIComponent(c.name)}`}>
                     <div className="flex items-center gap-3 py-1.5 hover:bg-bg-primary rounded px-2 -mx-2 transition-colors cursor-pointer">
                       <span className="text-xs text-text-muted w-5 text-right">{i + 1}</span>
+                      <CompanyLogo companyName={c.name} size={24} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-text-primary truncate">{c.name}</p>
                         <div className="w-full bg-border-light rounded-full h-1.5 mt-1">

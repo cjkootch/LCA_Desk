@@ -13,6 +13,7 @@ import {
   Mail,
 } from "lucide-react";
 import { AiSummaryPanel } from "@/components/shared/AiSummaryPanel";
+import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import { fetchSeekerOpportunities, seekerSaveOpportunity, seekerUnsaveOpportunity, fetchMySavedOpportunities } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -146,7 +147,7 @@ export default function SeekerOpportunitiesPage() {
 
                             <h3 className="text-sm font-medium text-text-primary line-clamp-2">{decodeHtml(opp.title)}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                              <Building2 className="h-3 w-3 text-text-muted" />
+                              <CompanyLogo companyName={opp.contractorName} size={18} />
                               <span className="text-xs text-text-secondary">{opp.contractorName}</span>
                             </div>
 
