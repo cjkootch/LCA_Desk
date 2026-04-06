@@ -9,7 +9,7 @@ import { ComplianceCalendar } from "@/components/dashboard/ComplianceCalendar";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { UsageBanner } from "@/components/billing/UsageBanner";
+
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
@@ -77,7 +77,7 @@ export default function DashboardPage() {
           dueSoonCount={dueSoonCount}
         />
 
-        <UsageBanner />
+
 
         <StatsBar
           totalEntities={entities.length}

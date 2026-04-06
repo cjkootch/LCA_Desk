@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
 
 export default function DashboardLayout({
@@ -39,6 +40,7 @@ export default function DashboardLayout({
           </button>
           <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
         </div>
+        <div className="px-4 sm:px-8 pt-4"><UsageBanner /></div>
         {children}
       </main>
       <OnboardingTour />
