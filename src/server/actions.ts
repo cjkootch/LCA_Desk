@@ -34,6 +34,9 @@ import {
   lcsEmploymentNotices,
   lcsRegister,
   paymentLog,
+  courses,
+  courseModules,
+  userCourseProgress,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
@@ -3586,4 +3589,202 @@ export async function toggleProfileVisibility(visible: boolean) {
   }).where(eq(jobSeekerProfiles.userId, session.user.id));
 
   return visible;
+}
+
+// ─── LEARNING / TRAINING SYSTEM ──────────────────────────────────
+
+export async function fetchCourses(audience?: "seeker" | "filer" | "all") {
+  const allCourses = await db.select().from(courses).where(eq(courses.active, true)).limit(50);
+  if (audience) return allCourses.filter(c => c.audience === audience || c.audience === "all");
+  return allCourses;
+}
+
+export async function fetchCourseWithModules(courseSlug: string) {
+  const [course] = await db.select().from(courses).where(eq(courses.slug, courseSlug)).limit(1);
+  if (!course) return null;
+
+  const modules = await db.select().from(courseModules)
+    .where(eq(courseModules.courseId, course.id))
+    .orderBy(courseModules.orderIndex);
+
+  // Get user progress if authenticated
+  const session = await auth();
+  let progress: Array<{ moduleId: string | null; status: string | null; quizScore: number | null; completedAt: Date | null; badgeEarnedAt: Date | null }> = [];
+  if (session?.user?.id) {
+    progress = await db.select({
+      moduleId: userCourseProgress.moduleId,
+      status: userCourseProgress.status,
+      quizScore: userCourseProgress.quizScore,
+      completedAt: userCourseProgress.completedAt,
+      badgeEarnedAt: userCourseProgress.badgeEarnedAt,
+    }).from(userCourseProgress)
+      .where(and(eq(userCourseProgress.userId, session.user.id), eq(userCourseProgress.courseId, course.id)));
+  }
+
+  return { course, modules, progress };
+}
+
+export async function completeModule(courseId: string, moduleId: string, quizScore: number) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Check if module's quiz was passed
+  const [mod] = await db.select({ passingScore: courseModules.passingScore })
+    .from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
+  const passed = quizScore >= (mod?.passingScore || 80);
+  if (!passed) return { passed: false, score: quizScore, required: mod?.passingScore || 80 };
+
+  // Upsert progress
+  const [existing] = await db.select({ id: userCourseProgress.id })
+    .from(userCourseProgress)
+    .where(and(
+      eq(userCourseProgress.userId, session.user.id),
+      eq(userCourseProgress.courseId, courseId),
+      eq(userCourseProgress.moduleId, moduleId),
+    )).limit(1);
+
+  if (existing) {
+    await db.update(userCourseProgress).set({
+      status: "completed", quizScore, completedAt: new Date(), updatedAt: new Date(),
+    }).where(eq(userCourseProgress.id, existing.id));
+  } else {
+    await db.insert(userCourseProgress).values({
+      userId: session.user.id, courseId, moduleId,
+      status: "completed", quizScore, completedAt: new Date(),
+    });
+  }
+
+  // Check if all modules complete → award badge
+  const allModules = await db.select({ id: courseModules.id })
+    .from(courseModules).where(eq(courseModules.courseId, courseId));
+  const completedModules = await db.select({ moduleId: userCourseProgress.moduleId })
+    .from(userCourseProgress)
+    .where(and(
+      eq(userCourseProgress.userId, session.user.id),
+      eq(userCourseProgress.courseId, courseId),
+      eq(userCourseProgress.status, "completed"),
+    ));
+
+  const allComplete = allModules.every(m => completedModules.some(c => c.moduleId === m.id));
+  if (allComplete) {
+    // Award badge — update all progress records for this course
+    await db.update(userCourseProgress).set({ badgeEarnedAt: new Date() })
+      .where(and(eq(userCourseProgress.userId, session.user.id), eq(userCourseProgress.courseId, courseId)));
+  }
+
+  return { passed: true, score: quizScore, badgeEarned: allComplete };
+}
+
+export async function fetchUserBadges(userId?: string) {
+  const session = await auth();
+  const uid = userId || session?.user?.id;
+  if (!uid) return [];
+
+  const badges = await db.select({
+    courseId: userCourseProgress.courseId,
+    badgeEarnedAt: userCourseProgress.badgeEarnedAt,
+    badgeLabel: courses.badgeLabel,
+    badgeColor: courses.badgeColor,
+    courseTitle: courses.title,
+  })
+    .from(userCourseProgress)
+    .innerJoin(courses, eq(userCourseProgress.courseId, courses.id))
+    .where(and(eq(userCourseProgress.userId, uid), sql`${userCourseProgress.badgeEarnedAt} IS NOT NULL`))
+    .limit(20);
+
+  // Deduplicate by courseId
+  const seen = new Set<string>();
+  return badges.filter(b => {
+    if (seen.has(b.courseId)) return false;
+    seen.add(b.courseId);
+    return true;
+  });
+}
+
+export async function seedLcaCourse() {
+  // Check if already seeded
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "lca-fundamentals")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "lca-fundamentals",
+    title: "LCA Fundamentals",
+    description: "Understand Guyana's Local Content Act 2021 — the legal framework, filing obligations, employment requirements, and your rights as a Guyanese national in the petroleum sector.",
+    audience: "all",
+    moduleCount: 5,
+    badgeLabel: "LCA Certified",
+    badgeColor: "accent",
+    estimatedMinutes: 30,
+  }).returning();
+
+  const moduleData = [
+    {
+      title: "Understanding the Local Content Act 2021",
+      content: `## What is the Local Content Act?\n\nThe Local Content Act No. 18 of 2021 is Guyana's landmark legislation ensuring that Guyanese citizens and companies benefit from the country's petroleum sector.\n\n## Key Objectives\n- Maximize the use of Guyanese labour, services, and goods\n- Develop local capacity and skills\n- Ensure transparency in procurement\n- Create meaningful economic participation for Guyanese\n\n## Who Does It Apply To?\nThe Act applies to all **Contractors**, **Sub-Contractors**, and **Licensees** operating in Guyana's petroleum sector. This includes international companies like ExxonMobil, Halliburton, and their supply chains.\n\n## The Local Content Secretariat\nThe Secretariat, under the Ministry of Natural Resources, oversees compliance. Reports are submitted to **localcontent@nre.gov.gy**.`,
+      quiz: [
+        { question: "What year was the Local Content Act enacted?", options: ["2019", "2020", "2021", "2022"], correctIndex: 2 },
+        { question: "Who oversees LCA compliance?", options: ["EPA", "Ministry of Finance", "Local Content Secretariat", "Bank of Guyana"], correctIndex: 2 },
+        { question: "The LCA applies to which sector?", options: ["Mining", "Agriculture", "Petroleum", "All sectors"], correctIndex: 2 },
+        { question: "Which of these must comply with the LCA?", options: ["Only Guyanese companies", "Only foreign companies", "Contractors, Sub-Contractors, and Licensees", "Only ExxonMobil"], correctIndex: 2 },
+        { question: "Reports are submitted to which email?", options: ["lca@gov.gy", "localcontent@nre.gov.gy", "reports@petroleum.gov.gy", "compliance@guyana.gov.gy"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Employment Categories & Requirements",
+      content: `## Employment Under the LCA\n\nSection 12 requires that **first consideration** be given to Guyanese nationals for all positions.\n\n## Employment Categories\nThe LCA tracks employment in three categories:\n\n### Managerial (Minimum 75% Guyanese)\nSenior management, directors, department heads.\n\n### Technical (Minimum 60% Guyanese)\nEngineers, geologists, technicians, skilled specialists.\n\n### Non-Technical (Minimum 80% Guyanese)\nAdministrative, clerical, support staff, logistics.\n\n## ISCO-08 Classification\nAll positions must be classified using the International Standard Classification of Occupations (ISCO-08) in reports.\n\n## Equal Pay (Section 18)\nGuyanese nationals must receive equal pay for work of equal value compared to non-Guyanese counterparts.`,
+      quiz: [
+        { question: "What is the minimum Guyanese percentage for Managerial roles?", options: ["60%", "70%", "75%", "80%"], correctIndex: 2 },
+        { question: "What classification system is used for employment?", options: ["SOC", "NAICS", "ISCO-08", "ISIC"], correctIndex: 2 },
+        { question: "Section 18 guarantees Guyanese nationals:", options: ["Priority hiring", "Equal pay", "Free training", "Management roles"], correctIndex: 1 },
+        { question: "Which category requires 80% Guyanese employment?", options: ["Managerial", "Technical", "Non-Technical", "All categories"], correctIndex: 2 },
+        { question: "'First consideration' means:", options: ["Must hire only Guyanese", "Guyanese must be considered before others", "Pay Guyanese more", "Train Guyanese first"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "The LCS Register & Supplier Certification",
+      content: `## What is the LCS Register?\n\nThe Local Content Secretariat maintains a register of certified Guyanese suppliers at **lcregister.petroleum.gov.gy**.\n\n## LCS Certificate\nTo count as a \"Guyanese supplier\" for compliance purposes, a company must hold a valid LCS Certificate (format: LCSR-XXXXXXXX).\n\n## Why It Matters\n- Contractors track their **Local Content Rate** — the percentage of expenditure going to LCS-certified suppliers\n- Higher LC rates mean better compliance scores\n- The Secretariat reviews these numbers in Half-Yearly Reports\n\n## Service Categories\nThe register covers 40+ categories including:\n- Engineering and Machining\n- Construction\n- Transportation\n- Catering and Food Services\n- Environmental Services\n- And many more\n\n## How to Get Registered\nApply through the Secretariat with your business registration, TIN, and proof of Guyanese ownership.`,
+      quiz: [
+        { question: "What format is the LCS Certificate ID?", options: ["LCS-001", "LCSR-XXXXXXXX", "GY-CERT-001", "LC-2021-001"], correctIndex: 1 },
+        { question: "Where is the LCS Register hosted?", options: ["lcadesk.com", "nre.gov.gy", "lcregister.petroleum.gov.gy", "guyana.gov.gy"], correctIndex: 2 },
+        { question: "Local Content Rate measures:", options: ["Employee satisfaction", "Percentage of Guyanese employees", "Percentage of spend with LCS-certified suppliers", "Number of suppliers"], correctIndex: 2 },
+        { question: "How many service categories does the register cover?", options: ["10+", "20+", "40+", "100+"], correctIndex: 2 },
+        { question: "To count as a Guyanese supplier, a company needs:", options: ["A Guyana address", "A valid LCS Certificate", "Guyanese employees", "Government approval"], correctIndex: 1 },
+      ],
+    },
+    {
+      title: "Rights & Protections for Workers",
+      content: `## Your Rights Under the LCA\n\nAs a worker in Guyana's petroleum sector, the LCA provides specific protections.\n\n## First Consideration (Section 12)\nEvery employer must give first consideration to qualified Guyanese nationals. This means:\n- Job postings must be advertised locally\n- Guyanese candidates must be evaluated before international candidates\n- Employers must document their hiring rationale\n\n## Equal Pay (Section 18)\nGuyanese nationals must receive the same compensation as non-Guyanese workers performing the same or equivalent work.\n\n## Capacity Development (Section 19)\nEmployers must invest in training and skills development for Guyanese workers, including:\n- On-the-job training\n- Scholarships and bursaries\n- Technology transfer programs\n\n## Penalties for Non-Compliance\n- Fines: GY$1,000,000 to GY$50,000,000\n- False submissions: Criminal offense under Section 23\n- The Secretariat can audit at any time`,
+      quiz: [
+        { question: "What is the maximum fine for LCA non-compliance?", options: ["GY$1M", "GY$10M", "GY$50M", "GY$100M"], correctIndex: 2 },
+        { question: "False submissions are:", options: ["A warning offense", "A civil penalty", "A criminal offense", "Not penalized"], correctIndex: 2 },
+        { question: "Section 19 requires employers to invest in:", options: ["Equipment", "Capacity development for Guyanese", "Government programs", "Environmental protection"], correctIndex: 1 },
+        { question: "Equal pay is guaranteed by which section?", options: ["Section 12", "Section 18", "Section 19", "Section 23"], correctIndex: 1 },
+        { question: "Job postings must be:", options: ["In English only", "Advertised internationally first", "Advertised locally", "Approved by the Secretariat"], correctIndex: 2 },
+      ],
+    },
+    {
+      title: "Guyana's Petroleum Sector Overview",
+      content: `## The Stabroek Block\n\nGuyana's petroleum industry is centered on the Stabroek Block, operated by ExxonMobil Guyana Limited with Hess and CNOOC as co-venturers.\n\n## Key Facts\n- First oil: December 2019 (Liza Phase 1)\n- Current production: 600,000+ barrels per day\n- Multiple FPSOs operating: Liza Destiny, Liza Unity, Prosperity, Yellowtail\n- Estimated recoverable resources: 11+ billion barrels\n\n## Major Companies in Guyana\n- **Operators**: ExxonMobil, Hess, CNOOC, TotalEnergies, CGX\n- **Service Companies**: Halliburton, SLB, Baker Hughes, TechnipFMC, Saipem\n- **Support**: GYSBI (shore base), SBM Offshore (FPSOs), Stena Drilling\n\n## Economic Impact\n- Thousands of direct and indirect jobs\n- Growing local supply chain\n- Sovereign wealth fund (Natural Resource Fund)\n\n## Your Role\nWhether you're a job seeker, supplier, or compliance professional, understanding this ecosystem is key to participating in Guyana's economic transformation.`,
+      quiz: [
+        { question: "Who operates the Stabroek Block?", options: ["Halliburton", "ExxonMobil Guyana Limited", "TotalEnergies", "Petrobras"], correctIndex: 1 },
+        { question: "When was Guyana's first oil?", options: ["2017", "2018", "2019", "2020"], correctIndex: 2 },
+        { question: "What does FPSO stand for?", options: ["First Petroleum Supply Operation", "Floating Production Storage and Offloading", "Federal Petroleum Safety Office", "Fixed Platform Shore Operations"], correctIndex: 1 },
+        { question: "GYSBI provides:", options: ["Drilling services", "Shore base operations", "Legal services", "Banking services"], correctIndex: 1 },
+        { question: "Guyana's estimated recoverable oil resources are:", options: ["1 billion barrels", "5 billion barrels", "11+ billion barrels", "50 billion barrels"], correctIndex: 2 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < moduleData.length; i++) {
+    const m = moduleData[i];
+    await db.insert(courseModules).values({
+      courseId: course.id,
+      orderIndex: i + 1,
+      title: m.title,
+      content: m.content,
+      quizQuestions: JSON.stringify(m.quiz),
+    });
+  }
+
+  return course.id;
 }

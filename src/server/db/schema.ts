@@ -872,6 +872,71 @@ export const submissionLogs = pgTable("submission_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── LEARNING / TRAINING ────────────────────────────────────────
+export const courses = pgTable(
+  "courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").unique().notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    audience: text("audience").notNull(), // seeker | filer | all
+    moduleCount: integer("module_count").default(0),
+    badgeLabel: text("badge_label"), // e.g. "LCA Certified"
+    badgeColor: text("badge_color").default("accent"), // accent | gold | success
+    estimatedMinutes: integer("estimated_minutes"),
+    mandatory: boolean("mandatory").default(false), // admin can toggle
+    active: boolean("active").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+  }
+);
+
+export const courseModules = pgTable(
+  "course_modules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseId: uuid("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+    orderIndex: integer("order_index").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(), // markdown
+    quizQuestions: text("quiz_questions"), // JSON array of { question, options[], correctIndex }
+    passingScore: integer("passing_score").default(80), // percent
+  }
+);
+
+export const userCourseProgress = pgTable(
+  "user_course_progress",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+    moduleId: uuid("module_id").references(() => courseModules.id),
+    status: text("status").default("not_started"), // not_started | in_progress | completed
+    quizScore: integer("quiz_score"),
+    completedAt: timestamp("completed_at"),
+    badgeEarnedAt: timestamp("badge_earned_at"), // set when all modules complete
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("user_progress_user_idx").on(table.userId),
+    index("user_progress_course_idx").on(table.courseId),
+  ]
+);
+
+// ─── TENANT TRAINING CONFIG ─────────────────────────────────────
+export const tenantTrainingConfig = pgTable(
+  "tenant_training_config",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+    mandatory: boolean("mandatory").default(false),
+    requiredForRoles: text("required_for_roles"), // JSON: ["member", "owner"] or null for all
+    createdAt: timestamp("created_at").defaultNow(),
+  }
+);
+
 // ─── PAYMENT LOG (Lightweight procurement tracker) ──────────────
 export const paymentLog = pgTable(
   "payment_log",

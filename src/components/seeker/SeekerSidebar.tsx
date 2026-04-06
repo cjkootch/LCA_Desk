@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles } from "lucide-react";
+import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Find Jobs", href: "/seeker/jobs", icon: Search },
   { label: "My Applications", href: "/seeker/applications", icon: FileText },
   { label: "Resume Builder", href: "/seeker/resume", icon: Sparkles },
+  { label: "Learn", href: "/seeker/learn", icon: GraduationCap },
   { label: "Opportunities", href: "/seeker/opportunities", icon: Megaphone },
   { label: "Saved", href: "/seeker/saved", icon: Bookmark },
   { label: "My Profile", href: "/seeker/profile", icon: User },
