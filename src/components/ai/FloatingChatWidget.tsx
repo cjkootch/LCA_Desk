@@ -2,12 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, X, Send, Sparkles, Minimize2, Maximize2 } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, Minimize2, Maximize2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface FloatingChatWidgetProps {
+  endpoint?: string;
+  title?: string;
+  subtitle?: string;
+  quickQuestions?: string[];
+  accentColor?: string;
+  icon?: React.ElementType;
+  pageContext?: string;
 }
 
 function renderInline(text: string, key: string): React.ReactNode[] {
@@ -40,13 +50,21 @@ function renderMarkdown(text: string): React.ReactNode {
   });
 }
 
-const QUICK_QUESTIONS = [
+const DEFAULT_QUICK_QUESTIONS = [
   "What are my filing deadlines?",
   "What's my current LC rate?",
   "Which employment categories am I below minimum?",
 ];
 
-export function FloatingChatWidget() {
+export function FloatingChatWidget({
+  endpoint = "/api/ai/chat",
+  title = "LCA Expert",
+  subtitle = "AI-powered compliance assistant",
+  quickQuestions = DEFAULT_QUICK_QUESTIONS,
+  accentColor = "bg-accent",
+  icon: IconComponent = Sparkles,
+  pageContext,
+}: FloatingChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,17 +83,24 @@ export function FloatingChatWidget() {
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
+
+    // Prepend page context if available
+    const contextPrefix = pageContext
+      ? `[The user is currently viewing: ${pageContext}]\n\n`
+      : "";
+
     const userMsg: Message = { role: "user", content: text.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    const apiMessages = [...messages, { role: "user" as const, content: contextPrefix + text.trim() }];
+    const displayMessages = [...messages, userMsg];
+    setMessages(displayMessages);
     setInput("");
     setStreaming(true);
 
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
       if (!res.ok) throw new Error();
       const reader = res.body?.getReader();
@@ -83,29 +108,27 @@ export function FloatingChatWidget() {
 
       const decoder = new TextDecoder();
       let accumulated = "";
-      setMessages([...newMessages, { role: "assistant", content: "" }]);
+      setMessages([...displayMessages, { role: "assistant", content: "" }]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         accumulated += decoder.decode(value, { stream: true });
-        setMessages([...newMessages, { role: "assistant", content: accumulated }]);
+        setMessages([...displayMessages, { role: "assistant", content: accumulated }]);
       }
     } catch {
-      setMessages([...newMessages, { role: "assistant", content: "Sorry, I couldn't process that. Please try again." }]);
+      setMessages([...displayMessages, { role: "assistant", content: "Sorry, I couldn't process that. Please try again." }]);
     }
     setStreaming(false);
-  }, [messages, streaming]);
+  }, [messages, streaming, endpoint, pageContext]);
 
-  // Floating button when closed
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-accent text-white shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:scale-105 transition-all flex items-center justify-center group"
-        title="Ask the LCA Expert"
-      >
-        <Sparkles className="h-6 w-6 group-hover:scale-110 transition-transform" />
+      <button onClick={() => setOpen(true)}
+        className={cn("fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group", accentColor)}
+        style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}
+        title={`Ask ${title}`}>
+        <IconComponent className="h-6 w-6 group-hover:scale-110 transition-transform" />
       </button>
     );
   }
@@ -113,21 +136,19 @@ export function FloatingChatWidget() {
   return (
     <div className={cn(
       "fixed z-50 bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200",
-      expanded
-        ? "bottom-4 right-4 w-[480px] h-[600px]"
-        : "bottom-6 right-6 w-[380px] h-[500px]"
+      expanded ? "bottom-4 right-4 w-[480px] h-[600px]" : "bottom-6 right-6 w-[380px] h-[500px]"
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-accent text-white shrink-0">
+      <div className={cn("flex items-center justify-between px-4 py-3 border-b border-border text-white shrink-0", accentColor)}>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
+          <IconComponent className="h-4 w-4" />
           <div>
-            <p className="text-sm font-semibold">LCA Expert</p>
-            <p className="text-[10px] text-white/70">AI-powered compliance assistant</p>
+            <p className="text-sm font-semibold">{title}</p>
+            <p className="text-[10px] text-white/70">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title={expanded ? "Minimize" : "Expand"}>
+          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -140,11 +161,11 @@ export function FloatingChatWidget() {
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 ? (
           <div className="text-center py-6">
-            <Sparkles className="h-8 w-8 text-accent mx-auto mb-3 opacity-50" />
-            <p className="text-sm font-medium text-text-primary mb-1">Ask anything about the LCA</p>
-            <p className="text-[11px] text-text-muted mb-4">I have access to your compliance data</p>
+            <IconComponent className="h-8 w-8 text-accent mx-auto mb-3 opacity-50" />
+            <p className="text-sm font-medium text-text-primary mb-1">Ask anything</p>
+            <p className="text-[11px] text-text-muted mb-4">{subtitle}</p>
             <div className="space-y-1.5">
-              {QUICK_QUESTIONS.map(q => (
+              {quickQuestions.map(q => (
                 <button key={q} onClick={() => sendMessage(q)}
                   className="w-full text-left text-xs px-3 py-2 rounded-lg border border-border hover:border-accent/30 hover:bg-bg-primary transition-colors text-text-secondary">
                   {q}
@@ -157,9 +178,7 @@ export function FloatingChatWidget() {
             <div key={i} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "")}>
               <div className={cn(
                 "rounded-xl px-3 py-2 max-w-[85%] text-xs leading-relaxed",
-                msg.role === "user"
-                  ? "bg-accent text-white"
-                  : "bg-bg-primary border border-border text-text-primary"
+                msg.role === "user" ? cn(accentColor, "text-white") : "bg-bg-primary border border-border text-text-primary"
               )}>
                 {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
                 {msg.role === "assistant" && streaming && i === messages.length - 1 && (

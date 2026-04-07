@@ -58,7 +58,15 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         {children}
       </main>
       <OnboardingTour />
-      <FloatingChatWidget />
+      <FloatingChatWidget
+        pageContext={pathname || undefined}
+        quickQuestions={[
+          "What are my filing deadlines?",
+          "What's my current LC rate?",
+          "Which employment categories am I below minimum?",
+          "Help me understand this page",
+        ]}
+      />
     </div>
   );
 }
