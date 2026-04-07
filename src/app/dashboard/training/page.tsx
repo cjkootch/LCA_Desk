@@ -10,7 +10,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, Users, Trophy,
   ArrowRight, Shield,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, fetchTeamMembers } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, seedSupplierCourse, fetchTeamMembers } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -32,6 +32,7 @@ export default function TrainingPage() {
           try {
             await seedLcaCourse();
             await seedPlatformCourse();
+            await seedSupplierCourse();
             c = await fetchCourses("filer");
           } catch { /* seed failed — show empty state */ }
         }

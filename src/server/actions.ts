@@ -4118,6 +4118,81 @@ export async function seedPlatformCourse() {
   return course.id;
 }
 
+export async function seedSupplierCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "supplier-success")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "supplier-success",
+    title: "Supplier Success on LCA Desk",
+    description: "Learn how to maximize your visibility, respond to opportunities, and grow your business through Guyana's petroleum sector supply chain.",
+    audience: "all",
+    moduleCount: 5,
+    badgeLabel: "Supplier Certified",
+    badgeColor: "success",
+    estimatedMinutes: 25,
+  }).returning();
+
+  const supplierModules = [
+    { title: "Your Verified Company Profile", content: "## The Verified Companies Directory\n\nLCA Desk maintains a directory of **796+ LCS-registered companies** scraped from the official register. If your company is registered, you already have a profile.\n\n## Claiming Your Profile\n1. Find your company in **Verified Companies**\n2. Click **Claim This Business**\n3. Verify via email domain, LCS certificate, or manual review\n4. Update contact info and showcase capabilities\n\n## LCS Verification\nCompanies with a valid LCS Certificate show a green **\"LCS Verified\"** badge — telling contractors that procurement from you counts toward their Local Content Rate.\n\n## Getting Registered\nNot registered yet? Use **LCS Certificate as a Service** at /register-lcs — guided registration starting at $49.",
+      quiz: [
+        { question: "How many LCS-registered companies are in the directory?", options: ["100+", "400+", "796+", "1000+"], correctIndex: 2 },
+        { question: "What does 'LCS Verified' mean?", options: ["Paid for ads", "Has valid LCS Certificate", "Government-owned", "Has filed reports"], correctIndex: 1 },
+        { question: "How can you claim your profile?", options: ["Pay a fee", "Email domain, LCS cert, or manual review", "Call Secretariat", "Submit a report"], correctIndex: 1 },
+        { question: "The directory is sourced from:", options: ["User submissions", "Official LCS Register", "Google", "Company websites"], correctIndex: 1 },
+        { question: "LCS registration starts at:", options: ["$29", "$49", "$99", "$199"], correctIndex: 1 },
+      ],
+    },
+    { title: "Browsing & Responding to Opportunities", content: "## The Opportunity Feed\n\n**190+ procurement notices** scraped from the LCS website with AI summaries.\n\n## Finding Opportunities\n- Search by company or keyword\n- Filter by notice type (EOI, RFQ, RFP, RFI)\n- Sort by newest, deadline, or company\n\n## Expressing Interest\n1. Click **Respond** on any opportunity\n2. Enter your contact email\n3. Add an optional cover note\n4. Submit\n\n## Free vs Pro\n- **Free**: 3 responses/month\n- **Supplier Pro ($99/mo)**: Unlimited\n\n## Response Pipeline\nInterested → Contacted → Shortlisted → Awarded",
+      quiz: [
+        { question: "How many procurement notices are available?", options: ["50+", "100+", "190+", "500+"], correctIndex: 2 },
+        { question: "Free plan allows how many responses/month?", options: ["1", "3", "5", "Unlimited"], correctIndex: 1 },
+        { question: "Supplier Pro costs:", options: ["$49/mo", "$99/mo", "$199/mo", "$399/mo"], correctIndex: 1 },
+        { question: "First pipeline status after responding:", options: ["Pending", "Interested", "Applied", "Submitted"], correctIndex: 1 },
+        { question: "Response tracking requires:", options: ["Free plan", "Supplier Pro", "Enterprise", "No plan"], correctIndex: 1 },
+      ],
+    },
+    { title: "Building Your Supplier Profile", content: "## Essential Information\n- **Legal Name** — must match LCS registration\n- **Contact Email & Phone**\n- **Service Categories** — 18+ categories\n- **Employee Count & Year Established**\n- **Guyanese Ownership** — required for compliance\n\n## Capability Statement (Pro)\nPro members add a detailed description visible to all contractors.\n\n## Why Complete Profiles Win\nComplete profiles with multiple categories, contact info, capability statement, and verified LCS certificate rank higher in search.",
+      quiz: [
+        { question: "Legal name should match:", options: ["Trading name", "LCS registration", "Email domain", "Bank account"], correctIndex: 1 },
+        { question: "Service categories available:", options: ["5+", "10+", "18+", "50+"], correctIndex: 2 },
+        { question: "Capability Statements require:", options: ["Free", "Supplier Pro", "Enterprise", "Manual approval"], correctIndex: 1 },
+        { question: "What ranks profiles higher?", options: ["Paying more", "Complete info + LCS verification", "More employees", "Being older"], correctIndex: 1 },
+        { question: "Guyanese ownership is required for:", options: ["Tax", "LCA compliance", "Banking", "Insurance"], correctIndex: 1 },
+      ],
+    },
+    { title: "Analytics & Growth (Pro)", content: "## Profile Views\nSee how many contractors viewed your profile.\n\n## Response Pipeline\n- Opportunities responded to\n- Breakdown by status\n- **Award Rate** — % leading to contracts\n- Monthly activity chart\n\n## Priority Placement\nPro suppliers appear higher in search results.\n\n## Direct Contact Visibility\nPro makes your email and phone visible to all contractors.",
+      quiz: [
+        { question: "Analytics is available on:", options: ["Free", "Supplier Pro", "All plans", "Enterprise only"], correctIndex: 1 },
+        { question: "Award Rate measures:", options: ["Views", "Responses leading to contracts", "Revenue", "Hires"], correctIndex: 1 },
+        { question: "Pro suppliers get:", options: ["Lower pricing", "Priority placement", "Government endorsement", "Free ads"], correctIndex: 1 },
+        { question: "High views, few responses suggests:", options: ["Need more staff", "Should respond to more opportunities", "Bad profile", "Change industries"], correctIndex: 1 },
+        { question: "Direct contact means:", options: ["Secretariat contacts you", "Contractors see your email/phone", "Auto calls", "Auto email"], correctIndex: 1 },
+      ],
+    },
+    { title: "From Supplier to Filer", content: "## When Do Suppliers File?\nMost suppliers do NOT file. But some grow into sub-contractors.\n\n## Upgrading\n1. Dashboard → **Start Filing**\n2. Company info and LCS cert pre-fill\n3. **30-day Professional trial**\n4. Role becomes **supplier + filer**\n\n## What Stays\n- Supplier profile stays active\n- Opportunity responses preserved\n- Analytics continue",
+      quiz: [
+        { question: "Do most suppliers file?", options: ["Yes", "No", "Only large ones", "Only international"], correctIndex: 1 },
+        { question: "Upgrading gives:", options: ["New account", "30-day Professional trial", "Enterprise", "Secretariat access"], correctIndex: 1 },
+        { question: "After upgrading, supplier profile:", options: ["Deleted", "Stays active", "Locked", "Hidden"], correctIndex: 1 },
+        { question: "Filing triggered by:", options: ["100+ employees", "Winning operator contract", "Being LCS registered", "Pro account"], correctIndex: 1 },
+        { question: "Dual-role user accesses:", options: ["Only filing", "Only supplier", "Both portals", "Must choose"], correctIndex: 2 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < supplierModules.length; i++) {
+    const m = supplierModules[i];
+    await db.insert(courseModules).values({
+      courseId: course.id, orderIndex: i + 1,
+      title: m.title, content: m.content,
+      quizQuestions: JSON.stringify(m.quiz),
+    });
+  }
+
+  return course.id;
+}
+
 // ─── JURISDICTION HELPERS ────────────────────────────────────────
 
 export async function getEntityJurisdictionCode(entityId: string): Promise<string> {
