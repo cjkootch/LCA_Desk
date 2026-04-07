@@ -301,7 +301,7 @@ export default function CompanyProfilePage() {
                 <h3 className="text-sm font-semibold text-text-primary mb-1">Is this your company?</h3>
                 <p className="text-xs text-text-secondary mb-4">
                   Claim this profile to manage your company&apos;s presence on LCA Desk.
-                  Update your info, respond to applicants, and manage your Local Content filings.
+                  Update your contact info, showcase your capabilities, and get discovered by contractors.
                 </p>
                 <Button onClick={() => setShowClaimDialog(true)} size="sm" className="w-full gap-1.5">
                   <Flag className="h-4 w-4" /> Claim This Business
