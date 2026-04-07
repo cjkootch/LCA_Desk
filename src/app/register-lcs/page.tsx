@@ -12,7 +12,7 @@ import {
   FileText, Upload, CreditCard, Sparkles, Clock, Users,
 } from "lucide-react";
 import {
-  createCertApplication, updateCertApplication, submitCertApplication,
+  createCertApplication, updateCertApplication,
 } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

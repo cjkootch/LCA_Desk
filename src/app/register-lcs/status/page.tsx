@@ -59,6 +59,8 @@ export default function ApplicationStatusPage() {
               const steps = ["draft", "documents_pending", "under_review", "submitted_to_lcs", "approved"];
               const currentIdx = steps.indexOf(app.status);
 
+              const isRejected = app.status === "rejected";
+
               return (
                 <Card key={app.id}>
                   <CardContent className="p-5">
@@ -77,14 +79,18 @@ export default function ApplicationStatusPage() {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="flex items-center gap-0.5 mb-3">
-                      {steps.map((s, i) => (
-                        <div key={s} className={cn("flex-1 h-1.5 rounded-full", i <= currentIdx ? "bg-accent" : "bg-border")} />
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-[9px] text-text-muted">
-                      <span>Submitted</span><span>Review</span><span>Sent to LCS</span><span>Approved</span>
-                    </div>
+                    {!isRejected && (
+                      <>
+                        <div className="flex items-center gap-0.5 mb-3">
+                          {steps.map((s, i) => (
+                            <div key={s} className={cn("flex-1 h-1.5 rounded-full", i <= currentIdx ? "bg-accent" : "bg-border")} />
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-[9px] text-text-muted">
+                          <span>Submitted</span><span>Review</span><span>Sent to LCS</span><span>Approved</span>
+                        </div>
+                      </>
+                    )}
 
                     {app.lcsCertId && (
                       <div className="mt-4 bg-success/5 border border-success/20 rounded-lg p-3 flex items-center gap-2">

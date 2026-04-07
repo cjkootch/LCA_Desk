@@ -10,6 +10,8 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
   "application/vnd.ms-excel", // .xls
   "application/pdf",
+  "image/jpeg",  // .jpg, .jpeg
+  "image/png",   // .png
 ];
 
 export async function POST(request: Request) {
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
   }
 
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Only Excel (.xlsx, .xls) and PDF files are accepted." }, { status: 400 });
+    return NextResponse.json({ error: "Accepted file types: PDF, Excel (.xlsx, .xls), JPG, PNG." }, { status: 400 });
   }
 
   const ext = file.name.split(".").pop() || "xlsx";

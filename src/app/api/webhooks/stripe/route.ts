@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { tenants } from "@/server/db/schema";
+import { tenants, lcsCertApplications } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
 function getStripe() {
@@ -45,6 +45,24 @@ export async function POST(req: NextRequest) {
       const tenantId = session.metadata?.tenantId;
       const plan = session.metadata?.plan;
 
+      // LCS Certificate application payment
+      if (session.metadata?.type === "lcs_cert_application") {
+        const applicationId = session.metadata.applicationId;
+        const tier = session.metadata.tier;
+        const tierPrices: Record<string, number> = { self_service: 4900, managed: 9900, concierge: 19900 };
+        if (applicationId) {
+          await db.update(lcsCertApplications).set({
+            stripePaymentId: session.id,
+            amountPaid: tierPrices[tier] || (session.amount_total ?? 0),
+            paidAt: new Date(),
+            status: "under_review",
+            updatedAt: new Date(),
+          }).where(eq(lcsCertApplications.id, applicationId));
+        }
+        break;
+      }
+
+      // Standard subscription checkout
       if (tenantId && plan) {
         await db
           .update(tenants)

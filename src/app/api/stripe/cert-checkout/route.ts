@@ -5,7 +5,7 @@ import { db } from "@/server/db";
 import { lcsCertApplications } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-04-30.basil" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const TIER_PRICES: Record<string, number> = {
   self_service: 4900, // $49 in cents
