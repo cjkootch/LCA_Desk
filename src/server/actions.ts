@@ -3839,10 +3839,16 @@ export async function toggleProfileVisibility(visible: boolean) {
 
 // ─── LEARNING / TRAINING SYSTEM ──────────────────────────────────
 
-export async function fetchCourses(audience?: "seeker" | "filer" | "all") {
+export async function fetchCourses(audience?: "seeker" | "filer" | "all", jurisdictionCode?: string) {
   const allCourses = await db.select().from(courses).where(eq(courses.active, true)).limit(50);
-  if (audience) return allCourses.filter(c => c.audience === audience || c.audience === "all");
-  return allCourses;
+
+  return allCourses.filter(c => {
+    // Audience filter: match audience or "all"
+    if (audience && c.audience !== audience && c.audience !== "all") return false;
+    // Jurisdiction filter: match jurisdiction or null (universal)
+    if (jurisdictionCode && c.jurisdictionCode && c.jurisdictionCode !== jurisdictionCode) return false;
+    return true;
+  });
 }
 
 export async function fetchCourseWithModules(courseSlug: string) {
@@ -3998,6 +4004,7 @@ export async function seedLcaCourse() {
     title: "LCA Fundamentals",
     description: "Understand Guyana's Local Content Act 2021 — the legal framework, filing obligations, employment requirements, and your rights as a Guyanese national in the petroleum sector.",
     audience: "all",
+    jurisdictionCode: "GY",
     moduleCount: 5,
     badgeLabel: "LCA Certified",
     badgeColor: "accent",
@@ -4085,6 +4092,7 @@ export async function seedPlatformCourse() {
     title: "Mastering LCA Desk",
     description: "Learn how to use every feature of LCA Desk — from filing your first report to managing your entire compliance workflow. Required for new team members.",
     audience: "filer",
+    jurisdictionCode: null, // Platform course — applies to all jurisdictions
     moduleCount: 8,
     badgeLabel: "Platform Certified",
     badgeColor: "gold",
@@ -4205,6 +4213,7 @@ export async function seedSupplierCourse() {
     title: "Supplier Success on LCA Desk",
     description: "Learn how to maximize your visibility, respond to opportunities, and grow your business through Guyana's petroleum sector supply chain.",
     audience: "all",
+    jurisdictionCode: "GY",
     moduleCount: 5,
     badgeLabel: "Supplier Certified",
     badgeColor: "success",
