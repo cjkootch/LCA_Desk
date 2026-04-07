@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         .replace(/^-+|-+$/g, "");
 
       const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+      trialEndsAt.setDate(trialEndsAt.getDate() + 30);
 
       const [tenant] = await db
         .insert(tenants)

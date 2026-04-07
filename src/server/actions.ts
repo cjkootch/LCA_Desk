@@ -44,7 +44,7 @@ import {
   lcsCertApplications,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
-import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
+import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining } from "@/lib/plans";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -65,19 +65,8 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
 
   if (!membership) throw new Error("No tenant found");
 
-  // Enforce trial paywall at action level (when enabled)
-  // Blocks users whose trial expired but who haven't paid. Does NOT block
-  // free-tier users who never had a trial (trialEndsAt is null).
-  if (process.env.NEXT_PUBLIC_ENFORCE_PAYWALL === "true" && !opts?.skipTrialCheck) {
-    const tenant = membership.tenant;
-    const plan = (tenant.plan as string) || "free";
-    const hasPaid = plan === "lite" || plan === "pro" || plan === "enterprise";
-    const hadTrial = !!tenant.trialEndsAt;
-    const trialActive = isInTrial(tenant.trialEndsAt);
-    if (hadTrial && !trialActive && !hasPaid) {
-      throw new Error("TRIAL_EXPIRED");
-    }
-  }
+  // After trial expires without payment, users get read-only Essentials.
+  // No hard lockout at the action level — the layout handles the interstitial.
 
   return {
     userId: session.user.id,
@@ -86,6 +75,7 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
     role: membership.role,
     plan: (membership.tenant.plan as string) || "free",
     trialEndsAt: membership.tenant.trialEndsAt ?? null,
+    stripeSubscriptionId: membership.tenant.stripeSubscriptionId ?? null,
   };
 }
 
@@ -1259,10 +1249,14 @@ export async function fetchPlanAndUsage() {
       .where(eq(tenantMembers.tenantId, tenantId))
   ).length;
 
+  const stripeSubId = tenant.stripeSubscriptionId ?? null;
+
   return {
     plan,
     trialEndsAt,
+    stripeSubscriptionId: stripeSubId,
     isInTrial: isInTrial(trialEndsAt),
+    isTrialExpired: isTrialExpired(trialEndsAt, stripeSubId),
     trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),
     effectivePlan: getEffectivePlan(plan, trialEndsAt).code,
     usage: {

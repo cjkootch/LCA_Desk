@@ -1,82 +1,112 @@
-"use client";
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Upload, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { CheckCircle, Sparkles, Lock, ArrowRight } from "lucide-react";
+
+const ESSENTIALS_FEATURES = [
+  "1 entity",
+  "3 users",
+  "All 5 mandatory submission types",
+  "Excel + PDF export (2 included/yr, $25 each after)",
+  "Compliance Health Score",
+  "Deadline alerts & filing calendar",
+  "Email support (48hr)",
+];
+
+const PRO_FEATURES = [
+  "Up to 5 entities",
+  "15 users",
+  "Unlimited report generation",
+  "AI Narrative Drafting",
+  "AI Compliance Gap Detection",
+  "Talent Pool access",
+  "Supplier search + contacts",
+  "Market intelligence + opportunities",
+  "Audit log",
+  "QuickBooks integration",
+  "Priority support (24hr)",
+];
 
 export default function TrialExpiredPage() {
   return (
-    <div className="p-4 sm:p-8 max-w-3xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="inline-flex p-4 rounded-full bg-warning-light mb-4">
-          <Sparkles className="h-8 w-8 text-warning" />
+    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center p-6">
+      <div className="max-w-3xl w-full">
+        <div className="text-center mb-10">
+          <Image src="/logo-full.png" alt="LCA Desk" width={160} height={48} className="mx-auto mb-6" />
+          <div className="inline-flex items-center gap-2 bg-warning-light border border-warning/20 text-warning text-sm font-medium px-4 py-2 rounded-full mb-4">
+            <Lock className="h-4 w-4" />
+            Your 30-day Professional trial has ended
+          </div>
+          <h1 className="text-3xl font-heading font-bold text-text-primary mb-3">
+            Choose a plan to continue
+          </h1>
+          <p className="text-text-secondary max-w-lg mx-auto text-sm">
+            Your data is safe and waiting. You now have read-only Essentials access.
+            Select a plan to regain full access to your compliance dashboard and filing tools.
+          </p>
         </div>
-        <h1 className="text-2xl font-heading font-bold text-text-primary mb-2">
-          Your Pro Trial Has Ended
-        </h1>
-        <p className="text-text-secondary max-w-lg mx-auto">
-          You still have full access to the Free tier — upload and submit reports to the Secretariat at no cost.
-          Upgrade to unlock report generation, AI features, and market intelligence.
-        </p>
-      </div>
 
-      {/* What you can still do */}
-      <Card className="mb-6 border-success/20">
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <Badge variant="success">Free Tier</Badge> What you can still do
-          </h3>
-          <ul className="space-y-2">
-            {[
-              "Upload your Excel report and submit to the Secretariat",
-              "Track 1 entity and manage deadlines",
-              "Receive deadline reminder alerts",
-              "View your compliance dashboard",
-            ].map(item => (
-              <li key={item} className="flex items-center gap-2 text-sm text-text-secondary">
-                <Check className="h-4 w-4 text-success shrink-0" /> {item}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Essentials */}
+          <div className="rounded-2xl border border-border bg-bg-card p-6 flex flex-col">
+            <div className="mb-4">
+              <h2 className="text-xl font-heading font-bold text-text-primary">Essentials</h2>
+              <p className="text-sm text-text-muted mt-0.5">Small vendors / 1-15 employees</p>
+            </div>
+            <div className="mb-1">
+              <span className="text-4xl font-bold text-text-primary">$199</span>
+              <span className="text-text-muted text-sm ml-1">/mo</span>
+            </div>
+            <p className="text-xs text-text-muted mb-6">2 report exports included · $25 each after · or $159/mo billed annually</p>
+            <ul className="space-y-2.5 mb-8 flex-1">
+              {ESSENTIALS_FEATURES.map(f => (
+                <li key={f} className="flex items-start gap-2 text-sm text-text-secondary">
+                  <CheckCircle className="h-4 w-4 text-accent shrink-0 mt-0.5" /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/dashboard/settings/billing?plan=lite"
+              className="block w-full text-center rounded-xl border-2 border-accent text-accent px-6 py-3 text-sm font-semibold hover:bg-accent/5 transition-colors">
+              Choose Essentials <ArrowRight className="inline h-4 w-4 ml-1" />
+            </Link>
+          </div>
 
-      {/* What you're missing */}
-      <Card className="mb-8 border-accent/20">
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <Badge variant="accent">Pro</Badge> What you had during trial
-          </h3>
-          <ul className="space-y-2">
-            {[
-              "Auto-generate Excel & PDF compliance reports",
-              "AI Narrative Drafting for all report sections",
-              "AI Compliance Scan to catch issues before filing",
-              "LCA Expert AI chat with your compliance data",
-              "Job board, supplier search, and market intelligence",
-              "Up to 5 entities and 10 team members",
-            ].map(item => (
-              <li key={item} className="flex items-center gap-2 text-sm text-text-secondary">
-                <X className="h-4 w-4 text-text-muted shrink-0" /> {item}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+          {/* Professional */}
+          <div className="rounded-2xl border-2 border-accent bg-bg-card p-6 flex flex-col relative shadow-lg shadow-accent/10">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-white text-[11px] font-semibold uppercase tracking-wider px-3 py-1 rounded-full">
+              What you had in your trial
+            </span>
+            <div className="mb-4">
+              <h2 className="text-xl font-heading font-bold text-text-primary">Professional</h2>
+              <p className="text-sm text-text-muted mt-0.5">Growing contractors / 15-150 employees</p>
+            </div>
+            <div className="mb-1">
+              <span className="text-4xl font-bold text-text-primary">$399</span>
+              <span className="text-text-muted text-sm ml-1">/mo</span>
+            </div>
+            <p className="text-xs text-text-muted mb-6">Unlimited reports · or $319/mo billed annually · save $960/yr</p>
+            <ul className="space-y-2.5 mb-8 flex-1">
+              {PRO_FEATURES.map(f => (
+                <li key={f} className="flex items-start gap-2 text-sm text-text-secondary">
+                  <CheckCircle className="h-4 w-4 text-accent shrink-0 mt-0.5" /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/dashboard/settings/billing?plan=pro"
+              className="block w-full text-center rounded-xl bg-gradient-to-r from-accent to-teal text-white px-6 py-3 text-sm font-semibold hover:shadow-lg hover:shadow-accent/20 transition-all">
+              <Sparkles className="inline h-4 w-4 mr-1.5" /> Upgrade to Professional
+            </Link>
+          </div>
+        </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
-        <Link href="/dashboard/settings/billing">
-          <Button size="lg">
-            <Sparkles className="h-5 w-5 mr-2" /> Upgrade Now
-          </Button>
-        </Link>
-        <Link href="/dashboard">
-          <Button variant="outline" size="lg">
-            <Upload className="h-5 w-5 mr-2" /> Continue with Free
-          </Button>
-        </Link>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-text-muted">
+            Need unlimited entities or a custom contract?{" "}
+            <Link href="/dashboard/settings/billing" className="text-accent hover:underline font-medium">View Enterprise →</Link>
+          </p>
+          <p className="text-xs text-text-muted">
+            Your data is never deleted. <a href="mailto:support@lcadesk.com" className="text-accent hover:underline">Contact support</a> if you need help.
+          </p>
+        </div>
       </div>
     </div>
   );

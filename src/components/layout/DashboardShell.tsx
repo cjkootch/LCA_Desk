@@ -1,0 +1,55 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { UsageBanner } from "@/components/billing/UsageBanner";
+import { Menu } from "lucide-react";
+
+interface DashboardShellProps {
+  children: React.ReactNode;
+  trialExpired: boolean;
+}
+
+const BILLING_PATHS = [
+  "/dashboard/settings/billing",
+  "/dashboard/trial-expired",
+];
+
+export function DashboardShell({ children, trialExpired }: DashboardShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isBillingPath = BILLING_PATHS.some(p => pathname?.startsWith(p));
+
+  // Redirect expired trial users to the upgrade page (once, not a hard lock)
+  useEffect(() => {
+    if (trialExpired && !isBillingPath) {
+      router.replace("/dashboard/trial-expired");
+    }
+  }, [trialExpired, isBillingPath, router]);
+
+  if (trialExpired && !isBillingPath) return null;
+
+  return (
+    <div className="flex min-h-screen">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
+      <main className="flex-1 lg:ml-60 min-w-0">
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-border bg-bg-surface">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-text-secondary hover:text-text-primary">
+            <Menu className="h-5 w-5" />
+          </button>
+          <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
+        </div>
+        <div className="px-4 sm:px-8 pt-4"><UsageBanner /></div>
+        {children}
+      </main>
+      <OnboardingTour />
+    </div>
+  );
+}

@@ -1,54 +1,32 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { db } from "@/server/db";
 import { tenantMembers } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { isInTrial } from "@/lib/plans";
-import { DashboardShell } from "./DashboardShell";
-
-// Pages that bypass the trial paywall
-const PAYWALL_BYPASS = [
-  "/dashboard/trial-expired",
-  "/dashboard/settings/billing",
-  "/dashboard/settings",
-];
+import { isTrialExpired } from "@/lib/plans";
+import { DashboardShell } from "@/components/layout/DashboardShell";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Trial paywall — only enforced when NEXT_PUBLIC_ENFORCE_PAYWALL=true
-  if (process.env.NEXT_PUBLIC_ENFORCE_PAYWALL === "true") {
-    const session = await auth();
-    if (session?.user?.id) {
-      const membership = await db.query.tenantMembers.findFirst({
-        where: eq(tenantMembers.userId, session.user.id),
-        with: { tenant: true },
-      });
+  const session = await auth();
+  if (!session?.user?.id) redirect("/auth/login");
 
-      if (membership?.tenant) {
-        const plan = (membership.tenant.plan as string) || "free";
-        const hadTrial = !!membership.tenant.trialEndsAt;
-        const trialActive = isInTrial(membership.tenant.trialEndsAt);
-        const hasPaid = plan === "lite" || plan === "pro" || plan === "enterprise";
+  const membership = await db.query.tenantMembers.findFirst({
+    where: eq(tenantMembers.userId, session.user.id),
+    with: { tenant: true },
+  });
 
-        // Only block users whose trial expired without paying.
-        // Free-tier users who never had a trial can still access their dashboard.
-        if (hadTrial && !trialActive && !hasPaid) {
-          // Check current path — allow billing and trial-expired pages through
-          const headersList = await headers();
-          const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
+  if (!membership?.tenant) redirect("/auth/login");
 
-          const isBypassed = PAYWALL_BYPASS.some(p => pathname.startsWith(p));
-          if (!isBypassed) {
-            redirect("/dashboard/trial-expired");
-          }
-        }
-      }
-    }
-  }
+  const { tenant } = membership;
+  const expired = isTrialExpired(tenant.trialEndsAt, tenant.stripeSubscriptionId);
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <DashboardShell trialExpired={expired}>
+      {children}
+    </DashboardShell>
+  );
 }

@@ -75,22 +75,23 @@ export default function BillingPage() {
 
   const features: { label: string; free: boolean | string; lite: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
     { label: "Entities", free: "1", lite: "1", pro: "5", enterprise: "Unlimited" },
-    { label: "Team Members", free: "1", lite: "2", pro: "10", enterprise: "Unlimited" },
+    { label: "Team Members", free: "1", lite: "3", pro: "15", enterprise: "Unlimited" },
     { label: "Upload & Submit", free: true, lite: true, pro: true, enterprise: true },
-    { label: "Platform Submission", free: true, lite: true, pro: true, enterprise: true },
-    { label: "Report Generation", free: false, lite: "$25/report", pro: "Included", enterprise: "Included" },
+    { label: "Report Exports", free: false, lite: "2/yr + $25 each", pro: "Unlimited", enterprise: "Unlimited" },
     { label: "Data Entry & Tracking", free: false, lite: true, pro: true, enterprise: true },
-    { label: "AI Narrative Drafts", free: false, lite: false, pro: "Unlimited", enterprise: "Unlimited" },
+    { label: "Compliance Health Score", free: false, lite: true, pro: true, enterprise: true },
+    { label: "AI Narrative Drafting", free: false, lite: false, pro: "Unlimited", enterprise: "Unlimited" },
     { label: "AI Expert Chat", free: false, lite: false, pro: "Unlimited", enterprise: "Unlimited" },
     { label: "AI Compliance Scan", free: false, lite: false, pro: true, enterprise: true },
     { label: "Deadline Alerts", free: true, lite: true, pro: true, enterprise: true },
-    { label: "QuickBooks Integration", free: false, lite: false, pro: true, enterprise: true },
-    { label: "Job Board Access", free: false, lite: false, pro: true, enterprise: true },
-    { label: "Supplier Search", free: false, lite: false, pro: true, enterprise: true },
-    { label: "Market Intelligence", free: false, lite: false, pro: true, enterprise: true },
     { label: "Audit Trail", free: false, lite: false, pro: true, enterprise: true },
-    { label: "Data Extraction (AI)", free: false, lite: false, pro: false, enterprise: true },
-    { label: "Priority Support", free: false, lite: false, pro: false, enterprise: true },
+    { label: "QuickBooks Integration", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Job Board & Talent Pool", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Supplier Search + Contacts", free: false, lite: false, pro: true, enterprise: true },
+    { label: "Market Intelligence", free: false, lite: false, pro: true, enterprise: true },
+    { label: "AI Data Extraction", free: false, lite: false, pro: false, enterprise: true },
+    { label: "API Access", free: false, lite: false, pro: false, enterprise: true },
+    { label: "Priority Support (SLA)", free: false, lite: false, pro: false, enterprise: true },
   ];
 
   if (loading) {
@@ -121,7 +122,7 @@ export default function BillingPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Current Usage</CardTitle>
                 <Badge variant={currentPlan.code === "free" || currentPlan.code === "lite" ? "default" : "accent"}>
-                  {currentPlan.name} Plan
+                  {currentPlan.displayName} Plan
                 </Badge>
               </div>
             </CardHeader>
@@ -265,9 +266,9 @@ export default function BillingPage() {
                             </span>
                           </div>
                         )}
-                        {billing === "monthly" && plan.price > 0 && (
+                        {billing === "monthly" && plan.price > 0 && plan.annualPrice > 0 && (
                           <p className="text-xs text-text-muted mt-1">
-                            or ${getPrice(plan.price) * 10}/yr with annual billing
+                            or ${plan.annualMonthlyEquivalent}/mo · ${plan.annualPrice.toLocaleString()}/yr billed annually
                           </p>
                         )}
                       </>
@@ -363,8 +364,8 @@ export default function BillingPage() {
                   <tr className="border-b border-border">
                     <th className="text-left py-3 pr-4 font-medium text-text-secondary">Feature</th>
                     <th className="text-center py-3 px-2 font-medium text-text-muted">Free</th>
-                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Lite</th>
-                    <th className="text-center py-3 px-2 font-medium text-accent">Pro</th>
+                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Essentials</th>
+                    <th className="text-center py-3 px-2 font-medium text-accent">Professional</th>
                     <th className="text-center py-3 px-2 font-medium text-text-secondary">Enterprise</th>
                   </tr>
                 </thead>

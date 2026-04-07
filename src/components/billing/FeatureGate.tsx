@@ -39,15 +39,15 @@ export function FeatureGate({
           </h3>
           <p className="text-sm text-text-secondary mb-4">
             This feature requires the{" "}
-            <span className="font-semibold text-accent capitalize">
-              {planRequired}
+            <span className="font-semibold text-accent">
+              {planRequired === "pro" ? "Professional" : "Enterprise"}
             </span>{" "}
             plan.
           </p>
           <Link href="/dashboard/settings/billing">
             <Button size="sm">
               <Sparkles className="h-4 w-4 mr-1" />
-              Upgrade to {planRequired === "pro" ? "Pro" : "Enterprise"}
+              Upgrade to {planRequired === "pro" ? "Professional" : "Enterprise"}
             </Button>
           </Link>
         </div>

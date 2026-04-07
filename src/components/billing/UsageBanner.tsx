@@ -38,18 +38,18 @@ export function UsageBanner() {
             <div>
               <p className="font-medium text-text-primary text-sm">
                 {days === 0
-                  ? "Your Pro trial ends today"
-                  : `Pro Trial — ${days} day${days !== 1 ? "s" : ""} remaining`}
+                  ? "Your Professional trial ends today"
+                  : `Professional Trial — ${days} day${days !== 1 ? "s" : ""} remaining`}
               </p>
               <p className="text-xs text-text-secondary mt-0.5">
                 {urgent
-                  ? "Upgrade now to keep AI Narrative Drafting and unlimited report generation."
-                  : "You have full Pro access including AI Narrative Drafting. Upgrade before your trial ends."}
+                  ? "Upgrade now to keep AI Narrative Drafting, unlimited reports, and the full marketplace layer."
+                  : "You have full Professional access. Upgrade before your trial ends to keep these features."}
               </p>
               <Link href="/dashboard/settings/billing" className="inline-block mt-2">
                 <Button size="sm" variant={urgent ? "primary" : "outline"}>
                   <Sparkles className="h-4 w-4 mr-1" />
-                  Upgrade to Pro
+                  Upgrade to Professional
                 </Button>
               </Link>
             </div>

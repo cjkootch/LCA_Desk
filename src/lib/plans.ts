@@ -6,30 +6,39 @@ export interface PlanConfig {
   displayName: string;
   price: number;
   annualPrice: number;
+  annualMonthlyEquivalent: number;
   perReportFee: number;
+  bundledReportsPerYear: number;
   entityLimit: number;
   teamMemberLimit: number;
   aiDraftsPerMonth: number;
   aiChatMessagesPerMonth: number;
   features: {
+    dataEntry: boolean;
     excelExport: boolean;
     pdfExport: boolean;
-    complianceScan: boolean;
     deadlineAlerts: boolean;
+    complianceHealthScore: boolean;
+    fileUploadSubmit: boolean;
+    platformSubmit: boolean;
+    aiNarrativeDrafting: boolean;
+    complianceScan: boolean;
+    auditTrail: boolean;
     qboIntegration: boolean;
-    dataExtraction: boolean;
-    prioritySupport: boolean;
     jobBoard: boolean;
     supplierSearch: boolean;
     saveOpportunities: boolean;
     companyContacts: boolean;
     marketIntelligence: boolean;
     firstConsiderationPdf: boolean;
-    auditTrail: boolean;
     smartMatching: boolean;
-    fileUploadSubmit: boolean;
-    platformSubmit: boolean;
+    talentPoolAccess: boolean;
+    dataExtraction: boolean;
+    prioritySupport: boolean;
+    apiAccess: boolean;
   };
+  bestFor: string;
+  tagline: string;
 }
 
 export const PLANS: Record<PlanCode, PlanConfig> = {
@@ -39,130 +48,202 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
     displayName: "Free",
     price: 0,
     annualPrice: 0,
+    annualMonthlyEquivalent: 0,
     perReportFee: 0,
+    bundledReportsPerYear: 0,
     entityLimit: 1,
     teamMemberLimit: 1,
     aiDraftsPerMonth: 0,
     aiChatMessagesPerMonth: 0,
+    bestFor: "Anyone submitting their LCS report",
+    tagline: "Upload and submit your report at no cost.",
     features: {
+      dataEntry: false,
       excelExport: false,
       pdfExport: false,
-      complianceScan: false,
       deadlineAlerts: true,
+      complianceHealthScore: false,
+      fileUploadSubmit: true,
+      platformSubmit: true,
+      aiNarrativeDrafting: false,
+      complianceScan: false,
+      auditTrail: false,
       qboIntegration: false,
-      dataExtraction: false,
-      prioritySupport: false,
       jobBoard: false,
       supplierSearch: false,
       saveOpportunities: false,
       companyContacts: false,
       marketIntelligence: false,
       firstConsiderationPdf: false,
-      auditTrail: false,
       smartMatching: false,
-      fileUploadSubmit: true,
-      platformSubmit: true,
+      talentPoolAccess: false,
+      dataExtraction: false,
+      prioritySupport: false,
+      apiAccess: false,
     },
   },
   lite: {
     code: "lite",
-    name: "Lite",
-    displayName: "Lite",
-    price: 149,
-    annualPrice: 1428,
+    name: "Essentials",
+    displayName: "Essentials",
+    price: 199,
+    annualPrice: 1908,
+    annualMonthlyEquivalent: 159,
     perReportFee: 25,
+    bundledReportsPerYear: 2,
     entityLimit: 1,
-    teamMemberLimit: 2,
+    teamMemberLimit: 3,
     aiDraftsPerMonth: 0,
     aiChatMessagesPerMonth: 0,
+    bestFor: "Small vendors / 1\u201315 employees",
+    tagline: "Everything you need to meet your LCA filing obligation.",
     features: {
-      excelExport: true,  // included at $25/report fee
-      pdfExport: true,    // included at $25/report fee
-      complianceScan: false,
+      dataEntry: true,
+      excelExport: true,
+      pdfExport: true,
       deadlineAlerts: true,
+      complianceHealthScore: true,
+      fileUploadSubmit: true,
+      platformSubmit: true,
+      aiNarrativeDrafting: false,
+      complianceScan: false,
+      auditTrail: false,
       qboIntegration: false,
-      dataExtraction: false,
-      prioritySupport: false,
       jobBoard: false,
       supplierSearch: false,
       saveOpportunities: false,
       companyContacts: false,
       marketIntelligence: false,
       firstConsiderationPdf: false,
-      auditTrail: false,
       smartMatching: false,
-      fileUploadSubmit: true,
-      platformSubmit: true,
+      talentPoolAccess: false,
+      dataExtraction: false,
+      prioritySupport: false,
+      apiAccess: false,
     },
   },
   pro: {
     code: "pro",
-    name: "Pro",
-    displayName: "Pro",
-    price: 299,
-    annualPrice: 2868,
+    name: "Professional",
+    displayName: "Professional",
+    price: 399,
+    annualPrice: 3828,
+    annualMonthlyEquivalent: 319,
     perReportFee: 0,
+    bundledReportsPerYear: -1,
     entityLimit: 5,
-    teamMemberLimit: 10,
+    teamMemberLimit: 15,
     aiDraftsPerMonth: -1,
     aiChatMessagesPerMonth: -1,
+    bestFor: "Growing contractors / 15\u2013150 employees",
+    tagline: "AI-powered compliance with the full marketplace layer.",
     features: {
+      dataEntry: true,
       excelExport: true,
       pdfExport: true,
-      complianceScan: true,
       deadlineAlerts: true,
+      complianceHealthScore: true,
+      fileUploadSubmit: true,
+      platformSubmit: true,
+      aiNarrativeDrafting: true,
+      complianceScan: true,
+      auditTrail: true,
       qboIntegration: true,
-      dataExtraction: false,
-      prioritySupport: false,
       jobBoard: true,
       supplierSearch: true,
       saveOpportunities: true,
       companyContacts: true,
       marketIntelligence: true,
       firstConsiderationPdf: true,
-      auditTrail: true,
       smartMatching: true,
-      fileUploadSubmit: true,
-      platformSubmit: true,
+      talentPoolAccess: true,
+      dataExtraction: false,
+      prioritySupport: false,
+      apiAccess: false,
     },
   },
   enterprise: {
     code: "enterprise",
     name: "Enterprise",
     displayName: "Enterprise",
-    price: 0,       // custom pricing
-    annualPrice: 0, // custom pricing
+    price: 0,
+    annualPrice: 0,
+    annualMonthlyEquivalent: 0,
     perReportFee: 0,
+    bundledReportsPerYear: -1,
     entityLimit: -1,
     teamMemberLimit: -1,
     aiDraftsPerMonth: -1,
     aiChatMessagesPerMonth: -1,
+    bestFor: "Large contractors / multi-entity operations",
+    tagline: "Unlimited scale, white-glove onboarding, SLA support.",
     features: {
+      dataEntry: true,
       excelExport: true,
       pdfExport: true,
-      complianceScan: true,
       deadlineAlerts: true,
+      complianceHealthScore: true,
+      fileUploadSubmit: true,
+      platformSubmit: true,
+      aiNarrativeDrafting: true,
+      complianceScan: true,
+      auditTrail: true,
       qboIntegration: true,
-      dataExtraction: true,
-      prioritySupport: true,
       jobBoard: true,
       supplierSearch: true,
       saveOpportunities: true,
       companyContacts: true,
       marketIntelligence: true,
       firstConsiderationPdf: true,
-      auditTrail: true,
       smartMatching: true,
-      fileUploadSubmit: true,
-      platformSubmit: true,
+      talentPoolAccess: true,
+      dataExtraction: true,
+      prioritySupport: true,
+      apiAccess: true,
     },
   },
 };
 
+// ─── PLAN HELPERS ─────────────────────────────────────────────────
+
 export function getPlan(code: string | null | undefined): PlanConfig {
-  // Handle legacy "starter" code from existing tenant records
   if (code === "starter") return PLANS.lite;
   return PLANS[(code as PlanCode)] ?? PLANS.free;
+}
+
+export function getEffectivePlan(
+  planCode: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined
+): PlanConfig {
+  if (trialEndsAt && new Date(trialEndsAt) > new Date()) {
+    return PLANS.pro;
+  }
+  return getPlan(planCode);
+}
+
+export function isInTrial(
+  trialEndsAt: Date | string | null | undefined
+): boolean {
+  if (!trialEndsAt) return false;
+  return new Date(trialEndsAt) > new Date();
+}
+
+export function isTrialExpired(
+  trialEndsAt: Date | string | null | undefined,
+  stripeSubscriptionId: string | null | undefined
+): boolean {
+  if (!trialEndsAt) return false;
+  if (stripeSubscriptionId) return false;
+  return new Date(trialEndsAt) <= new Date();
+}
+
+export function getTrialDaysRemaining(
+  trialEndsAt: Date | string | null | undefined
+): number | null {
+  if (!trialEndsAt) return null;
+  const ms = new Date(trialEndsAt).getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
 export function isFeatureAvailable(
@@ -190,28 +271,6 @@ export function getPerReportFee(planCode: string | null | undefined): number {
   return getPlan(planCode).perReportFee;
 }
 
-export function getEffectivePlan(
-  planCode: string | null | undefined,
-  trialEndsAt: Date | string | null | undefined
-): PlanConfig {
-  if (trialEndsAt && new Date(trialEndsAt) > new Date()) {
-    return PLANS.pro;
-  }
-  return getPlan(planCode);
-}
-
-export function isInTrial(
-  trialEndsAt: Date | string | null | undefined
-): boolean {
-  if (!trialEndsAt) return false;
-  return new Date(trialEndsAt) > new Date();
-}
-
-export function getTrialDaysRemaining(
-  trialEndsAt: Date | string | null | undefined
-): number | null {
-  if (!trialEndsAt) return null;
-  const ms = new Date(trialEndsAt).getTime() - Date.now();
-  if (ms <= 0) return 0;
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+export function getPlanDisplayName(planCode: string | null | undefined): string {
+  return getPlan(planCode).displayName;
 }
