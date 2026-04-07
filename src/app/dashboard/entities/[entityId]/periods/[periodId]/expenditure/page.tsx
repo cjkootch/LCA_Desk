@@ -57,6 +57,7 @@ export default function ExpenditurePage() {
   const [saving, setSaving] = useState(false);
   const [locked, setLocked] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [batchCount, setBatchCount] = useState(0);
 
   const loadData = async () => {
     const [entity, rawRecords] = await Promise.all([
@@ -75,28 +76,39 @@ export default function ExpenditurePage() {
     setSaving(true);
     try {
       await addExpenditure(periodId, entityId, data);
-      toast.success("Expenditure record added");
+      toast.success("Record added");
       setFormOpen(false);
+      setBatchCount(0);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add record");
+      toast.error(error instanceof Error ? error.message : "Failed to add");
     }
     setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
-    setDeleteTarget(id);
+  // Batch add: save and keep form open for next entry
+  const handleSaveAndNext = async (data: Record<string, unknown>) => {
+    setSaving(true);
+    try {
+      await addExpenditure(periodId, entityId, data);
+      setBatchCount(prev => prev + 1);
+      toast.success(`Record ${batchCount + 1} added — add another`);
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add");
+    }
+    setSaving(false);
   };
+
+  const handleDelete = async (id: string) => { setDeleteTarget(id); };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
       await removeExpenditure(deleteTarget);
-      setRecords((prev) => prev.filter((r) => r.id !== deleteTarget));
+      setRecords(prev => prev.filter(r => r.id !== deleteTarget));
       toast.success("Record deleted");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete");
-    }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to delete"); }
     setDeleteTarget(null);
   };
 
@@ -108,10 +120,69 @@ export default function ExpenditurePage() {
       toast.success("Record updated");
       setEditRecord(null);
       await loadData();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update");
-    }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to update"); }
     setSaving(false);
+  };
+
+  // Inline edit: update a single field
+  const handleInlineUpdate = async (id: string, field: string, value: string | number) => {
+    // Map inline field names to server action field names
+    const fieldMap: Record<string, string> = {
+      supplier_name: "supplier_name",
+      actual_payment: "actual_payment",
+      outstanding_payment: "outstanding_payment",
+      supplier_certificate_id: "supplier_certificate_id",
+    };
+
+    const record = records.find(r => r.id === id);
+    if (!record) return;
+
+    const updateData: Record<string, unknown> = {
+      type_of_item_procured: record.type_of_item_procured,
+      related_sector: record.related_sector,
+      description_of_good_service: record.description_of_good_service,
+      supplier_name: record.supplier_name,
+      supplier_type: (record as unknown as Record<string, string>).supplier_type,
+      sole_source_code: record.sole_source_code,
+      supplier_certificate_id: record.supplier_certificate_id,
+      actual_payment: record.actual_payment,
+      outstanding_payment: record.outstanding_payment,
+      projection_next_period: record.projection_next_period,
+      payment_method: record.payment_method,
+      supplier_bank: record.supplier_bank,
+      bank_location_country: record.bank_location_country,
+      currency_of_payment: record.currency_of_payment,
+      notes: record.notes,
+    };
+
+    const serverField = fieldMap[field] || field;
+    updateData[serverField] = value;
+
+    await updateExpenditure(id, updateData);
+
+    // Optimistic update
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  // Paste from Excel
+  const handlePasteRows = async (rows: Record<string, string>[]) => {
+    let added = 0;
+    for (const row of rows) {
+      try {
+        await addExpenditure(periodId, entityId, {
+          type_of_item_procured: row.type_of_item_procured || row.Type || row["Type of Item Procured"] || "Goods",
+          related_sector: row.related_sector || row.Sector || row["Related Sector"] || "",
+          description_of_good_service: row.description_of_good_service || row.Description || row["Description of Good/Service"] || "",
+          supplier_name: row.supplier_name || row.Supplier || row["Supplier Name"] || "Unknown",
+          supplier_type: row.supplier_type || row["Supplier Type"] || "",
+          supplier_certificate_id: row.supplier_certificate_id || row["Certificate ID"] || row["Supplier Certificate ID"] || "",
+          actual_payment: parseFloat(row.actual_payment || row.Amount || row["Actual Payment"] || "0") || 0,
+          currency_of_payment: row.currency_of_payment || row.Currency || "GYD",
+        });
+        added++;
+      } catch { /* skip bad rows */ }
+    }
+    if (added > 0) await loadData();
   };
 
   const metrics = calculateLocalContentRate(records);
@@ -133,14 +204,27 @@ export default function ExpenditurePage() {
         <PageHeader title="Expenditure Sub-Report" description="Record all procurement and supplier expenditure for this reporting period."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Expenditure" }]}>
           {!locked && (
-          <Dialog open={formOpen} onOpenChange={setFormOpen}>
-            <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
+            <>
+            <Dialog open={formOpen} onOpenChange={o => { if (!o) setBatchCount(0); setFormOpen(o); }}>
+              <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add Record</Button></DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {batchCount > 0 ? `Add Expenditure Record (${batchCount} added)` : "Add Expenditure Record"}
+                  </DialogTitle>
+                </DialogHeader>
+                <ExpenditureForm
+                  sectorOptions={RELATED_SECTORS}
+                  onSubmit={handleAdd}
+                  onCancel={() => { setFormOpen(false); setBatchCount(0); }}
+                  loading={saving}
+                  batchMode
+                  onSaveAndNext={handleSaveAndNext}
+                />
+              </DialogContent>
+            </Dialog>
             <CsvImport type="expenditure" periodId={periodId} entityId={entityId} onImported={loadData} />
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Add Expenditure Record</DialogTitle></DialogHeader>
-              <ExpenditureForm sectorOptions={RELATED_SECTORS} onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
-            </DialogContent>
-          </Dialog>
+            </>
           )}
         </PageHeader>
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="expenditure" completedSteps={completedSteps} />
@@ -150,7 +234,14 @@ export default function ExpenditurePage() {
               <EmptyState icon={Receipt} title="No expenditure records" description="Add your first expenditure record to start tracking supplier procurement." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
               <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <ExpenditureTable records={records} onDelete={locked ? () => {} : handleDelete} onEdit={locked ? () => {} : (r) => setEditRecord(r)} />
+                <ExpenditureTable
+                  records={records}
+                  onDelete={locked ? () => {} : handleDelete}
+                  onEdit={locked ? undefined : (r) => setEditRecord(r)}
+                  onInlineUpdate={locked ? undefined : handleInlineUpdate}
+                  onPasteRows={locked ? undefined : handlePasteRows}
+                  locked={locked}
+                />
               </div>
             )}
           </div>
@@ -169,6 +260,7 @@ export default function ExpenditurePage() {
                   related_sector: editRecord.related_sector || undefined,
                   description_of_good_service: editRecord.description_of_good_service || undefined,
                   supplier_name: editRecord.supplier_name,
+                  supplier_type: ((editRecord as unknown as Record<string, string>).supplier_type as "Guyanese" | "Non-Guyanese") || undefined,
                   sole_source_code: editRecord.sole_source_code || undefined,
                   supplier_certificate_id: editRecord.supplier_certificate_id || undefined,
                   actual_payment: editRecord.actual_payment,
@@ -193,8 +285,7 @@ export default function ExpenditurePage() {
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                Delete Record
+                <AlertTriangle className="h-5 w-5 text-warning" /> Delete Record
               </DialogTitle>
             </DialogHeader>
             {(() => { const r = records.find(r => r.id === deleteTarget); return r ? (

@@ -121,6 +121,8 @@ interface ExpenditureFormProps {
   onSubmit: (data: ExpenditureFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
+  batchMode?: boolean;
+  onSaveAndNext?: (data: ExpenditureFormData) => Promise<void>;
 }
 
 export function ExpenditureForm({
@@ -129,12 +131,15 @@ export function ExpenditureForm({
   onSubmit,
   onCancel,
   loading,
+  batchMode,
+  onSaveAndNext,
 }: ExpenditureFormProps) {
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<ExpenditureFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -296,13 +301,18 @@ export function ExpenditureForm({
 
       <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes or context" />
 
-      <div className="flex justify-end gap-3 pt-4">
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={loading}>
-          Save
-        </Button>
+      <div className="flex items-center justify-between pt-4">
+        <p className="text-[10px] text-text-muted">Enter to save · Escape to cancel</p>
+        <div className="flex gap-2">
+          <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+          {batchMode && onSaveAndNext && (
+            <Button type="button" variant="outline" loading={loading}
+              onClick={handleSubmit(async (data) => { await onSaveAndNext(data); reset({ currency_of_payment: "GYD" }); })}>
+              Save &amp; Add Another
+            </Button>
+          )}
+          <Button type="submit" loading={loading}>Save</Button>
+        </div>
       </div>
     </form>
   );
