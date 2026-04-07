@@ -13,6 +13,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
 } from "lucide-react";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
+import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -146,41 +147,18 @@ export default function SecretariatDashboardPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl">
-      {/* Hero header */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#1e293b] to-[#334155] p-6 sm:p-8 mb-6 text-white">
-        <div className="flex items-center gap-3 mb-1">
-          <Shield className="h-5 w-5 text-gold" />
-          <span className="text-[10px] font-semibold text-gold uppercase tracking-widest">Local Content Secretariat</span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-heading font-bold mb-1">Regulatory Dashboard</h1>
-        <p className="text-white/60 text-sm">Real-time sector compliance monitoring · {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
-
-        {/* KPI row inside hero */}
-        {analytics && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wider mb-1">Local Spend</p>
-              <p className="text-3xl font-bold">{formatCurrency(analytics.localSpend)}</p>
-              <p className="text-[11px] text-white/50 mt-1">{analytics.guyaneseSupplierCount} suppliers · {analytics.overallLcRate}% LC rate</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-[10px] font-semibold text-sky-300 uppercase tracking-wider mb-1">Guyanese Jobs</p>
-              <p className="text-3xl font-bold">{analytics.jobsCreated.toLocaleString()}</p>
-              <p className="text-[11px] text-white/50 mt-1">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-wider mb-1">Hours Saved</p>
-              <p className="text-3xl font-bold">{analytics.staffHoursSaved.toLocaleString()}</p>
-              <p className="text-[11px] text-white/50 mt-1">{analytics.totalSubmissions} digital submissions</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-[10px] font-semibold text-white/70 uppercase tracking-wider mb-1">Economic Impact</p>
-              <p className="text-3xl font-bold">{formatCurrency(analytics.economicImpact)}</p>
-              <p className="text-[11px] text-white/50 mt-1">{analytics.uniqueFilers} companies filing</p>
-            </div>
-          </div>
-        )}
-      </div>
+      <DashboardHero
+        badge="Local Content Secretariat"
+        title="Regulatory Dashboard"
+        subtitle="Real-time sector compliance monitoring"
+        date={new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        kpis={analytics ? [
+          { label: "Local Spend", value: formatCurrency(analytics.localSpend), color: "text-emerald-300", sublabel: `${analytics.guyaneseSupplierCount} suppliers · ${analytics.overallLcRate}% LC rate` },
+          { label: "Guyanese Jobs", value: analytics.jobsCreated.toLocaleString(), color: "text-sky-300", sublabel: `${analytics.totalEmployees.toLocaleString()} total · ${analytics.employmentPct}% Guyanese` },
+          { label: "Hours Saved", value: analytics.staffHoursSaved.toLocaleString(), color: "text-amber-300", sublabel: `${analytics.totalSubmissions} digital submissions` },
+          { label: "Economic Impact", value: formatCurrency(analytics.economicImpact), sublabel: `${analytics.uniqueFilers} companies filing` },
+        ] : undefined}
+      />
 
       {/* Secondary metrics row */}
       {analytics && (
