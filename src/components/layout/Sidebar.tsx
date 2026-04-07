@@ -42,7 +42,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Market",
     items: [
       { label: "Opportunities", href: "/dashboard/opportunities", icon: Megaphone },
-      { label: "Companies", href: "/dashboard/companies", icon: Factory },
+      { label: "Verified Companies", href: "/dashboard/companies", icon: Factory },
       { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
     ],
   },

@@ -47,12 +47,12 @@ export default function CompaniesPage() {
 
   return (
     <div>
-      <TopBar title="Companies" />
+      <TopBar title="Verified Companies" />
       <div className="p-4 sm:p-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-heading font-bold text-text-primary">Company Directory</h1>
-            <p className="text-sm text-text-secondary">{profiles.length} companies in Guyana&apos;s petroleum sector</p>
+            <h1 className="text-xl font-heading font-bold text-text-primary">Verified Companies</h1>
+            <p className="text-sm text-text-secondary">{profiles.length} LCS-registered companies in Guyana&apos;s petroleum sector</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleAggregate} loading={aggregating} className="gap-1.5">
             <RefreshCw className="h-4 w-4" /> Refresh Profiles
@@ -72,8 +72,8 @@ export default function CompaniesPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <Card className="p-4">
-            <p className="text-xs text-text-muted">Total Companies</p>
-            <p className="text-2xl font-bold">{profiles.length}</p>
+            <p className="text-xs text-text-muted">LCS Verified</p>
+            <p className="text-2xl font-bold">{profiles.filter(p => p.lcsRegistered).length}</p>
           </Card>
           <Card className="p-4">
             <p className="text-xs text-text-muted">With Open Opportunities</p>
@@ -116,14 +116,16 @@ export default function CompaniesPage() {
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold text-text-primary truncate">{p.companyName}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
+                          {p.lcsRegistered ? (
+                            <Badge variant="success" className="text-[9px] gap-0.5">
+                              <Shield className="h-2.5 w-2.5" /> LCS Verified
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" className="text-[9px]">Unverified</Badge>
+                          )}
                           {p.claimed && (
                             <Badge variant="accent" className="text-[9px] gap-0.5">
                               <CheckCircle className="h-2.5 w-2.5" /> Claimed
-                            </Badge>
-                          )}
-                          {p.lcsRegistered && (
-                            <Badge variant="success" className="text-[9px] gap-0.5">
-                              <Shield className="h-2.5 w-2.5" /> LCS
                             </Badge>
                           )}
                         </div>

@@ -92,7 +92,7 @@ export default function CompanyProfilePage() {
       <TopBar title={profile.companyName} />
       <div className="p-4 sm:p-8 max-w-5xl">
         <Link href="/dashboard/companies" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-4">
-          <ArrowLeft className="h-4 w-4" /> Back to Companies
+          <ArrowLeft className="h-4 w-4" /> Back to Verified Companies
         </Link>
 
         {/* Header */}
@@ -105,13 +105,15 @@ export default function CompanyProfilePage() {
                 <p className="text-sm text-text-muted">{profile.legalName}</p>
               )}
               <div className="flex items-center gap-2 mt-1">
+                {profile.lcsRegistered ? (
+                  <Badge variant="success" className="gap-1"><Shield className="h-3 w-3" /> LCS Verified</Badge>
+                ) : (
+                  <Badge variant="default">Unverified</Badge>
+                )}
                 {profile.claimed ? (
                   <Badge variant="accent" className="gap-1"><CheckCircle className="h-3 w-3" /> Claimed</Badge>
                 ) : (
                   <Badge variant="default">Unclaimed</Badge>
-                )}
-                {profile.lcsRegistered && (
-                  <Badge variant="success" className="gap-1"><Shield className="h-3 w-3" /> LCS Registered</Badge>
                 )}
                 {profile.verified && (
                   <Badge variant="accent" className="gap-1"><CheckCircle className="h-3 w-3" /> Verified</Badge>

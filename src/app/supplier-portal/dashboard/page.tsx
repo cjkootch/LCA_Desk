@@ -67,7 +67,7 @@ export default function SupplierDashboard() {
           <Shield className={cn("h-5 w-5 mx-auto mb-1", isExpired ? "text-danger" : isExpiring ? "text-warning" : "text-success")} />
           <p className="text-lg font-bold font-mono">{profile.lcsCertId || "—"}</p>
           <Badge variant={isExpired ? "danger" : profile.lcsVerified ? "success" : "warning"} className="text-[9px]">
-            {isExpired ? "Expired" : profile.lcsVerified ? "Verified" : profile.lcsCertId ? "Unverified" : "No Cert"}
+            {isExpired ? "Expired" : profile.lcsVerified ? "LCS Verified" : profile.lcsCertId ? "Pending" : "Not Registered"}
           </Badge>
         </Card>
         <Card className="p-4 text-center">
