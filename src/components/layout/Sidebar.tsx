@@ -50,7 +50,6 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Resources",
     items: [
       { label: "Training", href: "/dashboard/training", icon: GraduationCap },
-      { label: "LCA Expert", href: "/dashboard/expert", icon: Sparkles },
       { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
       { label: "Settings", href: "/dashboard/settings", icon: Settings },
     ],
