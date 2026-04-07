@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Search, MapPin, Calendar, Users, Briefcase, Sparkles, ExternalLink } from "lucide-react";
-import { fetchPublicJobs, fetchLcsJobs } from "@/server/actions";
+import { Search, MapPin, Calendar, Users, Briefcase, Sparkles, ExternalLink, Bookmark, BookmarkCheck } from "lucide-react";
+import { fetchPublicJobs, fetchLcsJobs, seekerSaveJob, seekerUnsaveJob, fetchMySavedJobs } from "@/server/actions";
 import { CompanyLogo } from "@/components/shared/CompanyLogo";
 import Link from "next/link";
 
@@ -28,6 +28,27 @@ export default function SeekerJobsPage() {
   const [category, setCategory] = useState("All");
   const [contractType, setContractType] = useState("All");
   const [tab, setTab] = useState<"all" | "posted" | "lcs">("all");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [savedJobIds, setSavedJobIds] = useState<Map<string, string>>(new Map()); // jobId → savedId
+
+  const loadSaved = () => {
+    fetchMySavedJobs().then(saved => {
+      const map = new Map<string, string>();
+      saved.forEach((s: { id: string; jobId: string }) => map.set(s.jobId, s.id));
+      setSavedJobIds(map);
+    }).catch(() => {});
+  };
+
+  const toggleSaveJob = async (jobId: string, jobType: "posted" | "lcs") => {
+    const savedId = savedJobIds.get(jobId);
+    if (savedId) {
+      await seekerUnsaveJob(savedId);
+      setSavedJobIds(prev => { const next = new Map(prev); next.delete(jobId); return next; });
+    } else {
+      await seekerSaveJob(jobId, jobType);
+      loadSaved();
+    }
+  };
 
   const loadJobs = () => {
     setLoading(true);
@@ -44,7 +65,7 @@ export default function SeekerJobsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadJobs(); }, [search, category, contractType]);
+  useEffect(() => { loadJobs(); loadSaved(); }, [search, category, contractType]);
 
   const handleSearch = () => loadJobs();
 
@@ -170,11 +191,16 @@ export default function SeekerJobsPage() {
                                 <p className="text-xs font-medium text-text-primary mt-0.5">{new Date(job.closingDate).toLocaleDateString()}</p>
                               </div>
                             )}
-                            {job.sourceUrl && (
-                              <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="gap-1"><ExternalLink className="h-3 w-3" /> View</Button>
-                              </a>
-                            )}
+                            <div className="flex gap-1">
+                              <button onClick={() => toggleSaveJob(job.id, "lcs")} className="p-1.5 rounded-lg hover:bg-bg-primary transition-colors" title={savedJobIds.has(job.id) ? "Unsave" : "Save"}>
+                                {savedJobIds.has(job.id) ? <BookmarkCheck className="h-4 w-4 text-accent" /> : <Bookmark className="h-4 w-4 text-text-muted" />}
+                              </button>
+                              {job.sourceUrl && (
+                                <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" size="sm" className="gap-1"><ExternalLink className="h-3 w-3" /> View</Button>
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -189,8 +215,13 @@ export default function SeekerJobsPage() {
             <div className="space-y-3">
               {tab === "all" && jobs.length > 0 && <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Posted on LCA Desk</h3>}
               {jobs.map((job) => (
-                <Link key={job.id} href={`/seeker/jobs/${job.id}`}>
-                  <Card className="hover:border-accent/30 transition-colors cursor-pointer mb-3">
+                <div key={job.id} className="relative mb-3">
+                  <button onClick={(e) => { e.preventDefault(); toggleSaveJob(job.id, "posted"); }}
+                    className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-bg-primary transition-colors" title={savedJobIds.has(job.id) ? "Unsave" : "Save"}>
+                    {savedJobIds.has(job.id) ? <BookmarkCheck className="h-4 w-4 text-accent" /> : <Bookmark className="h-4 w-4 text-text-muted" />}
+                  </button>
+                <Link href={`/seeker/jobs/${job.id}`}>
+                  <Card className="hover:border-accent/30 transition-colors cursor-pointer">
                     <CardContent className="p-4 sm:p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -240,6 +271,7 @@ export default function SeekerJobsPage() {
                     </CardContent>
                   </Card>
                 </Link>
+                </div>
               ))}
             </div>
             )}

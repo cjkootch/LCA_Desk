@@ -42,6 +42,7 @@ import {
   amendmentRequests,
   supplierResponses,
   lcsCertApplications,
+  savedJobs,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -2552,6 +2553,50 @@ export async function fetchMySavedOpportunities() {
     .orderBy(savedOpportunities.createdAt);
 }
 
+// ─── SEEKER: SAVE JOBS ──────────────────────────────────────────
+
+export async function seekerSaveJob(jobId: string, jobType: "posted" | "lcs") {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await db.insert(savedJobs).values({
+    userId: session.user.id,
+    jobPostingId: jobType === "posted" ? jobId : null,
+    lcsJobId: jobType === "lcs" ? jobId : null,
+    jobType,
+  }).onConflictDoNothing();
+}
+
+export async function seekerUnsaveJob(savedId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  await db.delete(savedJobs).where(and(eq(savedJobs.id, savedId), eq(savedJobs.userId, session.user.id)));
+}
+
+export async function fetchMySavedJobs() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const saved = await db.select().from(savedJobs)
+    .where(eq(savedJobs.userId, session.user.id))
+    .orderBy(desc(savedJobs.createdAt)).limit(50);
+
+  const results = [];
+  for (const s of saved) {
+    if (s.jobType === "posted" && s.jobPostingId) {
+      const [job] = await db.select({ title: jobPostings.jobTitle, company: tenants.name, category: jobPostings.employmentCategory, location: jobPostings.location, deadline: jobPostings.applicationDeadline })
+        .from(jobPostings).innerJoin(tenants, eq(jobPostings.tenantId, tenants.id))
+        .where(eq(jobPostings.id, s.jobPostingId)).limit(1);
+      if (job) results.push({ id: s.id, jobType: "posted", jobId: s.jobPostingId, savedAt: s.createdAt, ...job });
+    } else if (s.jobType === "lcs" && s.lcsJobId) {
+      const [job] = await db.select({ title: lcsEmploymentNotices.jobTitle, company: lcsEmploymentNotices.companyName, category: lcsEmploymentNotices.employmentCategory, location: lcsEmploymentNotices.location, deadline: lcsEmploymentNotices.closingDate })
+        .from(lcsEmploymentNotices).where(eq(lcsEmploymentNotices.id, s.lcsJobId)).limit(1);
+      if (job) results.push({ id: s.id, jobType: "lcs", jobId: s.lcsJobId, savedAt: s.createdAt, ...job });
+    }
+  }
+  return results;
+}
+
 export async function fetchSeekerDashboardStats() {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -2566,9 +2611,15 @@ export async function fetchSeekerDashboardStats() {
     .from(savedOpportunities)
     .where(eq(savedOpportunities.userId, session.user.id));
 
+  const savedJobCount = await db
+    .select({ id: savedJobs.id })
+    .from(savedJobs)
+    .where(eq(savedJobs.userId, session.user.id));
+
   const openJobs = await db
-    .select({ id: jobPostings.id })
+    .select({ id: jobPostings.id, category: jobPostings.employmentCategory, title: jobPostings.jobTitle, company: tenants.name })
     .from(jobPostings)
+    .innerJoin(tenants, eq(jobPostings.tenantId, tenants.id))
     .where(and(eq(jobPostings.status, "open"), eq(jobPostings.isPublic, true)))
     .limit(500);
 
@@ -2576,12 +2627,37 @@ export async function fetchSeekerDashboardStats() {
     where: eq(jobSeekerProfiles.userId, session.user.id),
   });
 
+  // Badges
+  const badges = await db.select({ courseId: userCourseProgress.courseId, badgeEarnedAt: userCourseProgress.badgeEarnedAt })
+    .from(userCourseProgress)
+    .where(and(eq(userCourseProgress.userId, session.user.id), sql`${userCourseProgress.badgeEarnedAt} IS NOT NULL`))
+    .limit(10);
+  const uniqueBadgeCourseIds = [...new Set(badges.map(b => b.courseId))];
+  const earnedBadges = uniqueBadgeCourseIds.length > 0
+    ? await db.select({ id: courses.id, badgeLabel: courses.badgeLabel, badgeColor: courses.badgeColor })
+        .from(courses).where(sql`${courses.id} = ANY(${uniqueBadgeCourseIds})`)
+    : [];
+
+  // Recommended jobs: match by employment category, then skills in title
+  const seekerCategory = profile?.employmentCategory || "";
+  const seekerSkills = profile?.skills || [];
+  const matched = openJobs
+    .filter(j => {
+      if (seekerCategory && j.category === seekerCategory) return true;
+      if (seekerSkills.some(s => j.title.toLowerCase().includes(s.toLowerCase()))) return true;
+      return false;
+    })
+    .slice(0, 6);
+  // If not enough matches, pad with recent jobs
+  const recommended = matched.length >= 4 ? matched : [...matched, ...openJobs.filter(j => !matched.includes(j)).slice(0, 6 - matched.length)];
+
   return {
     totalApplications: apps.length,
     activeApplications: apps.filter((a) => !["selected", "rejected"].includes(a.status || "")).length,
     selectedCount: apps.filter((a) => a.status === "selected").length,
     rejectedCount: apps.filter((a) => a.status === "rejected").length,
     savedOpportunities: saved.length,
+    savedJobs: savedJobCount.length,
     openJobsCount: openJobs.length,
     profileComplete: !!(
       profile?.currentJobTitle &&
@@ -2589,6 +2665,8 @@ export async function fetchSeekerDashboardStats() {
       profile?.skills?.length
     ),
     profile,
+    earnedBadges,
+    recommendedJobs: recommended.map(j => ({ id: j.id, title: j.title, company: j.company, category: j.category })),
   };
 }
 

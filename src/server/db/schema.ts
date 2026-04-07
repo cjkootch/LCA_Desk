@@ -645,6 +645,22 @@ export const savedOpportunities = pgTable(
   ]
 );
 
+// ─── SAVED JOBS ─────────────────────────────────────────────────
+export const savedJobs = pgTable(
+  "saved_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    jobPostingId: uuid("job_posting_id").references(() => jobPostings.id, { onDelete: "cascade" }),
+    lcsJobId: uuid("lcs_job_id").references(() => lcsEmploymentNotices.id, { onDelete: "cascade" }),
+    jobType: text("job_type").notNull().default("posted"), // "posted" | "lcs"
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("saved_jobs_user_idx").on(table.userId),
+  ]
+);
+
 // ─── JOB POSTINGS ────────────────────────────────────────────────
 export const jobPostings = pgTable(
   "job_postings",

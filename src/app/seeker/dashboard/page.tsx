@@ -9,9 +9,9 @@ import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Briefcase, FileText, Bookmark, TrendingUp, CheckCircle, XCircle,
-  Clock, ArrowRight, AlertCircle, Search,
+  Clock, ArrowRight, AlertCircle, Search, Trophy,
 } from "lucide-react";
-import { fetchSeekerDashboardStats, fetchMyApplications, fetchPublicJobs } from "@/server/actions";
+import { fetchSeekerDashboardStats, fetchMyApplications } from "@/server/actions";
 import Link from "next/link";
 
 const STATUS_VARIANT: Record<string, "default" | "accent" | "warning" | "success" | "danger"> = {
@@ -26,19 +26,19 @@ const STATUS_VARIANT: Record<string, "default" | "accent" | "warning" | "success
 export default function SeekerDashboard() {
   const [stats, setStats] = useState<Awaited<ReturnType<typeof fetchSeekerDashboardStats>>>(null);
   const [recentApps, setRecentApps] = useState<Awaited<ReturnType<typeof fetchMyApplications>>>([]);
-  const [recommendedJobs, setRecommendedJobs] = useState<Awaited<ReturnType<typeof fetchPublicJobs>>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetchSeekerDashboardStats(),
       fetchMyApplications(),
-      fetchPublicJobs(),
     ])
-      .then(([s, a, j]) => {
+      .then(([s, a]) => {
         setStats(s);
         setRecentApps(a.slice(0, 5));
-        setRecommendedJobs(j.slice(0, 4));
+        setRecommendedJobs(s?.recommendedJobs || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -167,6 +167,18 @@ export default function SeekerDashboard() {
           </Link>
         </div>
 
+        {/* Earned badges */}
+        {stats?.earnedBadges && stats.earnedBadges.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap">
+            {stats.earnedBadges.map((b: { id: string; badgeLabel: string | null; badgeColor: string | null }) => (
+              <div key={b.id} className="flex items-center gap-1.5 rounded-full bg-bg-primary border border-border px-3 py-1.5">
+                <Trophy className={`h-3.5 w-3.5 ${b.badgeColor === "gold" ? "text-gold" : b.badgeColor === "success" ? "text-success" : "text-accent"}`} />
+                <span className="text-xs font-medium text-text-primary">{b.badgeLabel}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-5 gap-6">
           {/* Recent applications */}
           <div className="lg:col-span-3 space-y-3">
@@ -237,7 +249,7 @@ export default function SeekerDashboard() {
                   <Card className="hover:border-accent/30 transition-colors cursor-pointer">
                     <CardContent className="p-3 flex items-center gap-3">
                       <Bookmark className="h-4 w-4 text-accent" />
-                      <span className="text-sm text-text-primary">Saved items ({stats?.savedOpportunities || 0})</span>
+                      <span className="text-sm text-text-primary">Saved items ({(stats?.savedOpportunities || 0) + (stats?.savedJobs || 0)})</span>
                     </CardContent>
                   </Card>
                 </Link>
@@ -256,21 +268,14 @@ export default function SeekerDashboard() {
               </Link>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              {recommendedJobs.map((job) => (
+              {recommendedJobs.map((job: { id: string; title: string; company: string; category: string }) => (
                 <Link key={job.id} href={`/seeker/jobs/${job.id}`}>
                   <Card className="hover:border-accent/30 transition-colors cursor-pointer h-full">
                     <CardContent className="p-4">
-                      <p className="text-sm font-medium text-text-primary">{job.jobTitle}</p>
-                      <p className="text-xs text-text-secondary mt-0.5">{job.companyName}</p>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <Badge variant="default" className="text-[10px]">{job.employmentCategory}</Badge>
-                        <Badge variant="default" className="text-[10px]">{job.contractType}</Badge>
-                        {job.location && <Badge variant="default" className="text-[10px]">{job.location}</Badge>}
-                      </div>
-                      {job.applicationDeadline && (
-                        <p className="text-[11px] text-text-muted mt-2">
-                          Deadline: {new Date(job.applicationDeadline).toLocaleDateString()}
-                        </p>
+                      <p className="text-sm font-medium text-text-primary">{job.title}</p>
+                      <p className="text-xs text-text-secondary mt-0.5">{job.company}</p>
+                      {job.category && (
+                        <Badge variant="default" className="text-[10px] mt-2">{job.category}</Badge>
                       )}
                     </CardContent>
                   </Card>
