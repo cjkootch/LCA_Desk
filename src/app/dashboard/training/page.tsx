@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/layout/TopBar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   GraduationCap, BookOpen, CheckCircle, Clock, Users, Trophy,
-  ArrowRight, Shield,
+  ArrowRight, Zap, Star, Award, Target,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, seedSupplierCourse, seedFirstReportCourse, seedFirstScheduleCourse, seedAuditPrepCourse, seedWinningContractsCourse, seedLcsCertCourse, seedCareerGuideCourse, seedInterviewPrepCourse, seedEsgCourse, fetchTeamMembers } from "@/server/actions";
-import { toast } from "sonner";
+import {
+  fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse,
+  seedSupplierCourse, seedFirstReportCourse, seedFirstScheduleCourse,
+  seedAuditPrepCourse, seedWinningContractsCourse, seedLcsCertCourse,
+  seedCareerGuideCourse, seedInterviewPrepCourse, seedEsgCourse,
+  fetchTeamMembers,
+} from "@/server/actions";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function TrainingPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,22 +33,14 @@ export default function TrainingPage() {
     Promise.all([fetchCourses("filer"), fetchUserBadges(), fetchTeamMembers()])
       .then(async ([c, b, t]) => {
         setBadges(b); setTeamMembers(t);
-        // Auto-seed courses if none exist (runs once, idempotent)
         if (c.length === 0) {
           try {
-            await seedLcaCourse();
-            await seedPlatformCourse();
-            await seedSupplierCourse();
-            await seedFirstReportCourse();
-            await seedFirstScheduleCourse();
-            await seedAuditPrepCourse();
-            await seedWinningContractsCourse();
-            await seedLcsCertCourse();
-            await seedCareerGuideCourse();
-            await seedInterviewPrepCourse();
-            await seedEsgCourse();
+            await seedLcaCourse(); await seedPlatformCourse(); await seedSupplierCourse();
+            await seedFirstReportCourse(); await seedFirstScheduleCourse(); await seedAuditPrepCourse();
+            await seedWinningContractsCourse(); await seedLcsCertCourse();
+            await seedCareerGuideCourse(); await seedInterviewPrepCourse(); await seedEsgCourse();
             c = await fetchCourses("filer");
-          } catch { /* seed failed — show empty state */ }
+          } catch {}
         }
         setCourseList(c);
       })
@@ -50,126 +48,212 @@ export default function TrainingPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Courses auto-seed on first visit if none exist
-
   if (loading) {
     return (
       <>
         <TopBar title="Training" />
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-        </div>
+        <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>
       </>
     );
   }
 
-  return (
-    <div>
-      <TopBar title="Training" description="LCA compliance training for your team" />
-      <div className="p-4 sm:p-8 max-w-5xl">
-        {/* Admin info */}
-        <Card className="border-accent/20 bg-accent-light mb-6">
-          <CardContent className="p-4 flex items-start gap-3">
-            <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-text-primary">Compliance Training</p>
-              <p className="text-xs text-text-secondary mt-0.5">
-                Ensure your team understands the Local Content Act before filing. Completed courses earn badges
-                visible in the audit trail, demonstrating your organization&apos;s commitment to compliance.
-              </p>
+  const completedCourses = badges.length;
+  const totalModules = courseList.reduce((s, c) => s + (c.moduleCount || 0), 0);
+  const xp = completedCourses * 500;
+  const level = Math.floor(xp / 1000) + 1;
+  const progressPct = courseList.length > 0 ? Math.round((completedCourses / courseList.length) * 100) : 0;
+
+  // Split courses into categories for visual grouping
+  const essentialCourses = courseList.filter(c => ["lca-fundamentals", "mastering-lca-desk", "first-report"].includes(c.slug));
+  const advancedCourses = courseList.filter(c => ["first-schedule", "audit-prep", "esg-local-content"].includes(c.slug));
+  const growthCourses = courseList.filter(c => !essentialCourses.includes(c) && !advancedCourses.includes(c));
+
+  const CourseCard = ({ course }: { course: typeof courseList[0] }) => {
+    const hasBadge = badges.some((b: { courseId: string }) => b.courseId === course.id);
+    return (
+      <Link href={`/seeker/learn/${course.slug}`}>
+        <Card className={cn(
+          "hover:border-accent/30 hover:shadow-md transition-all cursor-pointer h-full",
+          hasBadge && "border-success/20 bg-success/[0.02]"
+        )}>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className={cn("p-2 rounded-xl shrink-0", hasBadge ? "bg-success/10" : "bg-accent-light")}>
+                {hasBadge ? <CheckCircle className="h-5 w-5 text-success" /> : <BookOpen className="h-5 w-5 text-accent" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-text-primary">{course.title}</h3>
+                  {hasBadge && <Badge variant="success" className="text-[9px] gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Done</Badge>}
+                </div>
+                <p className="text-xs text-text-secondary mt-1 line-clamp-2">{course.description}</p>
+                <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-text-muted">
+                  <span className="flex items-center gap-0.5"><BookOpen className="h-3 w-3" /> {course.moduleCount}</span>
+                  {course.estimatedMinutes && <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {course.estimatedMinutes}m</span>}
+                  <span className="flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +500 XP</span>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-text-muted shrink-0 mt-1" />
             </div>
           </CardContent>
         </Card>
+      </Link>
+    );
+  };
 
-        {/* Team status */}
-        {teamMembers.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
+  return (
+    <div>
+      <TopBar title="Training" description="Build your team's compliance knowledge" />
+      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+
+        {/* Gamification header */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <Card className="p-4 text-center bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
+            <Zap className="h-4 w-4 text-accent mx-auto mb-1" />
+            <p className="text-2xl font-bold text-accent">{level}</p>
+            <p className="text-[10px] text-text-muted">Level</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <BookOpen className="h-4 w-4 text-text-muted mx-auto mb-1" />
+            <p className="text-2xl font-bold">{courseList.length}</p>
+            <p className="text-[10px] text-text-muted">Courses</p>
+          </Card>
+          <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent border-success/20">
+            <CheckCircle className="h-4 w-4 text-success mx-auto mb-1" />
+            <p className="text-2xl font-bold text-success">{completedCourses}</p>
+            <p className="text-[10px] text-text-muted">Completed</p>
+          </Card>
+          <Card className="p-4 text-center bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
+            <Trophy className="h-4 w-4 text-gold mx-auto mb-1" />
+            <p className="text-2xl font-bold text-gold">{badges.length}</p>
+            <p className="text-[10px] text-text-muted">Badges</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <Users className="h-4 w-4 text-text-muted mx-auto mb-1" />
+            <p className="text-2xl font-bold">{teamMembers.length}</p>
+            <p className="text-[10px] text-text-muted">Team</p>
+          </Card>
+        </div>
+
+        {/* Overall progress */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-accent" />
-                <CardTitle className="text-sm">Team Training Status</CardTitle>
+                <Target className="h-4 w-4 text-accent" />
+                <span className="text-sm font-medium text-text-primary">Training Progress</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {teamMembers.map((m: { id: string; userId: string; user: { name: string; email: string } }) => {
-                  // Check if this team member has badges (rough proxy for training status)
-                  // Full per-user progress tracking would require a dedicated query
-                  return (
-                  <div key={m.id} className="flex items-center justify-between text-sm">
+              <span className="text-xs text-text-muted">{completedCourses} of {courseList.length} courses · {xp} XP</span>
+            </div>
+            <Progress value={progressPct} className="h-2.5" indicatorClassName={progressPct === 100 ? "bg-success" : "bg-accent"} />
+            {progressPct === 100 && (
+              <p className="text-xs text-success font-medium mt-1.5 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> All courses completed!</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Earned badges showcase */}
+        {badges.length > 0 && (
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-gold/10 via-gold/5 to-transparent p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Award className="h-5 w-5 text-gold" />
+                <p className="text-sm font-semibold text-text-primary">Earned Certifications</p>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {badges.map((b: { courseId: string; badgeLabel: string; badgeColor: string }) => (
+                  <div key={b.courseId} className="flex items-center gap-2 rounded-xl bg-white/80 border border-gold/20 px-4 py-3 shrink-0 shadow-sm">
+                    <div className={cn("h-9 w-9 rounded-full flex items-center justify-center",
+                      b.badgeColor === "gold" ? "bg-gold/10" : b.badgeColor === "success" ? "bg-success/10" : "bg-accent/10"
+                    )}>
+                      <Trophy className={cn("h-4 w-4", b.badgeColor === "gold" ? "text-gold" : b.badgeColor === "success" ? "text-success" : "text-accent")} />
+                    </div>
                     <div>
-                      <p className="text-text-primary">{m.user.name || m.user.email}</p>
-                      <p className="text-xs text-text-muted">{m.user.email}</p>
+                      <p className="text-xs font-bold text-text-primary">{b.badgeLabel}</p>
+                      <p className="text-[9px] text-text-muted">Certified</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Team Training Status */}
+        {teamMembers.length > 1 && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4 text-accent" />
+                <p className="text-sm font-semibold text-text-primary">Team Training Status</p>
+              </div>
+              <div className="space-y-2">
+                {teamMembers.map((m: { id: string; userId: string; user: { name: string; email: string } }) => (
+                  <div key={m.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-bg-primary flex items-center justify-center text-sm font-bold text-text-muted">
+                        {(m.user.name || m.user.email).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">{m.user.name || "Team Member"}</p>
+                        <p className="text-[10px] text-text-muted">{m.user.email}</p>
+                      </div>
                     </div>
                     <Badge variant="default" className="text-[10px]">Not Started</Badge>
                   </div>
-                  );
-                })}
+                ))}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* My badges */}
-        {badges.length > 0 && (
-          <Card className="border-success/20 mb-6">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Trophy className="h-6 w-6 text-gold" />
+        {/* Course sections */}
+        {courseList.length === 0 ? (
+          <EmptyState icon={GraduationCap} title="Training courses loading" description="Courses are being set up. Refresh in a moment." />
+        ) : (
+          <>
+            {/* Essential courses */}
+            {essentialCourses.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-text-primary">Your Badges</p>
-                <div className="flex gap-2 mt-1">
-                  {badges.map(b => (
-                    <Badge key={b.courseId} variant="accent" className="gap-1">
-                      <CheckCircle className="h-3 w-3" /> {b.badgeLabel || b.courseTitle}
-                    </Badge>
-                  ))}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-1 w-1 rounded-full bg-accent" />
+                  <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Getting Started</h2>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {essentialCourses.map(c => <CourseCard key={c.id} course={c} />)}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
 
-        {/* Courses */}
-        {courseList.length === 0 ? (
-          <EmptyState
-            icon={GraduationCap}
-            title="Training courses loading"
-            description="Courses are being set up. Refresh this page in a moment."
-          />
-        ) : (
-          <div className="space-y-4">
-            {courseList.map(course => {
-              const hasBadge = badges.some(b => b.courseId === course.id);
-              return (
-                <Link key={course.id} href={`/seeker/learn/${course.slug}`}>
-                  <Card className="hover:border-accent/30 transition-colors cursor-pointer">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-accent-light shrink-0">
-                            <BookOpen className="h-5 w-5 text-accent" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-base font-semibold text-text-primary">{course.title}</h3>
-                              {hasBadge && <Badge variant="success" className="text-[10px] gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Completed</Badge>}
-                            </div>
-                            <p className="text-sm text-text-secondary mt-1">{course.description}</p>
-                            <div className="flex gap-3 mt-2 text-xs text-text-muted">
-                              <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.moduleCount} modules</span>
-                              {course.estimatedMinutes && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> ~{course.estimatedMinutes} min</span>}
-                              {course.badgeLabel && <span className="flex items-center gap-1"><Trophy className="h-3 w-3 text-gold" /> Earn: {course.badgeLabel}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-text-muted shrink-0 mt-2" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
+            {/* Advanced courses */}
+            {advancedCourses.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-1 w-1 rounded-full bg-gold" />
+                  <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Advanced Compliance</h2>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {advancedCourses.map(c => <CourseCard key={c.id} course={c} />)}
+                </div>
+              </div>
+            )}
+
+            {/* Growth courses */}
+            {growthCourses.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-1 w-1 rounded-full bg-success" />
+                  <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Professional Growth</h2>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {growthCourses.map(c => <CourseCard key={c.id} course={c} />)}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
