@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   FileSpreadsheet, FileText, Send, CheckCircle, Mail, Shield,
-  Lock, AlertTriangle, Clock, User, Globe, Download, ArrowRight, Upload,
+  Lock, AlertTriangle, Clock, User, Globe, Download, ArrowRight,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import { useJurisdiction } from "@/hooks/useJurisdiction";
 import {
   fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment,
   fetchCapacity, fetchNarratives, attestAndSubmit, updatePeriodStatus,
-  fetchPlanAndUsage, fetchAuditLog, submitWithUpload,
+  fetchPlanAndUsage, fetchAuditLog,
 } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
@@ -47,13 +47,6 @@ export default function ExportPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
   const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>(null);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadKey, setUploadKey] = useState("");
-  const [uploadName, setUploadName] = useState("");
-  const [uploading, setUploading] = useState(false);
-
-  const isFreePlan = currentPlan === "free";
-
   useEffect(() => {
     const load = async () => {
       fetchPlanAndUsage().then(d => setCurrentPlan(d.plan)).catch(() => {});
@@ -124,48 +117,6 @@ export default function ExportPage() {
           ? "Report submitted directly to the Secretariat via LCA Desk."
           : "Report submitted and locked. A snapshot has been saved."
       );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Submission failed");
-    }
-    setSubmitting(false);
-  };
-
-  const handleFileUpload = async (file: File) => {
-    setUploadFile(file);
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload failed");
-      }
-      const data = await res.json();
-      setUploadKey(data.fileKey);
-      setUploadName(data.fileName);
-      toast.success("File uploaded successfully");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
-      setUploadFile(null);
-    }
-    setUploading(false);
-  };
-
-  const handleUploadSubmit = async () => {
-    if (!attestChecked) {
-      toast.error("You must attest to the accuracy of this report before submitting.");
-      return;
-    }
-    if (!uploadKey) {
-      toast.error("Please upload your report file first.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await submitWithUpload(periodId, getJurisdictionTemplate(jurisdictionCode).attestationText, uploadKey, uploadName);
-      setPeriod((prev: typeof period) => prev ? { ...prev, status: "submitted", submittedAt: new Date(), lockedAt: new Date() } : prev);
-      toast.success("Report uploaded and submitted to the Secretariat via LCA Desk.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Submission failed");
     }
@@ -248,106 +199,8 @@ export default function ExportPage() {
           </CardContent>
         </Card>
 
-        {/* Free tier: Upload & Submit flow */}
-        {isFreePlan && !isSubmitted && (
-          <Card className="mb-6 border-accent/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Upload className="h-5 w-5 text-accent" />
-                <CardTitle className="text-base">Upload & Submit Report</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-text-secondary">
-                Upload your completed Excel report to submit directly to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"} through LCA Desk.
-              </p>
-
-              {/* File drop zone */}
-              <div
-                className="relative rounded-xl border-2 border-dashed border-border hover:border-accent/40 transition-colors p-8 text-center cursor-pointer"
-                onClick={() => document.getElementById("file-upload")?.click()}
-                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-accent", "bg-accent-light"); }}
-                onDragLeave={e => { e.currentTarget.classList.remove("border-accent", "bg-accent-light"); }}
-                onDrop={e => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove("border-accent", "bg-accent-light");
-                  const file = e.dataTransfer.files[0];
-                  if (file) handleFileUpload(file);
-                }}
-              >
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept=".xlsx,.xls,.pdf"
-                  className="hidden"
-                  onChange={e => { const file = e.target.files?.[0]; if (file) handleFileUpload(file); }}
-                />
-                {uploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-                    <p className="text-sm text-text-muted">Uploading...</p>
-                  </div>
-                ) : uploadKey ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <CheckCircle className="h-8 w-8 text-success" />
-                    <p className="text-sm font-medium text-text-primary">{uploadName}</p>
-                    <p className="text-xs text-text-muted">File uploaded. Click to replace.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="h-8 w-8 text-text-muted" />
-                    <p className="text-sm font-medium text-text-primary">Drop your Excel report here</p>
-                    <p className="text-xs text-text-muted">or click to browse. Accepts .xlsx, .xls, or .pdf (max 10 MB)</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Attestation & Submit */}
-              {uploadKey && (
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-text-primary">Attestation & Submission</h3>
-                      <p className="text-xs text-text-muted mt-0.5">This action is irreversible. Your file will be delivered to the Secretariat.</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-warning-light border border-warning/20 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                      <p className="text-xs text-text-secondary leading-relaxed">{getJurisdictionTemplate(jurisdictionCode).attestationText}</p>
-                    </div>
-                  </div>
-
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={attestChecked} onChange={e => setAttestChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent" />
-                    <span className="text-sm text-text-primary font-medium">I have read and agree to the attestation above</span>
-                  </label>
-
-                  <Button onClick={handleUploadSubmit} loading={submitting} disabled={!attestChecked} size="lg" className="w-full gap-2">
-                    <Send className="h-5 w-5" /> Submit to Secretariat
-                  </Button>
-                </div>
-              )}
-
-              {/* Upgrade banner */}
-              <div className="bg-bg-primary rounded-lg p-4 border border-border">
-                <p className="text-xs font-semibold text-text-primary mb-1">Want to generate reports automatically?</p>
-                <p className="text-[11px] text-text-muted mb-3">
-                  Upgrade to Lite to enter data directly, auto-generate Excel &amp; PDF reports, and access compliance analytics.
-                </p>
-                <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/settings/billing"}>
-                  View Plans
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Export files (paid plans only) */}
-        {!isFreePlan && (
+        {/* Export files */}
+        {(
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -372,7 +225,7 @@ export default function ExportPage() {
         )}
 
         {/* Submission method choice (paid plans) */}
-        {!isSubmitted && !isFreePlan && (
+        {!isSubmitted && (
           <>
             {/* Workflow status buttons */}
             {(period.status === "not_started" || period.status === "in_progress" || period.status === "in_review") && (

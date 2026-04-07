@@ -1,4 +1,4 @@
-export type PlanCode = "free" | "lite" | "pro" | "enterprise";
+export type PlanCode = "lite" | "pro" | "enterprise";
 
 export interface PlanConfig {
   code: PlanCode;
@@ -42,46 +42,6 @@ export interface PlanConfig {
 }
 
 export const PLANS: Record<PlanCode, PlanConfig> = {
-  free: {
-    code: "free",
-    name: "Free",
-    displayName: "Free",
-    price: 0,
-    annualPrice: 0,
-    annualMonthlyEquivalent: 0,
-    perReportFee: 0,
-    bundledReportsPerYear: 0,
-    entityLimit: 1,
-    teamMemberLimit: 1,
-    aiDraftsPerMonth: 0,
-    aiChatMessagesPerMonth: 0,
-    bestFor: "Anyone submitting their LCS report",
-    tagline: "Upload and submit your report at no cost.",
-    features: {
-      dataEntry: false,
-      excelExport: false,
-      pdfExport: false,
-      deadlineAlerts: true,
-      complianceHealthScore: false,
-      fileUploadSubmit: true,
-      platformSubmit: true,
-      aiNarrativeDrafting: false,
-      complianceScan: false,
-      auditTrail: false,
-      qboIntegration: false,
-      jobBoard: false,
-      supplierSearch: false,
-      saveOpportunities: false,
-      companyContacts: false,
-      marketIntelligence: false,
-      firstConsiderationPdf: false,
-      smartMatching: false,
-      talentPoolAccess: false,
-      dataExtraction: false,
-      prioritySupport: false,
-      apiAccess: false,
-    },
-  },
   lite: {
     code: "lite",
     name: "Essentials",
@@ -207,8 +167,8 @@ export const PLANS: Record<PlanCode, PlanConfig> = {
 // ─── PLAN HELPERS ─────────────────────────────────────────────────
 
 export function getPlan(code: string | null | undefined): PlanConfig {
-  if (code === "starter") return PLANS.lite;
-  return PLANS[(code as PlanCode)] ?? PLANS.free;
+  if (code === "starter" || code === "free") return PLANS.lite;
+  return PLANS[(code as PlanCode)] ?? PLANS.lite;
 }
 
 export function getEffectivePlan(
@@ -357,6 +317,6 @@ export function getBillingAccess(
     };
   }
 
-  // Free tier or no trial/subscription — allow access
+  // No trial, no subscription — default to active (new user or edge case)
   return { state: "active", canAccess: true, showWarning: false, warningUrgency: "low" };
 }

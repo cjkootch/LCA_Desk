@@ -42,7 +42,7 @@ export default function SupplierDashboard() {
           <h1 className="text-xl font-heading font-bold text-text-primary">{profile.legalName || "Supplier Dashboard"}</h1>
           <p className="text-sm text-text-secondary">{profile.tradingName ? `t/a ${profile.tradingName} · ` : ""}{profile.serviceCategories.join(", ") || "No categories set"}</p>
         </div>
-        <Badge variant={isPro ? "accent" : "default"} className="text-xs">{isPro ? "Supplier Pro" : "Free"}</Badge>
+        <Badge variant={isPro ? "accent" : "default"} className="text-xs">{isPro ? "Supplier Pro" : "Starter"}</Badge>
       </div>
 
       {/* Upgrade banner for free users */}

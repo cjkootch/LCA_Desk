@@ -772,7 +772,7 @@ export const supplierProfiles = pgTable(
     yearEstablished: integer("year_established"),
     isGuyaneseOwned: boolean("is_guyanese_owned").default(true),
     // Billing
-    tier: text("tier").default("free"), // free | pro
+    tier: text("tier").default("starter"), // starter | pro
     stripeCustomerId: text("stripe_customer_id"),
     stripeSubscriptionId: text("stripe_subscription_id"),
     trialEndsAt: timestamp("trial_ends_at"),

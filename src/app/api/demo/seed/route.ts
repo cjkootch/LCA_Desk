@@ -176,18 +176,13 @@ export async function POST(req: NextRequest) {
 
     // ═══ 3. Filer (30-day Trial) ═══
     const filerTrial = await ensureUser("demo-filer-trial@lcadesk.com", "Priya Persaud", "filer");
-    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "free", 30);
+    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "lite", 30);
     results.push(`✓ Filer Trial: ${filerTrial.email} (30-day Professional trial)`);
 
     // ═══ 4. Filer (Expired Trial) ═══
     const filerExpired = await ensureUser("demo-filer-expired@lcadesk.com", "James Rodrigues", "filer");
-    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "free", -7);
+    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "lite", -7);
     results.push(`✓ Filer Expired: ${filerExpired.email} (trial expired 7 days ago)`);
-
-    // ═══ 5. Filer (Free — upload only) ═══
-    const filerFree = await ensureUser("demo-filer-free@lcadesk.com", "Nadira Singh", "filer");
-    await ensureTenant(filerFree.id, "Singh Welding & Fabrication", "singh-welding", "free");
-    results.push(`✓ Filer Free: ${filerFree.email} (upload-only, no trial)`);
 
     // ═══ 6. Job Seeker ═══
     const seeker = await ensureUser("demo-seeker@lcadesk.com", "Devon Campbell", "job_seeker");

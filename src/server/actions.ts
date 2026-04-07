@@ -73,7 +73,7 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
     tenantId: membership.tenantId,
     tenant: membership.tenant,
     role: membership.role,
-    plan: (membership.tenant.plan as string) || "free",
+    plan: (membership.tenant.plan as string) || "lite",
     trialEndsAt: membership.tenant.trialEndsAt ?? null,
     stripeSubscriptionId: membership.tenant.stripeSubscriptionId ?? null,
     stripeSubscriptionStatus: membership.tenant.stripeSubscriptionStatus ?? null,
@@ -82,7 +82,7 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
 
 function requirePlan(plan: string, required: "lite" | "pro" | "enterprise", trialEndsAt?: Date | null) {
   const effective = getEffectivePlan(plan, trialEndsAt);
-  const rank: Record<string, number> = { free: 0, lite: 1, starter: 1, pro: 2, enterprise: 3 };
+  const rank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
   if ((rank[effective.code] ?? 0) < rank[required]) {
     const planNames: Record<string, string> = { lite: "Lite", pro: "Pro", enterprise: "Enterprise" };
     throw new Error(`This feature requires the ${planNames[required] || required} plan. Upgrade in Settings > Billing.`);
@@ -1224,7 +1224,7 @@ export async function deleteChatConversation(conversationId: string) {
 // ─── PLAN & USAGE ────────────────────────────────────────────────
 export async function fetchPlanAndUsage() {
   const { tenantId, tenant } = await getSessionTenant({ skipTrialCheck: true });
-  const plan = tenant.plan || "free";
+  const plan = tenant.plan || "lite";
   const trialEndsAt = tenant.trialEndsAt ?? null;
 
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -4971,7 +4971,7 @@ export async function fetchSupplierDashboard() {
       lcsCertId: profile.lcsCertId,
       lcsVerified: profile.lcsVerified,
       lcsExpirationDate: profile.lcsExpirationDate,
-      tier: profile.tier || "free",
+      tier: profile.tier || "lite",
       serviceCategories: profile.serviceCategories || [],
       profileViews: profile.profileViews || 0,
       responsesThisMonth: profile.responsesThisMonth || 0,
@@ -5110,7 +5110,7 @@ export async function fetchSupplierAnalytics() {
     awardRate: responses.length > 0
       ? Math.round((responses.filter(r => r.status === "awarded").length / responses.length) * 100)
       : 0,
-    tier: profile.tier || "free",
+    tier: profile.tier || "lite",
   };
 }
 

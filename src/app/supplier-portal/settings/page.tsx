@@ -65,7 +65,7 @@ export default function SupplierSettingsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Current Plan</CardTitle>
-            <Badge variant={isPro ? "accent" : "default"}>{isPro ? "Supplier Pro" : "Free"}</Badge>
+            <Badge variant={isPro ? "accent" : "default"}>{isPro ? "Supplier Pro" : "Starter"}</Badge>
           </div>
         </CardHeader>
         <CardContent>
