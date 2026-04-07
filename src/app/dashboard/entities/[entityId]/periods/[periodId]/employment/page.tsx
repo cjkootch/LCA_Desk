@@ -54,6 +54,7 @@ export default function EmploymentPage() {
   const [saving, setSaving] = useState(false);
   const [locked, setLocked] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [batchCount, setBatchCount] = useState(0);
 
   const loadData = async () => {
     const [entity, rawRecords] = await Promise.all([fetchEntity(entityId), fetchEmployment(periodId)]);
@@ -69,8 +70,9 @@ export default function EmploymentPage() {
     setSaving(true);
     try {
       await addEmployment(periodId, entityId, data);
-      toast.success("Employment record added");
+      toast.success("Record added");
       setFormOpen(false);
+      setBatchCount(0);
       await loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add record");
@@ -104,6 +106,51 @@ export default function EmploymentPage() {
       toast.error(error instanceof Error ? error.message : "Failed to update");
     }
     setSaving(false);
+  };
+
+  const handleSaveAndNext = async (data: Record<string, unknown>) => {
+    setSaving(true);
+    try {
+      await addEmployment(periodId, entityId, data);
+      setBatchCount(prev => prev + 1);
+      toast.success(`Record ${batchCount + 1} added — add another`);
+      await loadData();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to add"); }
+    setSaving(false);
+  };
+
+  const handleInlineUpdate = async (id: string, field: string, value: string | number) => {
+    const record = records.find(r => r.id === id);
+    if (!record) return;
+    const updateData: Record<string, unknown> = {
+      job_title: record.job_title,
+      employment_category: record.employment_category,
+      employment_classification: record.employment_classification,
+      related_company: record.related_company,
+      total_employees: record.total_employees,
+      guyanese_employed: record.guyanese_employed,
+      total_remuneration_paid: record.total_remuneration_paid,
+      remuneration_guyanese_only: record.remuneration_guyanese_only,
+    };
+    updateData[field] = value;
+    await updateEmploymentRecord(id, updateData);
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const handlePasteRows = async (rows: Record<string, string>[]) => {
+    let added = 0;
+    for (const row of rows) {
+      try {
+        await addEmployment(periodId, entityId, {
+          job_title: row.job_title || row["Job Title"] || row.Title || "Unknown",
+          employment_category: row.employment_category || row.Category || row["Employment Category"] || "Technical",
+          total_employees: parseInt(row.total_employees || row.Total || row["Total Employees"] || "1") || 1,
+          guyanese_employed: parseInt(row.guyanese_employed || row.Guyanese || row["Guyanese Employed"] || "0") || 0,
+        });
+        added++;
+      } catch { /* skip bad rows */ }
+    }
+    if (added > 0) await loadData();
   };
 
   const metrics = calculateEmploymentMetrics(records);
@@ -153,7 +200,14 @@ export default function EmploymentPage() {
               <EmptyState icon={Users} title="No employment records" description="Add employment data to track Guyanese employment rates by category." actionLabel="Add Record" onAction={() => setFormOpen(true)} />
             ) : (
               <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <EmploymentTable records={records} onDelete={locked ? () => {} : handleDelete} onEdit={locked ? () => {} : (r) => setEditRecord(r)} />
+                <EmploymentTable
+                  records={records}
+                  onDelete={locked ? () => {} : handleDelete}
+                  onEdit={locked ? undefined : (r) => setEditRecord(r)}
+                  onInlineUpdate={locked ? undefined : handleInlineUpdate}
+                  onPasteRows={locked ? undefined : handlePasteRows}
+                  locked={locked}
+                />
               </div>
             )}
           </div>

@@ -98,6 +98,44 @@ export default function CapacityPage() {
     setSaving(false);
   };
 
+  const handleInlineUpdate = async (id: string, field: string, value: string | number) => {
+    const record = records.find(r => r.id === id);
+    if (!record) return;
+    const updateData: Record<string, unknown> = {
+      activity: record.activity,
+      category: record.category,
+      participant_type: record.participant_type,
+      guyanese_participants_only: record.guyanese_participants_only,
+      total_participants: record.total_participants,
+      start_date: record.start_date,
+      duration_days: record.duration_days,
+      cost_to_participants: record.cost_to_participants,
+      expenditure_on_capacity: record.expenditure_on_capacity,
+    };
+    updateData[field] = value;
+    await updateCapacityRecord(id, updateData);
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const handlePasteRows = async (rows: Record<string, string>[]) => {
+    let added = 0;
+    for (const row of rows) {
+      try {
+        await addCapacity(periodId, entityId, {
+          activity: row.activity || row.Activity || "Training",
+          category: row.category || row.Category || "",
+          participant_type: row.participant_type || row["Participant Type"] || "",
+          total_participants: parseInt(row.total_participants || row.Total || row["Total Participants"] || "0") || 0,
+          guyanese_participants_only: parseInt(row.guyanese_participants || row.Guyanese || row["Guyanese Participants"] || "0") || 0,
+          start_date: row.start_date || row["Start Date"] || "",
+          duration_days: parseInt(row.duration_days || row.Days || row.Duration || "0") || 0,
+        });
+        added++;
+      } catch { /* skip */ }
+    }
+    if (added > 0) await loadData();
+  };
+
   const metrics = calculateCapacityMetrics(records);
 
   if (loading) {
@@ -136,7 +174,14 @@ export default function CapacityPage() {
               <EmptyState icon={GraduationCap} title="No capacity development activities" description="Record training, scholarships, and other capacity building activities." actionLabel="Add Activity" onAction={() => setFormOpen(true)} />
             ) : (
               <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <CapacityTable records={records} onDelete={locked ? () => {} : handleDelete} onEdit={locked ? () => {} : (r) => setEditRecord(r)} />
+                <CapacityTable
+                  records={records}
+                  onDelete={locked ? () => {} : handleDelete}
+                  onEdit={locked ? undefined : (r) => setEditRecord(r)}
+                  onInlineUpdate={locked ? undefined : handleInlineUpdate}
+                  onPasteRows={locked ? undefined : handlePasteRows}
+                  locked={locked}
+                />
               </div>
             )}
           </div>
