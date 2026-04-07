@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
@@ -57,6 +58,7 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         {children}
       </main>
       <OnboardingTour />
+      <FloatingChatWidget />
     </div>
   );
 }
