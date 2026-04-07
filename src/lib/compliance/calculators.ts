@@ -5,9 +5,11 @@ export function calculateLocalContentRate(
   expenditures: ExpenditureRecord[]
 ): LocalContentMetrics {
   const total = expenditures.reduce((sum, e) => sum + e.actual_payment, 0);
-  // A supplier with a certificate ID is considered Guyanese
+  // A supplier is Guyanese if they have an LCS certificate OR are explicitly marked as Guyanese
+  const isGuyanese = (e: ExpenditureRecord) =>
+    !!e.supplier_certificate_id || (e as unknown as Record<string, string>).supplier_type === "Guyanese";
   const guyanese = expenditures
-    .filter((e) => !!e.supplier_certificate_id)
+    .filter(isGuyanese)
     .reduce((sum, e) => sum + e.actual_payment, 0);
 
   return {
@@ -16,10 +18,10 @@ export function calculateLocalContentRate(
     non_guyanese_expenditure: total - guyanese,
     local_content_rate: total > 0 ? (guyanese / total) * 100 : 0,
     supplier_count_guyanese: new Set(
-      expenditures.filter((e) => !!e.supplier_certificate_id).map((e) => e.supplier_name)
+      expenditures.filter(isGuyanese).map((e) => e.supplier_name)
     ).size,
     supplier_count_non_guyanese: new Set(
-      expenditures.filter((e) => !e.supplier_certificate_id).map((e) => e.supplier_name)
+      expenditures.filter((e) => !isGuyanese(e)).map((e) => e.supplier_name)
     ).size,
   };
 }

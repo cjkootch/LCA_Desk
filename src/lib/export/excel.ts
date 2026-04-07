@@ -322,6 +322,7 @@ function buildExpenditureSheet(
       "Related Sector",
       "Description of Good/Service",
       "Supplier Name",
+      "Supplier Type",
       "Sole Source Code",
       "Supplier Certificate ID",
       "Actual Payments made during reporting period",
@@ -336,11 +337,14 @@ function buildExpenditureSheet(
 
   // Data rows
   for (const e of expenditures) {
+    const supplierType = (e as unknown as Record<string, string>).supplier_type ||
+      (e.supplier_certificate_id ? "Guyanese" : "");
     rows.push([
       e.type_of_item_procured || "",
       e.related_sector || "",
       e.description_of_good_service || "",
       e.supplier_name,
+      supplierType,
       e.sole_source_code || "",
       e.supplier_certificate_id || "",
       e.actual_payment,
@@ -355,12 +359,12 @@ function buildExpenditureSheet(
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
-  // Merges for header rows
+  // Merges for header rows (14 columns: A-N)
   ws["!merges"] = [
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } }, // Title
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } }, // Subtitle
-    { s: { r: 3, c: 0 }, e: { r: 3, c: 12 } }, // "Expenditure Sub-Report"
-    { s: { r: 5, c: 0 }, e: { r: 5, c: 12 } }, // Instructions
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }, // Title
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }, // Subtitle
+    { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }, // "Expenditure Sub-Report"
+    { s: { r: 5, c: 0 }, e: { r: 5, c: 13 } }, // Instructions
   ];
 
   return ws;

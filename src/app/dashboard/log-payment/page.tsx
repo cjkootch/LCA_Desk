@@ -29,6 +29,7 @@ export default function LogPaymentPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [supplierType, setSupplierType] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Auto-suggest
@@ -57,12 +58,13 @@ export default function LogPaymentPage() {
     setSaving(true);
     try {
       await addPaymentLog({
-        supplierName: supplier, supplierCertificateId: certId || undefined,
+        supplierName: supplier, supplierType: supplierType || undefined,
+        supplierCertificateId: certId || undefined,
         amount, description: description || undefined,
         category: category || undefined, paymentDate,
       });
       toast.success("Payment logged");
-      setSupplier(""); setCertId(""); setAmount(""); setDescription(""); setCategory("");
+      setSupplier(""); setSupplierType(""); setCertId(""); setAmount(""); setDescription(""); setCategory("");
       setShowForm(false);
       loadData();
     } catch { toast.error("Failed to log payment"); }
@@ -118,7 +120,7 @@ export default function LogPaymentPage() {
                     {suggestions.map((s) => (
                       <button key={s.certId || s.legalName} type="button"
                         className="w-full text-left px-3 py-2 hover:bg-bg-primary text-sm border-b border-border-light last:border-0"
-                        onClick={() => { setSupplier(s.legalName); setCertId(s.certId || ""); setShowSuggestions(false); }}>
+                        onClick={() => { setSupplier(s.legalName); setCertId(s.certId || ""); setSupplierType("Guyanese"); setShowSuggestions(false); }}>
                         <span className="font-medium">{s.legalName}</span>
                         {s.certId && <span className="text-[10px] text-accent ml-2">{s.certId}</span>}
                       </button>
@@ -130,7 +132,16 @@ export default function LogPaymentPage() {
                 <Input label="Amount *" type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
                 <Input label="Payment Date" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1.5">Supplier Type</label>
+                  <select value={supplierType} onChange={e => setSupplierType(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-white border border-border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent">
+                    <option value="">Select...</option>
+                    <option value="Guyanese">Guyanese Company</option>
+                    <option value="Non-Guyanese">Non-Guyanese Company</option>
+                  </select>
+                </div>
                 <Input label="LCS Cert ID" value={certId} onChange={(e) => setCertId(e.target.value)} placeholder="LCSR-XXXXXXXX" />
                 <Input label="Category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Equipment Rental" />
               </div>

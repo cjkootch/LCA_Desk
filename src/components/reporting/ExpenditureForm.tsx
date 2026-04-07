@@ -16,6 +16,7 @@ const expenditureSchema = z.object({
   related_sector: z.string().optional(),
   description_of_good_service: z.string().optional(),
   supplier_name: z.string().min(1, "Supplier name is required"),
+  supplier_type: z.enum(["Guyanese", "Non-Guyanese"]).optional(),
   sole_source_code: z.string().optional(),
   supplier_certificate_id: z.string().optional(),
   actual_payment: z.coerce.number().positive("Actual payment must be positive"),
@@ -30,9 +31,10 @@ const expenditureSchema = z.object({
 
 type ExpenditureFormData = z.infer<typeof expenditureSchema>;
 
-function SupplierAutoSuggest({ value, onChange, error }: {
+function SupplierAutoSuggest({ value, onChange, onTypeChange, error }: {
   value: string;
   onChange: (name: string, certId?: string) => void;
+  onTypeChange?: (type: string) => void;
   error?: string;
 }) {
   const [query, setQuery] = useState(value || "");
@@ -92,6 +94,7 @@ function SupplierAutoSuggest({ value, onChange, error }: {
               className="w-full text-left px-3 py-2 hover:bg-bg-primary transition-colors border-b border-border-light last:border-0"
               onClick={() => {
                 onChange(s.legalName, s.certId || undefined);
+                if (onTypeChange) onTypeChange("Guyanese");
                 setQuery(s.legalName);
                 setShowSuggestions(false);
               }}
@@ -197,8 +200,22 @@ export function ExpenditureForm({
             setValue("supplier_name", name);
             if (certId) setValue("supplier_certificate_id", certId);
           }}
+          onTypeChange={(type) => setValue("supplier_type", type as "Guyanese" | "Non-Guyanese")}
           error={errors.supplier_name?.message}
         />
+        <Select
+          label="Supplier Type"
+          id="supplier_type"
+          {...register("supplier_type")}
+          options={[
+            { value: "", label: "Select..." },
+            { value: "Guyanese", label: "Guyanese Company" },
+            { value: "Non-Guyanese", label: "Non-Guyanese Company" },
+          ]}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <Input
           label="Sole Source Code"
           id="sole_source_code"
@@ -218,6 +235,7 @@ export function ExpenditureForm({
           onCompanyFound={(company) => {
             if (company) {
               setValue("supplier_name", company.legalName);
+              setValue("supplier_type", "Guyanese");
             }
           }}
         />

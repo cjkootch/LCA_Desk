@@ -85,7 +85,37 @@ export default function ExportPage() {
     load().catch(() => setLoading(false));
   }, [entityId, periodId]);
 
-  const handleExport = async (type: "excel" | "pdf") => {
+  const handleExport = async (type: "excel" | "pdf" | "notice") => {
+    if (type === "notice") {
+      setExporting("notice");
+      try {
+        const response = await fetch("/api/export/notice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            companyName: entityName,
+            companyAddress: entity?.registered_address || entity?.operational_address || "",
+            contactName: entity?.contact_name || "",
+            contactDesignation: "",
+            reportingPeriod: periodLabel,
+            reportingYear: period?.fiscalYear,
+            entityType: entity?.company_type || "contractor",
+          }),
+        });
+        if (!response.ok) throw new Error("Export failed");
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Notice_of_Submission_${entityName}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Notice of Submission downloaded");
+      } catch { toast.error("Failed to export notice"); }
+      setExporting(null);
+      return;
+    }
+
     if (!exportData) return;
     setExporting(type);
     try {
@@ -212,13 +242,28 @@ export default function ExportPage() {
               <p className="text-sm text-text-secondary mb-4">
                 Generate your official compliance reports. These files can be submitted via LCA Desk or emailed to the Secretariat.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Button onClick={() => handleExport("excel")} loading={exporting === "excel"} variant="outline" className="w-full gap-2">
                   <FileSpreadsheet className="h-4 w-4 text-success" /> Excel Report <span className="text-[10px] text-text-muted ml-auto">v4.1</span>
                 </Button>
                 <Button onClick={() => handleExport("pdf")} loading={exporting === "pdf"} variant="outline" className="w-full gap-2">
                   <FileText className="h-4 w-4 text-danger" /> Narrative PDF
                 </Button>
+                <Button onClick={() => handleExport("notice")} loading={exporting === "notice"} variant="outline" className="w-full gap-2">
+                  <FileText className="h-4 w-4 text-accent" /> Notice of Submission
+                </Button>
+              </div>
+              <p className="text-[10px] text-text-muted mt-2">The Notice of Submission is required by the Secretariat. Submit it alongside your Comparative Analysis Report and Excel template.</p>
+
+              {/* Submission email format */}
+              <div className="bg-bg-primary rounded-lg p-3 mt-3 text-xs font-mono text-text-secondary space-y-1">
+                <p className="text-[10px] font-sans font-semibold text-text-primary mb-1.5">Email Submission Format</p>
+                <p><span className="text-text-muted">To:</span> localcontent@nre.gov.gy</p>
+                <p><span className="text-text-muted">Subject:</span> Local Content Half-Yearly Report – {periodLabel} {period?.fiscalYear} – {entityName}</p>
+                <p className="text-text-muted mt-1">Attachments:</p>
+                <p>1. Notice of Submission (PDF, signed, company letterhead)</p>
+                <p>2. Comparative Analysis Report (PDF, searchable)</p>
+                <p>3. Expenditure, Employment &amp; Capacity Report (XLSX)</p>
               </div>
             </CardContent>
           </Card>

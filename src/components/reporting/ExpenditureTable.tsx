@@ -2,6 +2,7 @@
 
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ExpenditureRecord } from "@/types/database.types";
@@ -21,6 +22,7 @@ export function ExpenditureTable({ records, onDelete, onEdit }: ExpenditureTable
           <TableHead>Type of Item</TableHead>
           <TableHead>Related Sector</TableHead>
           <TableHead>Supplier</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>Certificate ID</TableHead>
           <TableHead className="text-right">Actual Payment</TableHead>
           <TableHead className="text-right">Outstanding</TableHead>
@@ -34,7 +36,21 @@ export function ExpenditureTable({ records, onDelete, onEdit }: ExpenditureTable
             <TableCell className="text-text-muted">{i + 1}</TableCell>
             <TableCell className="font-medium max-w-[180px] truncate">{r.type_of_item_procured}</TableCell>
             <TableCell className="text-xs max-w-[160px] truncate">{r.related_sector || "—"}</TableCell>
-            <TableCell>{r.supplier_name}</TableCell>
+            <TableCell>
+              <span>{r.supplier_name}</span>
+              {!r.supplier_certificate_id && (r as unknown as Record<string, string>).supplier_type === "Non-Guyanese" && !r.sole_source_code && (
+                <Badge variant="warning" className="text-[8px] ml-1">Sole Source?</Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              {(r as unknown as Record<string, string>).supplier_type === "Guyanese" || r.supplier_certificate_id ? (
+                <Badge variant="success" className="text-[9px]">Guyanese</Badge>
+              ) : (r as unknown as Record<string, string>).supplier_type === "Non-Guyanese" ? (
+                <Badge variant="default" className="text-[9px]">Foreign</Badge>
+              ) : (
+                <span className="text-text-muted text-[10px]">—</span>
+              )}
+            </TableCell>
             <TableCell className="font-mono text-xs">{r.supplier_certificate_id || "—"}</TableCell>
             <TableCell className="text-right font-mono">{formatCurrency(r.actual_payment, r.currency_of_payment)}</TableCell>
             <TableCell className="text-right font-mono">{r.outstanding_payment ? formatCurrency(r.outstanding_payment, r.currency_of_payment) : "—"}</TableCell>

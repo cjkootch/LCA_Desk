@@ -113,6 +113,7 @@ export function EmploymentForm({ defaultValues, onSubmit, onCancel, loading }: E
           error={errors.remuneration_guyanese_only?.message}
         />
       </div>
+      <p className="text-[11px] text-text-muted -mt-2">Total compensation including base salary, bonuses, overtime, and other financial benefits for the reporting period.</p>
       <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes" />
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="ghost" onClick={onCancel}>

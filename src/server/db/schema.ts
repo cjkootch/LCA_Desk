@@ -316,6 +316,7 @@ export const expenditureRecords = pgTable(
     relatedSector: text("related_sector"),            // from Related Sector dropdown
     descriptionOfGoodService: text("description_of_good_service"),
     supplierName: text("supplier_name").notNull(),
+    supplierType: text("supplier_type"), // "Guyanese" | "Non-Guyanese" — required by V4 template
     soleSourceCode: text("sole_source_code"),
     supplierCertificateId: text("supplier_certificate_id"),
     actualPayment: numeric("actual_payment").notNull(), // "Actual Payments made during reporting period"
@@ -1128,6 +1129,7 @@ export const paymentLog = pgTable(
     tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
     entityId: uuid("entity_id").references(() => entities.id),
     supplierName: text("supplier_name").notNull(),
+    supplierType: text("supplier_type"), // "Guyanese" | "Non-Guyanese"
     supplierCertificateId: text("supplier_certificate_id"),
     amount: text("amount").notNull(),
     currency: text("currency").default("GYD"),

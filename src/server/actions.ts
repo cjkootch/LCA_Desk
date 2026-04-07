@@ -3563,6 +3563,7 @@ export async function fetchComplianceHealth() {
 
 export async function addPaymentLog(data: {
   supplierName: string;
+  supplierType?: string;
   supplierCertificateId?: string;
   amount: string;
   currency?: string;
@@ -3577,6 +3578,7 @@ export async function addPaymentLog(data: {
     tenantId,
     entityId: data.entityId || null,
     supplierName: data.supplierName,
+    supplierType: data.supplierType || null,
     supplierCertificateId: data.supplierCertificateId || null,
     amount: data.amount,
     currency: data.currency || "GYD",
