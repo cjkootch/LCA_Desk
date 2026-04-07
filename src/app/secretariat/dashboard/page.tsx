@@ -146,56 +146,67 @@ export default function SecretariatDashboardPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Shield className="h-6 w-6 text-gold" />
-        <div>
-          <h1 className="text-xl font-heading font-bold text-text-primary">Regulatory Dashboard</h1>
-          <p className="text-sm text-text-secondary">Review submissions and monitor sector compliance</p>
+      {/* Hero header */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#1e293b] to-[#334155] p-6 sm:p-8 mb-6 text-white">
+        <div className="flex items-center gap-3 mb-1">
+          <Shield className="h-5 w-5 text-gold" />
+          <span className="text-[10px] font-semibold text-gold uppercase tracking-widest">Local Content Secretariat</span>
         </div>
+        <h1 className="text-2xl sm:text-3xl font-heading font-bold mb-1">Regulatory Dashboard</h1>
+        <p className="text-white/60 text-sm">Real-time sector compliance monitoring · {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+
+        {/* KPI row inside hero */}
+        {analytics && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <p className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wider mb-1">Local Spend</p>
+              <p className="text-3xl font-bold">{formatCurrency(analytics.localSpend)}</p>
+              <p className="text-[11px] text-white/50 mt-1">{analytics.guyaneseSupplierCount} suppliers · {analytics.overallLcRate}% LC rate</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <p className="text-[10px] font-semibold text-sky-300 uppercase tracking-wider mb-1">Guyanese Jobs</p>
+              <p className="text-3xl font-bold">{analytics.jobsCreated.toLocaleString()}</p>
+              <p className="text-[11px] text-white/50 mt-1">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-wider mb-1">Hours Saved</p>
+              <p className="text-3xl font-bold">{analytics.staffHoursSaved.toLocaleString()}</p>
+              <p className="text-[11px] text-white/50 mt-1">{analytics.totalSubmissions} digital submissions</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <p className="text-[10px] font-semibold text-white/70 uppercase tracking-wider mb-1">Economic Impact</p>
+              <p className="text-3xl font-bold">{formatCurrency(analytics.economicImpact)}</p>
+              <p className="text-[11px] text-white/50 mt-1">{analytics.uniqueFilers} companies filing</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* KPI Banner — the metrics that matter to the regulator */}
+      {/* Secondary metrics row */}
       {analytics && (
-        <div className="mb-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-            <Card className="p-4 bg-gradient-to-br from-success/5 to-transparent border-success/20">
-              <p className="text-[10px] font-semibold text-success uppercase tracking-wider mb-1">Local Spend</p>
-              <p className="text-2xl font-bold text-success">{formatCurrency(analytics.localSpend)}</p>
-              <p className="text-[10px] text-text-muted mt-0.5">{analytics.guyaneseSupplierCount} Guyanese suppliers · {analytics.overallLcRate}% LC rate</p>
-            </Card>
-            <Card className="p-4 bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
-              <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Jobs Created</p>
-              <p className="text-2xl font-bold text-accent">{analytics.jobsCreated.toLocaleString()}</p>
-              <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
-            </Card>
-            <Card className="p-4 bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
-              <p className="text-[10px] font-semibold text-gold uppercase tracking-wider mb-1">Staff Hours Saved</p>
-              <p className="text-2xl font-bold text-gold">{analytics.staffHoursSaved.toLocaleString()}</p>
-              <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalSubmissions} submissions processed digitally</p>
-            </Card>
-            <Card className="p-4 bg-gradient-to-br from-text-primary/5 to-transparent">
-              <p className="text-[10px] font-semibold text-text-primary uppercase tracking-wider mb-1">Economic Impact</p>
-              <p className="text-2xl font-bold text-text-primary">{formatCurrency(analytics.economicImpact)}</p>
-              <p className="text-[10px] text-text-muted mt-0.5">{analytics.uniqueFilers} companies · {analytics.uniqueEntities} entities filing</p>
-            </Card>
-          </div>
-          {/* Supporting metrics */}
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
-            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalSubmissions}</p><p className="text-[9px] text-text-muted">Submissions</p></Card>
-            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.uniqueFilers}</p><p className="text-[9px] text-text-muted">Filing Companies</p></Card>
-            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-[9px] text-text-muted">Training Participants</p></Card>
-            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-[9px] text-text-muted">Training Days</p></Card>
-            <Card className="p-2 text-center"><p className="text-lg font-bold">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-[9px] text-text-muted">Capacity Spend</p></Card>
-            <Card className="p-2 text-center"><p className="text-lg font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-[9px] text-text-muted">GY Suppliers</p></Card>
-          </div>
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalSubmissions}</p><p className="text-[9px] text-text-muted font-medium">Submissions</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.uniqueFilers}</p><p className="text-[9px] text-text-muted font-medium">Companies</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-[9px] text-text-muted font-medium">Trained</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-[9px] text-text-muted font-medium">Training Days</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-[9px] text-text-muted font-medium">Capacity $</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-[9px] text-text-muted font-medium">GY Suppliers</p></Card>
         </div>
       )}
 
-      {/* Queue stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <Card className="p-3 text-center"><p className="text-xl font-bold">{data.stats.total}</p><p className="text-[10px] text-text-muted">Total</p></Card>
-        <Card className="p-3 text-center"><p className="text-xl font-bold text-warning">{data.stats.pending}</p><p className="text-[10px] text-text-muted">Pending</p></Card>
-        <Card className="p-3 text-center"><p className="text-xl font-bold text-success">{data.stats.acknowledged}</p><p className="text-[10px] text-text-muted">Reviewed</p></Card>
+      {/* Submission queue header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-heading font-semibold text-text-primary">Submission Queue</h2>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-warning animate-pulse" />
+            <span className="text-sm font-medium text-warning">{data.stats.pending} pending</span>
+          </div>
+          <span className="text-text-muted">·</span>
+          <span className="text-sm text-text-muted">{data.stats.acknowledged} reviewed</span>
+          <span className="text-text-muted">·</span>
+          <span className="text-sm text-text-muted">{data.stats.total} total</span>
+        </div>
       </div>
 
       {/* Filters */}
