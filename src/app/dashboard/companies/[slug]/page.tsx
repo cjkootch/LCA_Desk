@@ -326,7 +326,8 @@ export default function CompanyProfilePage() {
                   try { if (o.aiSummary) summary = JSON.parse(o.aiSummary); } catch {}
                   const isExpired = o.status === "expired";
                   return (
-                    <div key={o.id} className={cn("border border-border-light rounded-lg p-3", isExpired && "opacity-50")}>
+                    <a key={o.id} href={o.sourceUrl || "#"} target="_blank" rel="noopener noreferrer"
+                      className={cn("block border border-border-light rounded-lg p-3 hover:border-accent/30 hover:bg-accent-light/30 transition-colors cursor-pointer", isExpired && "opacity-50")}>
                       <div className="flex items-center gap-2 mb-1">
                         {o.noticeType && <Badge variant="accent" className="text-[10px]">{o.noticeType}</Badge>}
                         <Badge variant={isExpired ? "default" : "success"} className="text-[10px]">{isExpired ? "Closed" : "Active"}</Badge>
@@ -340,13 +341,11 @@ export default function CompanyProfilePage() {
                       )}
                       <div className="flex gap-3 mt-1 text-[11px] text-text-muted">
                         {o.deadline && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{o.deadline}</span>}
-                        {o.sourceUrl && (
-                          <a href={o.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover flex items-center gap-1">
-                            <ExternalLink className="h-3 w-3" /> View
-                          </a>
-                        )}
+                        <span className="text-accent flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" /> View Details
+                        </span>
                       </div>
-                    </div>
+                    </a>
                   );
                 })}
               </div>
@@ -368,7 +367,8 @@ export default function CompanyProfilePage() {
                 {jobPostings.map((j: { id: string; jobTitle: string; employmentCategory: string | null; status: string | null; closingDate: string | null; location: string | null; sourceUrl: string | null }) => {
                   const isClosed = j.status === "closed";
                   return (
-                    <div key={j.id} className={cn("border border-border-light rounded-lg p-3", isClosed && "opacity-50")}>
+                    <a key={j.id} href={j.sourceUrl || "#"} target="_blank" rel="noopener noreferrer"
+                      className={cn("block border border-border-light rounded-lg p-3 hover:border-accent/30 hover:bg-accent-light/30 transition-colors cursor-pointer", isClosed && "opacity-50")}>
                       <div className="flex items-center gap-2 mb-1">
                         {j.employmentCategory && <Badge variant="default" className="text-[10px]">{j.employmentCategory}</Badge>}
                         <Badge variant={isClosed ? "default" : "success"} className="text-[10px]">{isClosed ? "Closed" : "Open"}</Badge>
@@ -377,13 +377,11 @@ export default function CompanyProfilePage() {
                       <div className="flex gap-3 mt-1 text-[11px] text-text-muted">
                         {j.location && <span>{j.location}</span>}
                         {j.closingDate && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{j.closingDate}</span>}
-                        {j.sourceUrl && (
-                          <a href={j.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover flex items-center gap-1">
-                            <ExternalLink className="h-3 w-3" /> View
-                          </a>
-                        )}
+                        <span className="text-accent flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" /> View Details
+                        </span>
                       </div>
-                    </div>
+                    </a>
                   );
                 })}
               </div>
