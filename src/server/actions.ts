@@ -4568,6 +4568,168 @@ export async function seedLcsCertCourse() {
   return course.id;
 }
 
+// ─── COURSE: PETROLEUM SECTOR CAREER GUIDE ──────────────────────
+
+export async function seedCareerGuideCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "career-guide")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "career-guide",
+    title: "Petroleum Sector Career Guide",
+    description: "ISCO-08 classifications, key certifications, salary expectations, and career paths in Guyana's petroleum sector.",
+    audience: "all",
+    jurisdictionCode: "GY",
+    moduleCount: 3,
+    badgeLabel: "Career Ready",
+    badgeColor: "accent",
+    estimatedMinutes: 20,
+  }).returning();
+
+  const mods = [
+    { title: "Career Paths in Petroleum", content: "## The Petroleum Workforce\n\nGuyana's petroleum sector employs thousands across three LCA categories:\n\n### Managerial (75% Guyanese minimum)\n- Operations Manager\n- Project Manager\n- HSE Manager\n- Finance Director\n- Supply Chain Manager\n\n### Technical (60% Guyanese minimum)\n- Drilling Engineer\n- Mechanical Engineer\n- Geologist\n- HSE Officer\n- Electrical Technician\n- Marine Pilot\n- ROV Operator\n\n### Non-Technical (80% Guyanese minimum)\n- Admin Assistant\n- Logistics Coordinator\n- Crane Operator\n- Catering Staff\n- Security Officer\n- Warehouse Manager\n\n## ISCO-08 Classification\nEvery position in the petroleum sector is classified using ISCO-08 codes. Understanding your classification helps you:\n- Find matching jobs on LCA Desk\n- Ensure employers categorize you correctly\n- Understand which employment minimum applies to you",
+      quiz: [
+        { question: "Managerial roles require minimum Guyanese employment of:", options: ["60%", "70%", "75%", "80%"], correctIndex: 2 },
+        { question: "A Drilling Engineer falls under:", options: ["Managerial", "Technical", "Non-Technical", "Unclassified"], correctIndex: 1 },
+        { question: "ISCO-08 is:", options: ["A safety course", "International occupation classification", "A tax system", "A company type"], correctIndex: 1 },
+        { question: "Admin Assistant falls under:", options: ["Managerial", "Technical", "Non-Technical", "None"], correctIndex: 2 },
+        { question: "Non-Technical minimum Guyanese employment:", options: ["60%", "70%", "75%", "80%"], correctIndex: 3 },
+      ],
+    },
+    { title: "Essential Certifications", content: "## Certifications That Get You Hired\n\n### Safety Certifications (Most Critical)\n- **BOSIET** (Basic Offshore Safety Induction & Emergency Training) — Required for ALL offshore work\n- **HUET** (Helicopter Underwater Escape Training) — Required for helicopter transport offshore\n- **H2S Alive** — Hydrogen sulfide awareness, required for most field positions\n- **STCW** (Standards of Training, Certification & Watchkeeping) — For marine roles\n\n### Technical Certifications\n- **NEBOSH** (National Examination Board in OSH) — HSE roles\n- **IOSH** (Institution of Occupational Safety and Health) — General safety\n- **API certifications** — For inspection, welding, pipeline work\n- **ASME certifications** — Pressure vessel and piping\n\n### Professional Certifications\n- **PMP** (Project Management Professional)\n- **CPA/ACCA** — Finance and accounting roles\n- **ISO Lead Auditor** — Quality management roles\n\n## Where to Get Certified\nMany certifications are available in Georgetown through:\n- Guyana Fire & Safety Training Centre\n- OGIFS (Oil & Gas Industry Fire & Safety)\n- International providers with local centres\n\n## Cost Range\n- BOSIET: $500-$1,000\n- H2S Alive: $200-$400\n- NEBOSH: $1,500-$3,000\n- PMP: $400-$600",
+      quiz: [
+        { question: "BOSIET is required for:", options: ["Only managers", "All offshore work", "Only drilling", "Optional"], correctIndex: 1 },
+        { question: "H2S stands for:", options: ["Health & Safety Standard", "Hydrogen Sulfide", "High Security System", "Human Safety"], correctIndex: 1 },
+        { question: "NEBOSH is relevant for:", options: ["Drilling roles", "HSE roles", "Catering roles", "Admin roles"], correctIndex: 1 },
+        { question: "BOSIET costs approximately:", options: ["$100-$200", "$500-$1,000", "$2,000-$5,000", "$10,000+"], correctIndex: 1 },
+        { question: "HUET training is for:", options: ["Helicopter escape", "Fire fighting", "First aid", "Diving"], correctIndex: 0 },
+      ],
+    },
+    { title: "Building Your Profile on LCA Desk", content: "## Making Yourself Discoverable\n\n### Complete Your Profile\nA complete profile is visible to contractors in the Talent Pool. Include:\n- Current job title and employment category\n- Skills (be specific: 'FPSO maintenance' not just 'maintenance')\n- Certifications with dates\n- Education level and field\n- Years of experience\n- Location preference\n- Contract type preference\n\n### Opt Into the Talent Pool\nToggle **Profile Visible** in your settings. This lets contractors search for you by skills, category, and certifications.\n\n### Earn Badges\nCompleted courses show as badges on your profile:\n- LCA Certified (blue)\n- Career Ready (blue)\n- Supplier Certified (green)\n\nBadges signal to employers that you understand the regulatory environment.\n\n### Use the Resume Builder\nThe AI-powered resume builder creates petroleum-sector-ready CVs:\n- Extract skills from existing documents\n- Generate from scratch using your profile data\n- Enhance existing resumes with industry keywords\n- Export as PDF\n\n### Set Up Job Alerts\nEnable alerts in Settings to get notified when new jobs matching your category are posted.",
+      quiz: [
+        { question: "To be found by contractors, you need:", options: ["A paid subscription", "Profile Visible enabled in settings", "A referral", "Government approval"], correctIndex: 1 },
+        { question: "Skills should be:", options: ["Vague and general", "Specific like 'FPSO maintenance'", "Only one word", "Not listed"], correctIndex: 1 },
+        { question: "Badges appear on:", options: ["Your email signature", "Your Talent Pool profile", "Your bank account", "Government records"], correctIndex: 1 },
+        { question: "The Resume Builder can:", options: ["Only format text", "Extract skills, generate, and enhance resumes", "Only print", "Send applications for you"], correctIndex: 1 },
+        { question: "Job alerts notify you when:", options: ["Any job is posted anywhere", "Jobs matching your category are posted", "Your application is viewed", "Your profile is viewed"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
+// ─── COURSE: INTERVIEW PREP FOR OIL & GAS ───────────────────────
+
+export async function seedInterviewPrepCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "interview-prep")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "interview-prep",
+    title: "Interview Prep for Oil & Gas",
+    description: "Common interview questions, HSE scenarios, technical assessments, and what petroleum contractors look for when hiring in Guyana.",
+    audience: "all",
+    jurisdictionCode: "GY",
+    moduleCount: 3,
+    badgeLabel: "Interview Ready",
+    badgeColor: "accent",
+    estimatedMinutes: 20,
+  }).returning();
+
+  const mods = [
+    { title: "What Contractors Look For", content: "## The Hiring Mindset\n\nPetroleum contractors evaluate candidates on:\n\n### 1. Safety Culture (Non-Negotiable)\nEvery answer should demonstrate safety awareness. 'Stop Work Authority' — you must be willing to stop unsafe work regardless of schedule pressure.\n\n### 2. Technical Competence\nCan you do the job? Specific experience with relevant equipment, software, or processes matters more than generic qualifications.\n\n### 3. Certifications\nValid BOSIET, H2S, and role-specific certs are table stakes. Expired = not valid.\n\n### 4. Cultural Fit\nCan you work in a multi-national team? 28-day rotation schedule? Remote locations? This is assessed through behavioral questions.\n\n### 5. Local Content Compliance\nContractors want Guyanese nationals. Under the LCA, they must give first consideration to qualified Guyanese. Your nationality is an advantage — own it.\n\n## Common Interview Formats\n- Phone screen (15-30 min)\n- Technical assessment (written or practical)\n- Panel interview (2-3 interviewers)\n- HSE scenario walkthrough\n- Medical and fitness assessment",
+      quiz: [
+        { question: "The most important trait for petroleum hiring:", options: ["Speed", "Safety culture", "Social skills", "Salary flexibility"], correctIndex: 1 },
+        { question: "Stop Work Authority means:", options: ["Managers can stop work", "Anyone can stop unsafe work", "Work stops at 5pm", "The government can stop operations"], correctIndex: 1 },
+        { question: "An expired BOSIET certificate is:", options: ["Still valid for 6 months", "Not valid", "Valid if you passed originally", "Transferable"], correctIndex: 1 },
+        { question: "Under the LCA, Guyanese nationality is:", options: ["Irrelevant", "A competitive advantage", "A requirement for all roles", "Only relevant for managers"], correctIndex: 1 },
+        { question: "A typical interview process includes:", options: ["Just a phone call", "Phone screen, technical assessment, panel interview", "Only a written test", "A single meeting"], correctIndex: 1 },
+      ],
+    },
+    { title: "Common Interview Questions", content: "## Technical Questions\n\n**For Engineers:**\n- Describe your experience with [specific equipment/process]\n- Walk me through a time you solved a technical problem under pressure\n- What standards do you follow for [welding/inspection/design]?\n\n**For HSE Roles:**\n- Describe your approach to a Job Safety Analysis (JSA)\n- How would you handle discovering a colleague not wearing PPE?\n- What's your experience with incident investigation?\n\n**For Operations/Logistics:**\n- How do you prioritize competing demands?\n- Describe your experience managing supply chains in remote locations\n- How do you handle equipment breakdowns during critical operations?\n\n## Behavioral Questions (STAR Method)\nUse Situation, Task, Action, Result:\n\n- 'Tell me about a time you identified a safety hazard'\n- 'Describe a situation where you had to work with a difficult team member'\n- 'Give an example of when you went above and beyond'\n\n## Questions to Ask the Interviewer\n- What does a typical rotation schedule look like?\n- What safety certifications does the team hold?\n- How does the company support local content development?\n- What career progression looks like in this role?",
+      quiz: [
+        { question: "STAR stands for:", options: ["Safety, Training, Assessment, Review", "Situation, Task, Action, Result", "Standard, Technical, Applied, Reported", "Start, Think, Act, Reflect"], correctIndex: 1 },
+        { question: "When asked about PPE non-compliance, you should:", options: ["Ignore it", "Report it and address it directly", "Wait for a manager", "Document it only"], correctIndex: 1 },
+        { question: "Asking about rotation schedule shows:", options: ["You're lazy", "You understand the working environment", "You want more time off", "Nothing useful"], correctIndex: 1 },
+        { question: "Technical questions test:", options: ["Memorization", "Specific experience with relevant processes", "Speed of thinking", "Personality"], correctIndex: 1 },
+        { question: "A JSA is:", options: ["Job Safety Analysis", "Joint Service Agreement", "Junior Staff Assessment", "Jurisdiction Safety Act"], correctIndex: 0 },
+      ],
+    },
+    { title: "After the Interview", content: "## Follow-Up Best Practices\n\n### Within 24 Hours\nSend a brief thank-you email. Reference something specific from the conversation.\n\n### If You Don't Hear Back\nWait 5-7 business days, then follow up once. Be professional, not pushy.\n\n### If You're Offered the Role\n- Review the contract carefully\n- Check rotation schedule, leave policy, medical coverage\n- Verify certifications required before start date\n- Ask about onboarding timeline\n\n### If You're Not Selected\n- Ask for feedback (many companies will provide it)\n- Stay in their database for future opportunities\n- Keep your LCA Desk profile updated\n- Apply to similar roles — persistence pays off\n\n## Red Flags in Offers\n- No written contract before start date\n- Vague terms on payment schedule\n- No mention of insurance or medical coverage\n- Required to pay for your own certifications that should be employer-provided\n- Salary significantly below market rate for the role\n\n## Salary Expectations (Guyana, 2026)\n- Entry-level technical: $80,000-$150,000 GYD/month\n- Mid-level engineer: $200,000-$500,000 GYD/month\n- Senior/Managerial: $500,000-$1,500,000 GYD/month\n- Offshore premium: 30-50% above onshore rates",
+      quiz: [
+        { question: "Thank-you email should be sent within:", options: ["1 hour", "24 hours", "1 week", "Never"], correctIndex: 1 },
+        { question: "If not selected, you should:", options: ["Give up", "Ask for feedback and keep applying", "Complain publicly", "Reapply immediately"], correctIndex: 1 },
+        { question: "A red flag in a job offer is:", options: ["Written contract", "Vague payment terms", "Medical coverage", "Onboarding plan"], correctIndex: 1 },
+        { question: "Offshore premium is typically:", options: ["5-10% above onshore", "30-50% above onshore", "Same as onshore", "Less than onshore"], correctIndex: 1 },
+        { question: "Before accepting an offer, verify:", options: ["Your friend's opinion", "Certifications required before start date", "The CEO's background", "Company stock price"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
+// ─── COURSE: ESG & LOCAL CONTENT ────────────────────────────────
+
+export async function seedEsgCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "esg-local-content")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "esg-local-content",
+    title: "ESG & Local Content",
+    description: "How local content compliance connects to Environmental, Social, and Governance reporting. Relevant to international companies reporting ESG metrics.",
+    audience: "all",
+    jurisdictionCode: null, // Universal — relevant to all jurisdictions
+    moduleCount: 3,
+    badgeLabel: "ESG Informed",
+    badgeColor: "gold",
+    estimatedMinutes: 20,
+  }).returning();
+
+  const mods = [
+    { title: "What is ESG?", content: "## Environmental, Social, and Governance\n\nESG is a framework used by investors, regulators, and stakeholders to evaluate a company's impact beyond financial returns.\n\n### Environmental\n- Carbon emissions and climate impact\n- Waste management and pollution prevention\n- Biodiversity and ecosystem protection\n- Water usage and treatment\n\n### Social\n- **Local content and community benefit** ← This is where LCA compliance fits\n- Worker health and safety\n- Diversity and inclusion\n- Human rights in supply chains\n- Community engagement\n\n### Governance\n- Board diversity and independence\n- Executive compensation transparency\n- Anti-corruption and bribery policies\n- Regulatory compliance\n\n## Why It Matters\nMajor petroleum companies (ExxonMobil, Hess, TotalEnergies) all publish annual ESG reports. Local content performance in Guyana is a key metric in the 'Social' pillar.\n\n## The Connection\nEvery dollar spent with a Guyanese supplier, every Guyanese national employed, and every training program delivered — these are all ESG data points that international companies report to their shareholders.",
+      quiz: [
+        { question: "ESG stands for:", options: ["Energy, Safety, Growth", "Environmental, Social, Governance", "Equity, Standards, Guidelines", "Economics, Systems, Goals"], correctIndex: 1 },
+        { question: "Local content falls under which ESG pillar?", options: ["Environmental", "Social", "Governance", "None"], correctIndex: 1 },
+        { question: "Who reads ESG reports?", options: ["Only the government", "Investors, regulators, and stakeholders", "Only employees", "No one"], correctIndex: 1 },
+        { question: "Guyanese supplier spend is:", options: ["Irrelevant to ESG", "An ESG data point for the Social pillar", "Only relevant to Guyana", "A tax metric"], correctIndex: 1 },
+        { question: "Major petroleum companies publish ESG reports:", options: ["Never", "Every 5 years", "Annually", "Only when required"], correctIndex: 2 },
+      ],
+    },
+    { title: "Local Content as ESG Performance", content: "## Measuring Social Impact Through Local Content\n\n### Key Metrics That Map to ESG\n\n**Local Procurement (Social - Community Benefit)**\n- Total spend with Guyanese suppliers\n- Local Content Rate (%)\n- Number of Guyanese suppliers engaged\n- Supplier development programs\n\n**Local Employment (Social - Workforce)**\n- Guyanese employment by category\n- Compliance with employment minimums (75/60/80)\n- Remuneration data (equal pay compliance)\n- Workforce development and training\n\n**Capacity Development (Social - Education & Training)**\n- Training hours delivered\n- Guyanese participants trained\n- Scholarships and educational support\n- Technology transfer programs\n\n## How LCA Desk Data Feeds ESG Reporting\nEvery report filed through LCA Desk generates structured data that maps directly to ESG frameworks:\n- GRI (Global Reporting Initiative) Standard 204: Procurement Practices\n- GRI Standard 401: Employment\n- GRI Standard 404: Training and Education\n- SASB Oil & Gas standards\n\n## For Compliance Officers\nYour half-yearly filing isn't just a regulatory requirement — it's producing the data your company's ESG team needs. Make it accurate.",
+      quiz: [
+        { question: "LC Rate maps to which ESG metric?", options: ["Environmental impact", "Local procurement / community benefit", "Carbon emissions", "Board diversity"], correctIndex: 1 },
+        { question: "GRI Standard 204 covers:", options: ["Climate change", "Procurement Practices", "Water usage", "Executive pay"], correctIndex: 1 },
+        { question: "Training data feeds into ESG through:", options: ["Environmental pillar", "Governance pillar", "Social pillar (education & training)", "Financial reporting"], correctIndex: 2 },
+        { question: "LCA Desk filing data is useful for:", options: ["Only the Secretariat", "Both regulatory compliance and ESG reporting", "Only tax purposes", "Only internal use"], correctIndex: 1 },
+        { question: "Equal pay compliance falls under:", options: ["Environmental", "Social - Workforce", "Governance", "Not ESG-related"], correctIndex: 1 },
+      ],
+    },
+    { title: "Future of Local Content & ESG", content: "## Emerging Trends\n\n### Mandatory ESG Reporting\nThe EU's Corporate Sustainability Reporting Directive (CSRD) and the SEC's climate disclosure rules are making ESG reporting mandatory. Companies operating in Guyana will need structured local content data.\n\n### Carbon & Local Content Intersection\nUsing local suppliers reduces transportation emissions. A Guyanese catering company serving an onshore facility has a smaller carbon footprint than flying food from Houston. This creates a dual ESG benefit: local content + reduced emissions.\n\n### Supply Chain Due Diligence\nInternational regulations increasingly require companies to audit their entire supply chain for ESG compliance. Your LCS certification and compliance data become proof of responsible sourcing.\n\n### Digital Verification\nPlatforms like LCA Desk provide auditable, timestamped compliance data. This is more valuable to ESG auditors than self-reported spreadsheets.\n\n### Multi-Jurisdiction Expansion\nAs other countries (Nigeria, Suriname, Namibia) develop local content legislation, ESG frameworks will incorporate local content metrics globally. What you learn filing in Guyana applies everywhere.\n\n## Your Competitive Edge\nCompanies and suppliers who understand the ESG-local content connection will win more contracts. International operators want partners who can help them report strong ESG numbers — and that's exactly what LCS-certified Guyanese companies provide.",
+      quiz: [
+        { question: "CSRD is:", options: ["A Guyana regulation", "EU Corporate Sustainability Reporting Directive", "A US tax code", "A safety standard"], correctIndex: 1 },
+        { question: "Using local suppliers reduces:", options: ["Only costs", "Transportation emissions (dual ESG benefit)", "Quality", "Employment"], correctIndex: 1 },
+        { question: "LCA Desk data is valuable to ESG auditors because:", options: ["It's free", "It's auditable and timestamped", "It looks nice", "It's optional"], correctIndex: 1 },
+        { question: "Local content legislation is expanding to:", options: ["Only Guyana", "Nigeria, Suriname, Namibia, and others", "Only the US", "No other countries"], correctIndex: 1 },
+        { question: "LCS-certified companies help operators:", options: ["Avoid taxes", "Report strong ESG numbers", "Reduce headcount", "Delay filings"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
 // ─── JURISDICTION HELPERS ────────────────────────────────────────
 
 export async function getEntityJurisdictionCode(entityId: string): Promise<string> {
