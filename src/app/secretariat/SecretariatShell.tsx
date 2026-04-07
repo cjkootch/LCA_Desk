@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart } from "lucide-react";
+import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
@@ -91,6 +92,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <main className="lg:ml-60 min-h-screen">{children}</main>
+      <SecretariatTour />
     </div>
   );
 }

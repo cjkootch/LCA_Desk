@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu } from "lucide-react";
+import { SupplierTour } from "@/components/onboarding/SupplierTour";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
@@ -87,6 +88,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
       <main className="lg:ml-60 min-h-screen">{children}</main>
+      <SupplierTour />
     </div>
   );
 }

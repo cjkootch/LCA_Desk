@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SeekerSidebar } from "@/components/seeker/SeekerSidebar";
+import { SeekerTour } from "@/components/onboarding/SeekerTour";
 import { Menu } from "lucide-react";
 import { SessionProvider } from "next-auth/react";
 
@@ -34,6 +35,7 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
       <main className="lg:ml-60 min-h-screen">
         {children}
       </main>
+      <SeekerTour />
     </div>
   );
 }
