@@ -125,7 +125,7 @@ export default function CapacityPage() {
               <CapacityForm onSubmit={handleAdd} onCancel={() => setFormOpen(false)} loading={saving} />
             </DialogContent>
           </Dialog>
-          <CsvImport type="expenditure" periodId={periodId} entityId={entityId} onImported={loadData} />
+          <CsvImport type="capacity" periodId={periodId} entityId={entityId} onImported={loadData} />
           </>
           )}
         </PageHeader>
