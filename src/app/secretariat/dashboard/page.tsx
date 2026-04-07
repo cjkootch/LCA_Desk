@@ -154,14 +154,40 @@ export default function SecretariatDashboardPage() {
         </div>
       </div>
 
-      {/* Sector-wide stats */}
+      {/* KPI Banner — the metrics that matter to the regulator */}
       {analytics && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <Card className="p-3 text-center"><p className="text-2xl font-bold">{analytics.totalSubmissions}</p><p className="text-[10px] text-text-muted">Submissions</p></Card>
-          <Card className="p-3 text-center"><p className="text-2xl font-bold text-accent">{analytics.uniqueFilers}</p><p className="text-[10px] text-text-muted">Filing Companies</p></Card>
-          <Card className="p-3 text-center"><p className={cn("text-2xl font-bold", analytics.overallLcRate >= 50 ? "text-success" : "text-warning")}>{analytics.overallLcRate}%</p><p className="text-[10px] text-text-muted">Sector LC Rate</p></Card>
-          <Card className="p-3 text-center"><p className="text-2xl font-bold">{formatCurrency(analytics.totalExpenditure)}</p><p className="text-[10px] text-text-muted">Total Expenditure</p></Card>
-          <Card className="p-3 text-center"><p className={cn("text-2xl font-bold", analytics.employmentPct >= 60 ? "text-success" : "text-warning")}>{analytics.employmentPct}%</p><p className="text-[10px] text-text-muted">GY Employment</p></Card>
+        <div className="mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <Card className="p-4 bg-gradient-to-br from-success/5 to-transparent border-success/20">
+              <p className="text-[10px] font-semibold text-success uppercase tracking-wider mb-1">Local Spend</p>
+              <p className="text-2xl font-bold text-success">{formatCurrency(analytics.localSpend)}</p>
+              <p className="text-[10px] text-text-muted mt-0.5">{analytics.guyaneseSupplierCount} Guyanese suppliers · {analytics.overallLcRate}% LC rate</p>
+            </Card>
+            <Card className="p-4 bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
+              <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Jobs Created</p>
+              <p className="text-2xl font-bold text-accent">{analytics.jobsCreated.toLocaleString()}</p>
+              <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
+            </Card>
+            <Card className="p-4 bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
+              <p className="text-[10px] font-semibold text-gold uppercase tracking-wider mb-1">Staff Hours Saved</p>
+              <p className="text-2xl font-bold text-gold">{analytics.staffHoursSaved.toLocaleString()}</p>
+              <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalSubmissions} submissions processed digitally</p>
+            </Card>
+            <Card className="p-4 bg-gradient-to-br from-text-primary/5 to-transparent">
+              <p className="text-[10px] font-semibold text-text-primary uppercase tracking-wider mb-1">Economic Impact</p>
+              <p className="text-2xl font-bold text-text-primary">{formatCurrency(analytics.economicImpact)}</p>
+              <p className="text-[10px] text-text-muted mt-0.5">{analytics.uniqueFilers} companies · {analytics.uniqueEntities} entities filing</p>
+            </Card>
+          </div>
+          {/* Supporting metrics */}
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalSubmissions}</p><p className="text-[9px] text-text-muted">Submissions</p></Card>
+            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.uniqueFilers}</p><p className="text-[9px] text-text-muted">Filing Companies</p></Card>
+            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-[9px] text-text-muted">Training Participants</p></Card>
+            <Card className="p-2 text-center"><p className="text-lg font-bold">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-[9px] text-text-muted">Training Days</p></Card>
+            <Card className="p-2 text-center"><p className="text-lg font-bold">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-[9px] text-text-muted">Capacity Spend</p></Card>
+            <Card className="p-2 text-center"><p className="text-lg font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-[9px] text-text-muted">GY Suppliers</p></Card>
+          </div>
         </div>
       )}
 

@@ -4579,19 +4579,35 @@ export async function fetchSecretariatAnalytics() {
 
   const allExp = await db.select().from(expenditureRecords).limit(5000);
   const allEmp = await db.select().from(employmentRecords).limit(5000);
+  const allCap = await db.select().from(capacityDevelopmentRecords).limit(5000);
 
   // Aggregate LC rate across all filers
   const totalSpend = allExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
-  const guySpend = allExp.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const guySpend = allExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").reduce((s, e) => s + Number(e.actualPayment || 0), 0);
   const overallLcRate = totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0;
 
   // Aggregate employment
   const totalEmp = allEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
   const guyEmp = allEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
 
+  // Capacity development
+  const totalTrainingParticipants = allCap.reduce((s, c) => s + (c.totalParticipants || 0), 0);
+  const totalTrainingDays = allCap.reduce((s, c) => s + (c.durationDays || 0), 0);
+  const totalCapacitySpend = allCap.reduce((s, c) => s + Number(c.expenditureOnCapacity || 0), 0);
+
   // Unique filers
   const uniqueTenants = new Set(allSubmitted.map(p => p.tenantId)).size;
   const uniqueEntities = new Set(allSubmitted.map(p => p.entityId)).size;
+
+  // Staff hours saved estimate:
+  // Manual review of a half-yearly report: ~4 hours (data entry check, cross-reference, calculations)
+  // LCA Desk automated review: ~15 minutes
+  // Net saving: ~3.75 hours per submission
+  const hoursPerSubmission = 3.75;
+  const staffHoursSaved = Math.round(allSubmitted.length * hoursPerSubmission);
+
+  // Guyanese supplier count (unique companies)
+  const guyaneseSupplierNames = new Set(allExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").map(e => e.supplierName));
 
   return {
     totalSubmissions: allSubmitted.length,
@@ -4603,6 +4619,16 @@ export async function fetchSecretariatAnalytics() {
     totalEmployees: totalEmp,
     guyaneseEmployees: guyEmp,
     employmentPct: totalEmp > 0 ? Math.round((guyEmp / totalEmp) * 1000) / 10 : 0,
+    // KPIs
+    localSpend: guySpend,
+    jobsCreated: guyEmp,
+    staffHoursSaved,
+    economicImpact: totalSpend,
+    // Supporting metrics
+    guyaneseSupplierCount: guyaneseSupplierNames.size,
+    totalTrainingParticipants,
+    totalTrainingDays,
+    totalCapacitySpend,
   };
 }
 
