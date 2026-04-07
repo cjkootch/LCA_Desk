@@ -5,7 +5,9 @@ import { db } from "@/server/db";
 import { lcsCertApplications } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 const TIER_PRICES: Record<string, number> = {
   self_service: 4900, // $49 in cents
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutSession = await getStripe().checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: [{

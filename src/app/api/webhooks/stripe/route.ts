@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { tenants, lcsCertApplications } from "@/server/db/schema";
+import { tenants, lcsCertApplications, supplierProfiles } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
 function getStripe() {
@@ -57,6 +57,19 @@ export async function POST(req: NextRequest) {
             status: "under_review",
             updatedAt: new Date(),
           }).where(eq(lcsCertApplications.id, applicationId));
+        }
+        break;
+      }
+
+      // Supplier Pro checkout
+      if (session.metadata?.type === "supplier_pro") {
+        const supplierId = session.metadata.supplierId;
+        if (supplierId) {
+          await db.update(supplierProfiles).set({
+            tier: "pro",
+            stripeCustomerId: session.customer as string,
+            stripeSubscriptionId: session.subscription as string,
+          }).where(eq(supplierProfiles.id, supplierId));
         }
         break;
       }

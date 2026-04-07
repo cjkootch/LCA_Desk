@@ -150,7 +150,7 @@ export default function SupplierProfilePage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Capability Statement</CardTitle>
-              {!isPro && <Badge variant="default" className="text-[9px] gap-1"><Lock className="h-2.5 w-2.5" /> Pro</Badge>}
+              {!isPro && <Badge variant="default" className="text-[9px] gap-1"><Lock className="h-2.5 w-2.5" /> Supplier Pro</Badge>}
             </div>
           </CardHeader>
           <CardContent>

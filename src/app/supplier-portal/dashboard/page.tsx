@@ -42,7 +42,7 @@ export default function SupplierDashboard() {
           <h1 className="text-xl font-heading font-bold text-text-primary">{profile.legalName || "Supplier Dashboard"}</h1>
           <p className="text-sm text-text-secondary">{profile.tradingName ? `t/a ${profile.tradingName} · ` : ""}{profile.serviceCategories.join(", ") || "No categories set"}</p>
         </div>
-        <Badge variant={isPro ? "accent" : "default"} className="text-xs">{isPro ? "Pro" : "Free"}</Badge>
+        <Badge variant={isPro ? "accent" : "default"} className="text-xs">{isPro ? "Supplier Pro" : "Free"}</Badge>
       </div>
 
       {/* Upgrade banner for free users */}
@@ -90,7 +90,7 @@ export default function SupplierDashboard() {
           ) : (
             <>
               <Lock className="h-5 w-5 text-text-muted mx-auto mb-1" />
-              <p className="text-lg font-bold text-text-muted">Pro</p>
+              <p className="text-lg font-bold text-text-muted">Upgrade</p>
               <p className="text-[10px] text-text-muted">Profile Analytics</p>
             </>
           )}
