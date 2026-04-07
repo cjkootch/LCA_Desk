@@ -17,7 +17,7 @@ const CATEGORIES = [
   "Semi-Skilled Labour", "Unskilled Labour",
 ];
 
-const CONTRACT_TYPES = ["All", "permanent", "Full-time", "Part-time", "contract", "temporary"];
+const CONTRACT_TYPES = ["All", "Full-time", "Part-time", "Contract", "Permanent", "Temporary"];
 
 export default function SeekerJobsPage() {
   const [jobs, setJobs] = useState<Awaited<ReturnType<typeof fetchPublicJobs>>>([]);
@@ -44,7 +44,7 @@ export default function SeekerJobsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadJobs(); }, []);
+  useEffect(() => { loadJobs(); }, [search, category, contractType]);
 
   const handleSearch = () => loadJobs();
 
@@ -75,7 +75,7 @@ export default function SeekerJobsPage() {
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => { setCategory(cat); setTimeout(loadJobs, 0); }}
+                    onClick={() => setCategory(cat)}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       category === cat
                         ? "bg-accent text-white"
@@ -90,7 +90,7 @@ export default function SeekerJobsPage() {
                 {CONTRACT_TYPES.map((ct) => (
                   <button
                     key={ct}
-                    onClick={() => { setContractType(ct); setTimeout(loadJobs, 0); }}
+                    onClick={() => setContractType(ct)}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       contractType === ct
                         ? "bg-accent text-white"

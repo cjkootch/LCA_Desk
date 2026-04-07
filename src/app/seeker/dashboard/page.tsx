@@ -55,7 +55,17 @@ export default function SeekerDashboard() {
     );
   }
 
-  const profileCompletion = stats?.profileComplete ? 100 : stats?.profile ? 60 : 20;
+  const completionItems = [
+    { label: "Job title", done: !!stats?.profile?.currentJobTitle },
+    { label: "Employment category", done: !!stats?.profile?.employmentCategory },
+    { label: "Skills", done: (stats?.profile?.skills?.length || 0) > 0 },
+    { label: "Education", done: !!stats?.profile?.educationLevel },
+    { label: "Certifications", done: (stats?.profile?.certifications?.length || 0) > 0 },
+    { label: "Location preference", done: !!stats?.profile?.locationPreference && stats.profile.locationPreference !== "Any" },
+    { label: "LCA attestation", done: !!stats?.profile?.lcaAttestationDate },
+  ];
+  const completedCount = completionItems.filter(i => i.done).length;
+  const profileCompletion = Math.round((completedCount / completionItems.length) * 100);
 
   return (
     <>
@@ -82,7 +92,11 @@ export default function SeekerDashboard() {
               </div>
               <div className="mt-3">
                 <Progress value={profileCompletion} className="h-1.5" />
-                <p className="text-[11px] text-text-muted mt-1">{profileCompletion}% complete</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                  {completionItems.filter(i => !i.done).map(i => (
+                    <span key={i.label} className="text-[10px] text-text-muted">· {i.label}</span>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

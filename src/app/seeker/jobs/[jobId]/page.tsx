@@ -200,6 +200,9 @@ export default function JobDetailPage() {
                         My Applications
                       </Link>
                     </p>
+                    <Link href="/seeker/jobs">
+                      <Button variant="outline" size="sm" className="mt-3">Continue Browsing Jobs</Button>
+                    </Link>
                   </div>
                 ) : isDeadlinePassed ? (
                   <div className="text-center py-2">

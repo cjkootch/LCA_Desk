@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
-import { User, Briefcase, MapPin, CheckCircle, Plus, X } from "lucide-react";
-import { fetchMyProfile, updateMyProfile } from "@/server/actions";
+import { User, Briefcase, MapPin, CheckCircle, Plus, X, Trophy } from "lucide-react";
+import { fetchMyProfile, updateMyProfile, fetchUserBadges } from "@/server/actions";
 import { toast } from "sonner";
 
 const EMPLOYMENT_CATEGORIES = [
@@ -24,6 +24,8 @@ export default function SeekerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [badges, setBadges] = useState<any[]>([]);
 
   // Form state
   const [name, setName] = useState("");
@@ -76,6 +78,7 @@ export default function SeekerProfilePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetchUserBadges().then(setBadges).catch(() => {});
   }, []);
 
   const addSkill = () => {
@@ -346,6 +349,32 @@ export default function SeekerProfilePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Earned Badges */}
+          {badges.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-gold" />
+                  <CardTitle className="text-sm">Earned Badges</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {badges.map((b: { courseId: string; badgeLabel: string; badgeColor: string; earnedAt: string }) => (
+                    <div key={b.courseId} className="flex items-center gap-1.5 rounded-lg bg-bg-primary px-3 py-2">
+                      <Trophy className={`h-4 w-4 ${b.badgeColor === "gold" ? "text-gold" : b.badgeColor === "success" ? "text-success" : "text-accent"}`} />
+                      <div>
+                        <p className="text-xs font-medium text-text-primary">{b.badgeLabel}</p>
+                        <p className="text-[9px] text-text-muted">Earned {new Date(b.earnedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-text-muted mt-2">Badges are visible to employers browsing the Talent Pool.</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* LCA Compliance */}
           <Card>
