@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, entities, jurisdictions, jobSeekerProfiles, supplierProfiles, reportingPeriods, expenditureRecords, employmentRecords } from "@/server/db/schema";
+import {
+  users, tenants, tenantMembers, entities, jurisdictions,
+  jobSeekerProfiles, supplierProfiles, reportingPeriods,
+  expenditureRecords, employmentRecords, capacityDevelopmentRecords,
+  secretariatOffices, secretariatMembers,
+} from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const DEMO_PASSWORD = "demo-password-2026";
 
 export async function POST(req: NextRequest) {
-  // Gate behind env-configured demo secret only
   const demoSecret = process.env.DEMO_SEED_SECRET;
   if (!demoSecret) {
     return NextResponse.json({ error: "Demo seeding is disabled" }, { status: 403 });
@@ -20,11 +24,9 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const results: string[] = [];
 
-  // Get Guyana jurisdiction
   const [guyana] = await db.select().from(jurisdictions).where(eq(jurisdictions.code, "GY")).limit(1);
   const jurisdictionId = guyana?.id || null;
 
-  // ── Helper: create user if not exists ──
   async function ensureUser(email: string, name: string, role: string, isSuperAdmin = false) {
     const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existing) return existing;
@@ -34,11 +36,9 @@ export async function POST(req: NextRequest) {
     return user;
   }
 
-  // ── Helper: create tenant + membership ──
   async function ensureTenant(userId: string, name: string, slug: string, plan: string, trialDays?: number) {
     const [existing] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
     if (existing) {
-      // Ensure membership exists
       const [membership] = await db.select().from(tenantMembers)
         .where(eq(tenantMembers.userId, userId)).limit(1);
       if (!membership) {
@@ -58,27 +58,25 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // ═══ 1. Filer (Lite) ═══
+    // ═══ 1. Filer (Essentials) ═══
     const filerLite = await ensureUser("demo-filer-lite@lcadesk.com", "Sarah Mitchell", "filer");
     const tenantLite = await ensureTenant(filerLite.id, "Georgetown Supplies Ltd", "georgetown-supplies", "lite");
-    results.push(`✓ Filer Lite: ${filerLite.email}`);
+    results.push(`✓ Filer Essentials: ${filerLite.email}`);
 
-    // Create entity + sample data
     const [entityLite] = await db.select().from(entities).where(eq(entities.tenantId, tenantLite.id)).limit(1);
     if (!entityLite) {
       const [ent] = await db.insert(entities).values({
         tenantId: tenantLite.id, jurisdictionId, legalName: "Georgetown Supplies Ltd",
         companyType: "sub_contractor", contactName: "Sarah Mitchell", contactEmail: "sarah@georgetownsupplies.gy",
+        lcsCertificateId: "LCSR-demo0001",
       }).returning();
 
-      // Create a reporting period
       const [period] = await db.insert(reportingPeriods).values({
         entityId: ent.id, tenantId: tenantLite.id, jurisdictionId,
         reportType: "half_yearly_h1", periodStart: "2026-01-01", periodEnd: "2026-06-30",
         dueDate: "2026-07-30", fiscalYear: 2026, status: "in_progress",
       }).returning();
 
-      // Sample expenditure
       await db.insert(expenditureRecords).values({
         reportingPeriodId: period.id, entityId: ent.id, tenantId: tenantLite.id,
         typeOfItemProcured: "Services", supplierName: "Guyana Shore Base Inc.",
@@ -91,7 +89,6 @@ export async function POST(req: NextRequest) {
         actualPayment: "280000", relatedSector: "Engineering and Machining", currencyOfPayment: "USD",
       });
 
-      // Sample employment
       await db.insert(employmentRecords).values({
         reportingPeriodId: period.id, entityId: ent.id, tenantId: tenantLite.id,
         jobTitle: "Warehouse Manager", employmentCategory: "Managerial",
@@ -104,25 +101,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ═══ 2. Filer (Pro) ═══
+    // ═══ 2. Filer (Professional) — with SUBMITTED report for secretariat ═══
     const filerPro = await ensureUser("demo-filer-pro@lcadesk.com", "Marcus Williams", "filer");
     const tenantPro = await ensureTenant(filerPro.id, "Demerara Oilfield Services", "demerara-oilfield", "pro");
-    results.push(`✓ Filer Pro: ${filerPro.email}`);
+    results.push(`✓ Filer Professional: ${filerPro.email}`);
 
     const [entityPro] = await db.select().from(entities).where(eq(entities.tenantId, tenantPro.id)).limit(1);
     if (!entityPro) {
       const [ent] = await db.insert(entities).values({
         tenantId: tenantPro.id, jurisdictionId, legalName: "Demerara Oilfield Services Inc.",
         companyType: "contractor", contactName: "Marcus Williams", contactEmail: "marcus@demerara-oilfield.gy",
+        lcsCertificateId: "LCSR-demo0002",
       }).returning();
 
+      // In-progress H1
       const [period] = await db.insert(reportingPeriods).values({
         entityId: ent.id, tenantId: tenantPro.id, jurisdictionId,
         reportType: "half_yearly_h1", periodStart: "2026-01-01", periodEnd: "2026-06-30",
         dueDate: "2026-07-30", fiscalYear: 2026, status: "in_progress",
       }).returning();
 
-      // Richer sample data for Pro
+      // Submitted H2 2025 (visible to secretariat)
+      const [submittedPeriod] = await db.insert(reportingPeriods).values({
+        entityId: ent.id, tenantId: tenantPro.id, jurisdictionId,
+        reportType: "half_yearly_h2", periodStart: "2025-07-01", periodEnd: "2025-12-31",
+        dueDate: "2026-01-30", fiscalYear: 2025, status: "submitted",
+        submittedAt: new Date("2026-01-28"), lockedAt: new Date("2026-01-28"),
+        attestation: "I certify that the information contained in this report is true and accurate.",
+        attestedBy: filerPro.id, attestedAt: new Date("2026-01-28"),
+      }).returning();
+
       for (const exp of [
         { supplier: "G-Boats Inc.", cert: "LCSR-gboat001", amount: "420000", sector: "Transportation Services" },
         { supplier: "GYSBI", cert: "LCSR-gysbi001", amount: "890000", sector: "Storage Services (Warehousing)" },
@@ -130,12 +138,15 @@ export async function POST(req: NextRequest) {
         { supplier: "Local Catering Co.", cert: "LCSR-cater001", amount: "95000", sector: "Catering and Food Services" },
         { supplier: "SLB Guyana", cert: null, amount: "780000", sector: "Borehole Testing Services" },
       ]) {
-        await db.insert(expenditureRecords).values({
-          reportingPeriodId: period.id, entityId: ent.id, tenantId: tenantPro.id,
-          typeOfItemProcured: "Services", supplierName: exp.supplier,
-          supplierCertificateId: exp.cert, actualPayment: exp.amount,
-          relatedSector: exp.sector, currencyOfPayment: "USD",
-        });
+        // Insert for both periods
+        for (const pid of [period.id, submittedPeriod.id]) {
+          await db.insert(expenditureRecords).values({
+            reportingPeriodId: pid, entityId: ent.id, tenantId: tenantPro.id,
+            typeOfItemProcured: "Services", supplierName: exp.supplier,
+            supplierCertificateId: exp.cert, actualPayment: exp.amount,
+            relatedSector: exp.sector, currencyOfPayment: "USD",
+          });
+        }
       }
 
       for (const emp of [
@@ -145,25 +156,40 @@ export async function POST(req: NextRequest) {
         { title: "Admin Assistant", cat: "Non-Technical", total: 6, gy: 6 },
         { title: "Crane Operator", cat: "Non-Technical", total: 15, gy: 13 },
       ]) {
-        await db.insert(employmentRecords).values({
-          reportingPeriodId: period.id, entityId: ent.id, tenantId: tenantPro.id,
-          jobTitle: emp.title, employmentCategory: emp.cat,
-          totalEmployees: emp.total, guyanaeseEmployed: emp.gy,
-        });
+        for (const pid of [period.id, submittedPeriod.id]) {
+          await db.insert(employmentRecords).values({
+            reportingPeriodId: pid, entityId: ent.id, tenantId: tenantPro.id,
+            jobTitle: emp.title, employmentCategory: emp.cat,
+            totalEmployees: emp.total, guyanaeseEmployed: emp.gy,
+          });
+        }
       }
+
+      // Capacity development records for submitted period
+      await db.insert(capacityDevelopmentRecords).values({
+        reportingPeriodId: submittedPeriod.id, entityId: ent.id, tenantId: tenantPro.id,
+        activity: "Offshore Safety Training (BOSIET)", category: "Technical Training",
+        participantType: "employee", totalParticipants: 12, guyanaeseParticipantsOnly: 10,
+        startDate: "2025-09-15", durationDays: 5, expenditureOnCapacity: "45000",
+      });
     }
 
-    // ═══ 3. Filer (Trial) ═══
+    // ═══ 3. Filer (30-day Trial) ═══
     const filerTrial = await ensureUser("demo-filer-trial@lcadesk.com", "Priya Persaud", "filer");
-    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "lite", 14);
-    results.push(`✓ Filer Trial: ${filerTrial.email} (14-day trial)`);
+    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "free", 30);
+    results.push(`✓ Filer Trial: ${filerTrial.email} (30-day Professional trial)`);
 
-    // ═══ 3b. Filer (Expired Trial) ═══
+    // ═══ 4. Filer (Expired Trial) ═══
     const filerExpired = await ensureUser("demo-filer-expired@lcadesk.com", "James Rodrigues", "filer");
-    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "lite", -7); // expired 7 days ago
+    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "free", -7);
     results.push(`✓ Filer Expired: ${filerExpired.email} (trial expired 7 days ago)`);
 
-    // ═══ 4. Job Seeker ═══
+    // ═══ 5. Filer (Free — upload only) ═══
+    const filerFree = await ensureUser("demo-filer-free@lcadesk.com", "Nadira Singh", "filer");
+    await ensureTenant(filerFree.id, "Singh Welding & Fabrication", "singh-welding", "free");
+    results.push(`✓ Filer Free: ${filerFree.email} (upload-only, no trial)`);
+
+    // ═══ 6. Job Seeker ═══
     const seeker = await ensureUser("demo-seeker@lcadesk.com", "Devon Campbell", "job_seeker");
     const [existingSeeker] = await db.select().from(jobSeekerProfiles).where(eq(jobSeekerProfiles.userId, seeker.id)).limit(1);
     if (!existingSeeker) {
@@ -171,7 +197,9 @@ export async function POST(req: NextRequest) {
         userId: seeker.id, currentJobTitle: "Mechanical Engineer",
         employmentCategory: "Technical", yearsExperience: 5,
         isGuyanese: true, guyaneseStatus: "citizen", nationality: "Guyanese",
+        educationLevel: "bachelors", educationField: "Mechanical Engineering",
         skills: ["Offshore operations", "FPSO maintenance", "Hydraulics", "AutoCAD", "Health & Safety"],
+        certifications: ["BOSIET", "HUET", "H2S Alive"],
         locationPreference: "Georgetown", contractTypePreference: "Full-time",
         headline: "Mechanical Engineer with 5 years offshore O&G experience",
         profileVisible: true, alertsEnabled: true,
@@ -179,20 +207,51 @@ export async function POST(req: NextRequest) {
     }
     results.push(`✓ Job Seeker: ${seeker.email}`);
 
-    // ═══ 5. Supplier ═══
+    // ═══ 7. Supplier (with full profile) ═══
     const supplier = await ensureUser("demo-supplier@lcadesk.com", "Anil Raghunath", "supplier");
     const [existingSupplier] = await db.select().from(supplierProfiles).where(eq(supplierProfiles.userId, supplier.id)).limit(1);
     if (!existingSupplier) {
       await db.insert(supplierProfiles).values({
         userId: supplier.id, legalName: "Raghunath Engineering Solutions",
+        tradingName: "RES Guyana",
         lcsCertId: "LCSR-demo1234", lcsVerified: true, lcsStatus: "Active",
-        serviceCategories: ["Engineering and Machining", "Structural Fabrication"],
-        profileVisible: true,
+        lcsExpirationDate: "2027-06-30",
+        serviceCategories: ["Engineering and Machining", "Structural Fabrication", "Equipment Supply"],
+        contactEmail: "anil@res-guyana.com", contactPhone: "+592-222-3456",
+        website: "https://res-guyana.com",
+        employeeCount: 45, yearEstablished: 2015, isGuyaneseOwned: true,
+        capabilityStatement: "Raghunath Engineering Solutions provides structural fabrication, equipment maintenance, and machining services to the petroleum sector. With 45 employees and ISO 9001 certification, we have completed projects for ExxonMobil, CNOOC, and Hess.",
+        profileVisible: true, tier: "pro",
       });
     }
-    results.push(`✓ Supplier: ${supplier.email}`);
+    results.push(`✓ Supplier (Pro): ${supplier.email}`);
 
-    // ═══ 6. Super Admin ═══
+    // ═══ 8. Secretariat User ═══
+    const secretariatUser = await ensureUser("demo-secretariat@lcadesk.com", "Dr. Martin Pertab", "secretariat");
+    results.push(`✓ Secretariat: ${secretariatUser.email}`);
+
+    // Ensure secretariat office and membership
+    const [existingOffice] = await db.select().from(secretariatOffices).limit(1);
+    let officeId: string;
+    if (existingOffice) {
+      officeId = existingOffice.id;
+    } else {
+      const [office] = await db.insert(secretariatOffices).values({
+        name: "Local Content Secretariat",
+        jurisdictionId,
+      }).returning();
+      officeId = office.id;
+    }
+
+    const [existingMembership] = await db.select().from(secretariatMembers)
+      .where(eq(secretariatMembers.userId, secretariatUser.id)).limit(1);
+    if (!existingMembership) {
+      await db.insert(secretariatMembers).values({
+        officeId, userId: secretariatUser.id, role: "admin",
+      });
+    }
+
+    // ═══ 9. Super Admin ═══
     const admin = await ensureUser("demo-admin@lcadesk.com", "Cole Kootch", "filer", true);
     await ensureTenant(admin.id, "LCA Desk Admin", "lcadesk-admin", "enterprise");
     results.push(`✓ Admin: ${admin.email} (superAdmin=true)`);

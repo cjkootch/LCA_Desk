@@ -17,8 +17,8 @@ import { toast } from "sonner";
 const DEMO_USERS = [
   {
     id: "filer-lite",
-    label: "Filer (Lite)",
-    description: "Compliance officer on Lite plan — 1 entity, basic features",
+    label: "Filer (Essentials)",
+    description: "Compliance officer on Essentials $199/mo — 1 entity, 3 users",
     icon: Building2,
     plan: "lite",
     role: "filer",
@@ -28,8 +28,8 @@ const DEMO_USERS = [
   },
   {
     id: "filer-pro",
-    label: "Filer (Pro)",
-    description: "Full compliance team — 5 entities, AI, exports, talent pool",
+    label: "Filer (Professional)",
+    description: "Full compliance team — 5 entities, AI, marketplace, submitted report",
     icon: Crown,
     plan: "pro",
     role: "filer",
@@ -39,10 +39,10 @@ const DEMO_USERS = [
   },
   {
     id: "filer-trial",
-    label: "Filer (Trial)",
-    description: "New signup in 14-day Pro trial — sees trial banner",
+    label: "Filer (30-Day Trial)",
+    description: "New signup in 30-day Professional trial — sees countdown banner",
     icon: Shield,
-    plan: "lite",
+    plan: "free",
     role: "filer",
     email: "demo-filer-trial@lcadesk.com",
     color: "text-accent",
@@ -51,18 +51,29 @@ const DEMO_USERS = [
   {
     id: "filer-expired",
     label: "Filer (Expired Trial)",
-    description: "Trial ended — sees Lite restrictions, upgrade prompts, no AI",
+    description: "Trial ended 7 days ago — redirected to upgrade page",
     icon: Lock,
-    plan: "lite",
+    plan: "free",
     role: "filer",
     email: "demo-filer-expired@lcadesk.com",
     color: "text-danger",
     bgColor: "bg-danger-light",
   },
   {
+    id: "filer-free",
+    label: "Filer (Free)",
+    description: "Upload-only — can submit reports but no data entry or AI",
+    icon: FileText,
+    plan: "free",
+    role: "filer",
+    email: "demo-filer-free@lcadesk.com",
+    color: "text-text-muted",
+    bgColor: "bg-bg-primary",
+  },
+  {
     id: "seeker",
     label: "Job Seeker",
-    description: "Searching for petroleum sector jobs, building resume",
+    description: "Searching for petroleum jobs, resume builder, LMS courses",
     icon: Search,
     plan: null,
     role: "job_seeker",
@@ -72,20 +83,31 @@ const DEMO_USERS = [
   },
   {
     id: "supplier",
-    label: "Supplier",
-    description: "LCS-registered supplier managing their profile",
+    label: "Supplier (Pro)",
+    description: "LCS-certified supplier — full profile, opportunity responses, analytics",
     icon: Truck,
-    plan: null,
+    plan: "pro",
     role: "supplier",
     email: "demo-supplier@lcadesk.com",
     color: "text-success",
     bgColor: "bg-success-light",
   },
   {
+    id: "secretariat",
+    label: "Secretariat",
+    description: "Regulatory office — review submissions, compliance tracking, AI analyst",
+    icon: Shield,
+    plan: null,
+    role: "secretariat",
+    email: "demo-secretariat@lcadesk.com",
+    color: "text-gold",
+    bgColor: "bg-gold-light",
+  },
+  {
     id: "admin",
     label: "Super Admin",
-    description: "Platform admin — sees all tenants, admin panel",
-    icon: Shield,
+    description: "Platform admin — all tenants, admin panel, enterprise",
+    icon: Crown,
     plan: "enterprise",
     role: "filer",
     email: "demo-admin@lcadesk.com",
@@ -130,6 +152,8 @@ function DemoContent() {
         router.push("/seeker/dashboard");
       } else if (user.role === "supplier") {
         router.push("/supplier-portal/dashboard");
+      } else if (user.role === "secretariat") {
+        router.push("/secretariat/dashboard");
       } else {
         router.push("/dashboard");
       }
