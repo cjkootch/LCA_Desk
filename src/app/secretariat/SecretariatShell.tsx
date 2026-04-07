@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus } from "lucide-react";
+import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
@@ -12,6 +12,7 @@ import { SessionProvider } from "next-auth/react";
 const NAV_ITEMS = [
   { label: "Submissions", href: "/secretariat/dashboard", icon: FileText },
   { label: "Filing Compliance", href: "/secretariat/compliance", icon: ClipboardCheck },
+  { label: "Reports", href: "/secretariat/reports", icon: PieChart },
   { label: "Market Intel", href: "/secretariat/market", icon: BarChart3 },
   { label: "LCS Applications", href: "/secretariat/applications", icon: UserPlus },
   { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
