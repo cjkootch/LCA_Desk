@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   BarChart3, Download, Settings2, X, Check, GripVertical,
   DollarSign, Users, Clock, TrendingUp, Briefcase, Shield,
-  GraduationCap, Building2, FileText, PieChart,
+  GraduationCap, Building2, FileText, PieChart, Sparkles, Copy,
 } from "lucide-react";
 import { fetchSecretariatAnalytics, fetchSecretariatDashboard, fetchSecretariatMarketIntel } from "@/server/actions";
 import { toast } from "sonner";
@@ -76,6 +76,8 @@ export default function SecretariatReportsPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [enabledWidgets, setEnabledWidgets] = useState<string[]>(getStoredWidgets());
   const [exporting, setExporting] = useState(false);
+  const [aiSummary, setAiSummary] = useState("");
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -117,6 +119,55 @@ export default function SecretariatReportsPage() {
     setExporting(false);
   };
 
+  const generateAiSummary = async () => {
+    if (!analytics) return;
+    setGeneratingSummary(true);
+    setAiSummary("");
+    try {
+      const res = await fetch("/api/ai/secretariat-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `Write a concise executive summary (150-250 words) of the current Local Content sector performance for the Director to share with the Minister or include in a quarterly report. Use these exact figures:
+
+- Local Content Rate: ${analytics.overallLcRate}%
+- Guyanese Expenditure: $${(analytics.localSpend || 0).toLocaleString()} of $${(analytics.economicImpact || 0).toLocaleString()} total
+- Guyanese Employment: ${(analytics.jobsCreated || 0).toLocaleString()} of ${(analytics.totalEmployees || 0).toLocaleString()} total (${analytics.employmentPct}%)
+- Filing Companies: ${analytics.uniqueFilers}
+- Submissions Processed: ${analytics.totalSubmissions}
+- Training Participants: ${(analytics.totalTrainingParticipants || 0).toLocaleString()}
+- Training Days: ${(analytics.totalTrainingDays || 0).toLocaleString()}
+- Capacity Investment: $${(analytics.totalCapacitySpend || 0).toLocaleString()}
+- Staff Hours Saved: ${analytics.staffHoursSaved}
+
+Write in formal government report style. Open with the headline metric (LC rate), cover employment compliance, training investment, and close with the platform efficiency gain (staff hours saved). Do not use bullet points — write flowing paragraphs.`,
+          }],
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No reader");
+      const decoder = new TextDecoder();
+      let accumulated = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        setAiSummary(accumulated);
+      }
+    } catch {
+      setAiSummary("Failed to generate summary. Please try again.");
+    }
+    setGeneratingSummary(false);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(aiSummary);
+    toast.success("Summary copied to clipboard");
+  };
+
   const isEnabled = (id: string) => enabledWidgets.includes(id);
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold" /></div>;
@@ -141,6 +192,38 @@ export default function SecretariatReportsPage() {
           </Button>
         </div>
       </div>
+
+      {/* AI Executive Summary */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-gold" />
+              <p className="text-sm font-semibold text-text-primary">AI Executive Summary</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {aiSummary && !generatingSummary && (
+                <Button variant="outline" size="sm" onClick={copyToClipboard} className="gap-1 text-xs">
+                  <Copy className="h-3 w-3" /> Copy
+                </Button>
+              )}
+              <Button size="sm" onClick={generateAiSummary} loading={generatingSummary} className="gap-1 text-xs">
+                <Sparkles className="h-3 w-3" /> {aiSummary ? "Regenerate" : "Generate Summary"}
+              </Button>
+            </div>
+          </div>
+          {aiSummary ? (
+            <div className="bg-bg-primary rounded-lg p-4 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+              {aiSummary}
+              {generatingSummary && <span className="inline-block w-2 h-4 bg-gold animate-pulse ml-1" />}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">
+              Generate an AI-written executive summary from your current sector data. Ready to paste into emails, quarterly reports, or ministerial briefings.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Widget configurator */}
       {configOpen && (
