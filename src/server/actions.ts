@@ -2159,9 +2159,19 @@ export async function upgradeSupplierToFiler(companyName: string) {
     .replace(/[\s_]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
   const [tenant] = await db
     .insert(tenants)
-    .values({ name: companyName, slug, jurisdictionId: guyana?.id })
+    .values({
+      name: companyName,
+      slug,
+      jurisdictionId: guyana?.id,
+      plan: "lite",
+      planEntityLimit: 1,
+      trialEndsAt,
+    })
     .returning();
 
   await db.insert(tenantMembers).values({
