@@ -290,6 +290,19 @@ export async function updatePeriodStatus(periodId: string, newStatus: string) {
 
   const oldStatus = current.status || "not_started";
 
+  // Validate state transitions
+  const validTransitions: Record<string, string[]> = {
+    not_started: ["in_progress"],
+    in_progress: ["in_review", "approved"],
+    in_review: ["approved", "in_progress"],
+    approved: ["submitted"],
+    submitted: [],
+    acknowledged: [],
+  };
+  if (validTransitions[oldStatus] && !validTransitions[oldStatus].includes(newStatus)) {
+    throw new Error(`Cannot transition from "${oldStatus}" to "${newStatus}".`);
+  }
+
   // Build update fields based on new status
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updates: Record<string, any> = { status: newStatus, updatedAt: new Date() };
@@ -798,7 +811,8 @@ export async function addCapacity(
 }
 
 export async function removeCapacity(id: string) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
+  const [old] = await db.select().from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.id, id)).limit(1);
   await db
     .delete(capacityDevelopmentRecords)
     .where(
@@ -807,6 +821,7 @@ export async function removeCapacity(id: string) {
         eq(capacityDevelopmentRecords.tenantId, tenantId)
       )
     );
+  if (old) await logAudit({ tenantId, userId, action: "delete", entityType: "capacity_record", entityId: id, reportingPeriodId: old.reportingPeriodId, oldValue: `${old.activity}: ${old.totalParticipants} participants` });
 }
 
 export async function updateCapacityRecord(id: string, data: Record<string, unknown>) {

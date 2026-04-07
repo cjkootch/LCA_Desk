@@ -186,7 +186,16 @@ export default function CapacityPage() {
                 Delete Activity
               </DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-text-secondary">Are you sure you want to delete this capacity development record? This action cannot be undone.</p>
+            {(() => { const r = records.find(r => r.id === deleteTarget); return r ? (
+              <div className="text-sm text-text-secondary">
+                <p className="mb-2">Are you sure you want to delete this capacity record?</p>
+                <div className="bg-bg-primary rounded-lg p-2 text-xs space-y-0.5">
+                  <p><span className="text-text-muted">Activity:</span> <strong>{r.activity}</strong></p>
+                  <p><span className="text-text-muted">Participants:</span> {r.guyanese_participants_only}/{r.total_participants} Guyanese</p>
+                </div>
+                <p className="mt-2 text-xs text-danger">This action cannot be undone.</p>
+              </div>
+            ) : <p>Are you sure?</p>; })()}
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
               <Button variant="danger" onClick={confirmDelete}>Delete</Button>

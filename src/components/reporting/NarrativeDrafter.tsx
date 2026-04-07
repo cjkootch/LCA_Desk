@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, Check } from "lucide-react";
 import type { NarrativeSection } from "@/types/ai.types";
 
 interface NarrativeDrafterProps {
@@ -26,6 +26,24 @@ export function NarrativeDrafter({
   const [content, setContent] = useState(initialContent || "");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoSaved, setAutoSaved] = useState(false);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(initialContent || "");
+
+  // Auto-save after 3 seconds of inactivity
+  useEffect(() => {
+    if (content === lastSavedRef.current || !content.trim() || generating) return;
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(async () => {
+      try {
+        await onSave(content);
+        lastSavedRef.current = content;
+        setAutoSaved(true);
+        setTimeout(() => setAutoSaved(false), 2000);
+      } catch { /* silent auto-save failure */ }
+    }, 3000);
+    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+  }, [content, generating, onSave]);
 
   const generate = useCallback(async () => {
     setGenerating(true);
@@ -65,6 +83,7 @@ export function NarrativeDrafter({
   const handleSave = async () => {
     setSaving(true);
     await onSave(content);
+    lastSavedRef.current = content;
     setSaving(false);
   };
 
@@ -110,8 +129,8 @@ export function NarrativeDrafter({
         />
         {content && (
           <div className="flex items-center justify-between pt-3 border-t border-border text-xs text-text-muted">
-            <span>{wordCount} words</span>
-            <span>{content.length} characters</span>
+            <span>{wordCount} words · {content.length} characters</span>
+            {autoSaved && <span className="flex items-center gap-1 text-success"><Check className="h-3 w-3" /> Auto-saved</span>}
           </div>
         )}
       </div>
