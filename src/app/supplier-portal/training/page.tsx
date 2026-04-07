@@ -9,7 +9,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, ArrowRight, Trophy,
   Star, Zap, Award,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse, seedSupplierCourse } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedLcaCourse, seedSupplierCourse, seedWinningContractsCourse, seedLcsCertCourse } from "@/server/actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ export default function SupplierTrainingPage() {
     Promise.all([fetchCourses("all"), fetchUserBadges()])
       .then(async ([c, b]) => {
         if (c.length === 0) {
-          try { await seedLcaCourse(); await seedSupplierCourse(); c = await fetchCourses("all"); } catch {}
+          try { await seedLcaCourse(); await seedSupplierCourse(); await seedWinningContractsCourse(); await seedLcsCertCourse(); c = await fetchCourses("all"); } catch {}
         }
         setCourseList(c);
         setBadges(b);

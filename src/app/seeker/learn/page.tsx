@@ -10,7 +10,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, ArrowRight, Trophy,
   Flame, Star, Zap, Award,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, seedSupplierCourse } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedLcaCourse, seedPlatformCourse, seedSupplierCourse, seedWinningContractsCourse, seedLcsCertCourse } from "@/server/actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ export default function LearnPage() {
     Promise.all([fetchCourses("seeker"), fetchUserBadges()])
       .then(async ([c, b]) => {
         if (c.length === 0) {
-          try { await seedLcaCourse(); await seedPlatformCourse(); await seedSupplierCourse(); c = await fetchCourses("seeker"); } catch {}
+          try { await seedLcaCourse(); await seedPlatformCourse(); await seedSupplierCourse(); await seedWinningContractsCourse(); await seedLcsCertCourse(); c = await fetchCourses("seeker"); } catch {}
         }
         setCourseList(c);
         setBadges(b);

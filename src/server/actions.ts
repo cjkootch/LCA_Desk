@@ -4451,6 +4451,123 @@ export async function seedAuditPrepCourse() {
   return course.id;
 }
 
+// ─── COURSE: WINNING PETROLEUM CONTRACTS ─────────────────────────
+
+export async function seedWinningContractsCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "winning-contracts")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "winning-contracts",
+    title: "Winning Petroleum Contracts",
+    description: "How to write capability statements, respond to EOIs/RFQs, and position your company to win contracts from petroleum operators in Guyana.",
+    audience: "all",
+    jurisdictionCode: "GY",
+    moduleCount: 4,
+    badgeLabel: "Contract Winner",
+    badgeColor: "gold",
+    estimatedMinutes: 25,
+  }).returning();
+
+  const mods = [
+    { title: "Understanding the Procurement Cycle", content: "## How Contractors Procure\n\nPetroleum operators follow a structured procurement process:\n\n### 1. Expression of Interest (EOI)\nThe contractor announces they need a service. You express interest and provide basic capability info. This is your first impression.\n\n### 2. Request for Qualification (RFQ)\nContractor shortlists companies and asks for detailed qualifications — safety records, experience, certifications, financial capacity.\n\n### 3. Request for Proposal (RFP)\nFormal bid. You submit a technical proposal and commercial offer. Price matters, but so does capability and local content.\n\n### 4. Evaluation & Award\nContractor evaluates proposals on technical merit, price, HSE record, and local content contribution. First consideration must go to Guyanese companies.\n\n### 5. Contract Execution\nNegotiation, contract signing, mobilization.\n\n## Where to Find Opportunities\n- LCA Desk Opportunities feed (190+ notices)\n- LCS website (lcsguyana.com)\n- Direct contractor portals (ExxonMobil, SLB, etc.)\n- Industry networking events",
+      quiz: [
+        { question: "The first step in procurement is usually:", options: ["RFP", "Contract signing", "Expression of Interest (EOI)", "Invoice"], correctIndex: 2 },
+        { question: "RFQ stands for:", options: ["Request for Quality", "Request for Qualification", "Report for Quarterly", "Required for Quotation"], correctIndex: 1 },
+        { question: "First consideration in evaluation goes to:", options: ["The cheapest bid", "International firms", "Guyanese companies", "The largest company"], correctIndex: 2 },
+        { question: "LCA Desk has how many procurement notices?", options: ["50+", "100+", "190+", "500+"], correctIndex: 2 },
+        { question: "The procurement cycle ends with:", options: ["EOI submission", "Contract execution", "RFP submission", "Evaluation"], correctIndex: 1 },
+      ],
+    },
+    { title: "Writing a Capability Statement", content: "## Your Capability Statement\n\nThis is the single most important document for winning work. It tells contractors what you can do.\n\n## What to Include\n\n### Company Overview (1 paragraph)\nWho you are, when established, employee count, Guyanese ownership %.\n\n### Services Offered (bullet list)\nSpecific services mapped to LCA First Schedule categories. Don't be vague — \"Engineering services\" loses to \"Structural fabrication, pipe welding, and CNC machining.\"\n\n### Key Projects (3-5 examples)\nProject name, client, scope, value, duration. Show you've done similar work.\n\n### Certifications & Compliance\n- LCS Certificate ID\n- ISO certifications\n- Safety certifications (BOSIET, H2S, etc.)\n- Insurance coverage\n\n### Equipment & Capacity\nMajor equipment owned, workshop/yard facilities, vehicle fleet.\n\n### Contact Information\nKey personnel, email, phone, address.\n\n## Common Mistakes\n- Too vague (\"We do everything\")\n- No specific examples\n- Missing LCS Certificate\n- Poor formatting / spelling errors\n- Not updated for 2+ years",
+      quiz: [
+        { question: "A capability statement should include:", options: ["Only pricing", "Company overview, services, projects, certifications", "Just a logo", "Employee salaries"], correctIndex: 1 },
+        { question: "'Engineering services' is:", options: ["A strong service description", "Too vague — be specific", "Perfect for all bids", "What the Secretariat recommends"], correctIndex: 1 },
+        { question: "Key projects should show:", options: ["Revenue only", "Client, scope, value, and duration", "Employee names", "Profit margins"], correctIndex: 1 },
+        { question: "Updating your capability statement should happen:", options: ["Never", "Every 5 years", "At least annually", "Only when bidding"], correctIndex: 2 },
+        { question: "The LCS Certificate should be:", options: ["Hidden", "Prominently displayed", "Only mentioned if asked", "Excluded from bids"], correctIndex: 1 },
+      ],
+    },
+    { title: "Responding to Opportunities on LCA Desk", content: "## Using LCA Desk to Respond\n\n### Step 1: Browse Opportunities\nFilter by notice type (EOI, RFQ, RFP, RFI), sector category, and company. Save interesting ones for later.\n\n### Step 2: Express Interest\nClick **Respond** on any opportunity. Add your contact email and a cover note.\n\n### Cover Note Best Practices\n- Lead with your most relevant experience\n- Reference the specific service requested\n- Mention your LCS Certificate ID\n- Keep it under 200 words\n- End with a call to action (\"We welcome the opportunity to discuss...\")\n\n### Step 3: Track Your Pipeline\nSupplier Pro ($99/mo) unlocks:\n- Full response tracking (Interested → Contacted → Shortlisted → Awarded)\n- Analytics (award rate, profile views)\n- Priority placement in the directory\n\n### Step 4: Follow Up\nIf contacted, respond within 24 hours. Prepare your capability statement in advance.\n\n## Response Limits\n- Free plan: 3 responses per month\n- Supplier Pro: Unlimited responses",
+      quiz: [
+        { question: "Free plan allows how many responses?", options: ["1/month", "3/month", "5/month", "Unlimited"], correctIndex: 1 },
+        { question: "A cover note should be:", options: ["500+ words", "Under 200 words with relevant experience", "A full proposal", "Just your name"], correctIndex: 1 },
+        { question: "Response tracking requires:", options: ["Free plan", "Supplier Pro", "Enterprise", "Government approval"], correctIndex: 1 },
+        { question: "When contacted by a contractor, respond within:", options: ["1 week", "24 hours", "1 month", "No rush"], correctIndex: 1 },
+        { question: "Your cover note should reference:", options: ["Your competitor's weaknesses", "The specific service requested", "Your personal opinions", "Political connections"], correctIndex: 1 },
+      ],
+    },
+    { title: "Positioning for First Consideration", content: "## First Consideration Advantage\n\nUnder the LCA, contractors must give first consideration to Guyanese companies. Here's how to make that work for you.\n\n## What 'First Consideration' Actually Means\n- Guyanese companies must be evaluated BEFORE international companies\n- If a Guyanese company can meet the requirements, they should be selected\n- Contractors must document why they chose a non-Guyanese supplier\n\n## How to Maximize Your Advantage\n\n### 1. Get LCS Certified\nWithout a valid LCS Certificate, you don't count as a Guyanese supplier in the contractor's LC rate. Get certified or renew before expiry.\n\n### 2. Match Your Services to the First Schedule\nMap your capabilities to specific First Schedule categories. Contractors classify every purchase — if your services match a category, you're a natural fit.\n\n### 3. Build Relationships Before the RFP\nAttend industry events, register on contractor portals, respond to EOIs even if you don't win. Visibility matters.\n\n### 4. Demonstrate Capacity\nContractors worry about local firms' ability to deliver at scale. Show evidence: equipment, workforce, past project values.\n\n### 5. Partner for Scale\nIf a contract is too large, consider joint ventures with other Guyanese firms. A consortium of 3 local companies beats one international firm in LC rate calculations.",
+      quiz: [
+        { question: "First consideration means:", options: ["Guyanese companies are always cheapest", "Guyanese companies must be evaluated first", "International firms are excluded", "The government decides the winner"], correctIndex: 1 },
+        { question: "Without an LCS Certificate, you:", options: ["Can still bid", "Don't count in the contractor's LC rate", "Are automatically rejected", "Must apply every year"], correctIndex: 1 },
+        { question: "Contractors must document:", options: ["All purchases over $100", "Why they chose a non-Guyanese supplier", "Employee satisfaction", "Equipment maintenance"], correctIndex: 1 },
+        { question: "Joint ventures help by:", options: ["Reducing costs", "Increasing combined capacity for larger contracts", "Avoiding LCA compliance", "Reducing paperwork"], correctIndex: 1 },
+        { question: "Responding to EOIs you won't win is:", options: ["A waste of time", "Good for visibility and relationship building", "Not allowed", "Only for large companies"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
+// ─── COURSE: GETTING LCS CERTIFIED ──────────────────────────────
+
+export async function seedLcsCertCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "lcs-certification")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "lcs-certification",
+    title: "Getting LCS Certified",
+    description: "Everything you need to know about the LCS registration process — requirements, documents, and how to get certified through LCA Desk.",
+    audience: "all",
+    jurisdictionCode: "GY",
+    moduleCount: 3,
+    badgeLabel: "Cert Ready",
+    badgeColor: "success",
+    estimatedMinutes: 15,
+  }).returning();
+
+  const mods = [
+    { title: "Why LCS Certification Matters", content: "## The Business Case\n\nAn LCS Certificate is your ticket to the petroleum supply chain.\n\n## What It Does\n- Proves you're a registered Guyanese company\n- Allows contractors to count payments to you as local content\n- Gets you listed in the official LCS Register (796+ companies)\n- Shows up as 'LCS Verified' on LCA Desk (green badge)\n\n## Who Needs It\n- Any Guyanese-owned company wanting to supply the petroleum sector\n- Individuals seeking employment who want to prove Guyanese status\n- Companies that want to be listed in the supplier directory\n\n## The Certificate Format\nLCSR-XXXXXXXX (8 hexadecimal characters after the prefix)\n\n## Expiration\nCertificates have an expiration date. If yours expires, contractors can no longer count procurement from you as local content. You effectively become invisible to the compliance system.\n\n## Cost of NOT Having One\nA Guyanese company without LCS certification is treated the same as an international company in LC rate calculations. You lose your competitive advantage.",
+      quiz: [
+        { question: "LCS Certificate format:", options: ["LCS-001", "LCSR-XXXXXXXX", "GY-CERT-001", "LC-2021-001"], correctIndex: 1 },
+        { question: "Without LCS certification, a Guyanese company:", options: ["Can still count as local content", "Is treated the same as an international company", "Cannot operate in Guyana", "Must pay a fine"], correctIndex: 1 },
+        { question: "The LCS Register contains:", options: ["100+", "400+", "796+", "1000+"], correctIndex: 2 },
+        { question: "If your certificate expires:", options: ["Nothing changes", "Contractors can't count your procurement as local", "You're automatically renewed", "You must close your business"], correctIndex: 1 },
+        { question: "LCS Verified on LCA Desk shows as:", options: ["A red badge", "A green badge", "A yellow badge", "No badge"], correctIndex: 1 },
+      ],
+    },
+    { title: "Registration Requirements", content: "## What You Need\n\n### For Businesses\n- Business Registration Certificate\n- TIN Certificate (Tax Identification Number)\n- Director/Owner National ID\n- Proof of Business Address\n- NIB Certificate of Good Standing (recommended)\n- GRA Tax Clearance (recommended)\n- Company Profile / Portfolio\n\n### For Individuals\n- National ID or Passport\n- TIN Certificate\n- Proof of Address\n- CV / Resume\n- Professional Certifications\n\n### Guyanese Ownership Requirement\nTo qualify as a 'Guyanese company', the business must be majority-owned (51%+) by Guyanese nationals. The Secretariat may verify ownership structure.\n\n## Common Application Errors\n- Expired TIN certificate\n- Business registration not matching the name on application\n- Missing proof of address (utility bill or bank statement)\n- National ID expired or unclear scan\n- No service categories selected",
+      quiz: [
+        { question: "Minimum Guyanese ownership for certification:", options: ["25%", "50%", "51%+", "100%"], correctIndex: 2 },
+        { question: "TIN stands for:", options: ["Total Income Number", "Tax Identification Number", "Trade Information Notice", "Territorial ID Number"], correctIndex: 1 },
+        { question: "Proof of address can be:", options: ["A verbal statement", "Utility bill or bank statement", "A text message", "Social media profile"], correctIndex: 1 },
+        { question: "Most common application error:", options: ["Wrong font size", "Expired TIN certificate", "Too many pages", "Wrong email address"], correctIndex: 1 },
+        { question: "Business name on application must match:", options: ["Your trading name", "Business Registration Certificate", "Your personal name", "Your bank account name"], correctIndex: 1 },
+      ],
+    },
+    { title: "Applying Through LCA Desk", content: "## LCS Certificate as a Service\n\nLCA Desk offers guided registration at three tiers:\n\n### Self-Service ($49)\n- Step-by-step application wizard\n- Document checklist\n- Auto-filled forms\n- Submit-ready package\n\n### Managed ($99) — Most Popular\n- Everything in Self-Service\n- Document review and error checking\n- Resubmission handling if issues found\n- Email support\n\n### Concierge ($199)\n- Everything in Managed\n- Dedicated support agent\n- Expedited processing\n- Renewal management for 1 year\n\n## The Process\n1. Go to /register-lcs on LCA Desk\n2. Choose Individual or Business\n3. Select your service tier\n4. Fill in your details\n5. Upload required documents\n6. Pay and submit\n7. We review and submit to the Secretariat\n8. You receive your LCSR- Certificate ID\n\n## After Certification\n- Your profile appears in the Verified Companies directory\n- Contractors can find you by service category\n- You're visible to all filers on the platform\n- Set up expiry alerts so you never lose coverage",
+      quiz: [
+        { question: "Self-Service tier costs:", options: ["$29", "$49", "$99", "$199"], correctIndex: 1 },
+        { question: "Most popular tier is:", options: ["Self-Service", "Managed", "Concierge", "Free"], correctIndex: 1 },
+        { question: "After certification, your profile appears in:", options: ["Google", "Verified Companies directory", "Government gazette", "Social media"], correctIndex: 1 },
+        { question: "Concierge includes:", options: ["Only document review", "Renewal management for 1 year", "Lifetime certification", "Government lobbying"], correctIndex: 1 },
+        { question: "The application process has how many steps?", options: ["3", "5", "8", "12"], correctIndex: 2 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
 // ─── JURISDICTION HELPERS ────────────────────────────────────────
 
 export async function getEntityJurisdictionCode(entityId: string): Promise<string> {
