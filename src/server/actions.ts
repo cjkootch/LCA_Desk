@@ -4280,6 +4280,177 @@ export async function seedSupplierCourse() {
   return course.id;
 }
 
+// ─── COURSE: FILING YOUR FIRST REPORT ───────────────────────────
+
+export async function seedFirstReportCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "first-report")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "first-report",
+    title: "Filing Your First Report",
+    description: "Step-by-step guide to completing and submitting your first Local Content Half-Yearly Report. The course that gets you from signup to submission.",
+    audience: "filer",
+    jurisdictionCode: "GY",
+    moduleCount: 4,
+    badgeLabel: "First Filer",
+    badgeColor: "accent",
+    estimatedMinutes: 20,
+  }).returning();
+
+  const mods = [
+    { title: "Setting Up Your Entity", content: "## Your First Entity\n\nAn entity represents a company that files LCA reports. After signup, your first entity is auto-created.\n\n## What You Need\n- Legal name (must match your LCS registration)\n- Company type: Contractor, Sub-Contractor, or Licensee\n- LCS Certificate ID (format: LCSR-XXXXXXXX)\n- Contact name and email\n\n## Company Types Explained\n- **Contractor**: Direct agreement with the Government (e.g., ExxonMobil)\n- **Sub-Contractor**: Agreement with a Contractor (e.g., Halliburton)\n- **Licensee**: Holder of a petroleum licence\n\n## Starting a Report\nFrom your entity page, click **Start New Report**. Select H1 (Jan-Jun) or H2 (Jul-Dec). Dates and deadlines auto-fill from the Secretariat schedule.",
+      quiz: [
+        { question: "What format is the LCS Certificate ID?", options: ["LCS-001", "LCSR-XXXXXXXX", "GY-CERT-001", "LC-2021"], correctIndex: 1 },
+        { question: "An entity represents:", options: ["A user account", "A company with filing obligations", "A report", "A billing account"], correctIndex: 1 },
+        { question: "H1 covers which months?", options: ["Jan-Mar", "Jan-Jun", "Jul-Dec", "Full year"], correctIndex: 1 },
+        { question: "Company type 'Sub-Contractor' means:", options: ["Works for the government directly", "Has agreement with a Contractor", "Is a Guyanese company", "Has no filing obligation"], correctIndex: 1 },
+        { question: "After starting a report, deadlines:", options: ["Must be entered manually", "Auto-fill from the Secretariat schedule", "Don't exist", "Are sent by email"], correctIndex: 1 },
+      ],
+    },
+    { title: "Entering Expenditure Data", content: "## The Expenditure Sub-Report\n\nThis is where you record every payment made during the reporting period.\n\n## For Each Payment, Record:\n- Type of item (Goods or Services)\n- Related sector (from the LCA First Schedule)\n- Supplier name (auto-suggest from 796+ LCS register)\n- Supplier Type (Guyanese or Non-Guyanese)\n- Supplier Certificate ID (for Guyanese suppliers)\n- Actual payment amount\n- Currency and payment method\n\n## Speed Tips\n- **Click cells to edit inline** — no modal needed for quick fixes\n- **Paste from Excel** — copy rows from a spreadsheet, paste into the table\n- **Save & Add Another** — batch entry without closing the form\n- **Import Excel** — upload the official Secretariat template directly\n\n## Local Content Rate\nYour LC Rate = Guyanese supplier spend ÷ Total spend × 100%\n\nThe sidebar shows this in real-time as you enter data.",
+      quiz: [
+        { question: "How many LCS-registered suppliers are in the auto-suggest?", options: ["100+", "400+", "796+", "1000+"], correctIndex: 2 },
+        { question: "LC Rate formula:", options: ["Employees ÷ Total × 100", "Guyanese spend ÷ Total spend × 100", "Reports filed ÷ Due × 100", "Suppliers ÷ Total × 100"], correctIndex: 1 },
+        { question: "To bulk-add records from a spreadsheet:", options: ["Email them to support", "Copy rows and paste into the table", "Use the Log Payment feature", "Print and scan them"], correctIndex: 1 },
+        { question: "A supplier counts as Guyanese if:", options: ["They have a Guyana address", "They have an LCS Certificate or are marked as Guyanese", "They employ Guyanese people", "They were founded in Guyana"], correctIndex: 1 },
+        { question: "The Related Sector dropdown contains:", options: ["5 options", "20 options", "40+ options from the First Schedule", "Unlimited custom entries"], correctIndex: 2 },
+      ],
+    },
+    { title: "Employment & Capacity Data", content: "## Employment Sub-Report\n\nRecord every position in your workforce.\n\n## For Each Position:\n- Job title and ISCO-08 classification\n- Employment category: Managerial, Technical, or Non-Technical\n- Total employees and number of Guyanese employed\n- Total remuneration and Guyanese remuneration\n\n## LCA Employment Minimums\n- **Managerial**: 75% Guyanese\n- **Technical**: 60% Guyanese\n- **Non-Technical**: 80% Guyanese\n\n## Capacity Development Sub-Report\n\nRecord all training activities:\n- Activity name and category\n- Participant type (Guyanese Internal, External, Mixed, etc.)\n- Number of participants (Guyanese and total)\n- Duration in days\n- Cost and expenditure\n\n## Why This Matters\nThe Secretariat cross-references your employment data with your expenditure to verify first consideration compliance.",
+      quiz: [
+        { question: "Minimum Guyanese % for Technical roles:", options: ["50%", "60%", "75%", "80%"], correctIndex: 1 },
+        { question: "ISCO-08 is:", options: ["A safety standard", "An occupation classification system", "A tax code", "A company registration"], correctIndex: 1 },
+        { question: "Capacity Development includes:", options: ["Only classroom training", "All training, scholarships, and mentoring", "Only safety courses", "Only Guyanese participants"], correctIndex: 1 },
+        { question: "Remuneration means:", options: ["Only base salary", "Total compensation including bonuses and overtime", "Only Guyanese pay", "Equipment costs"], correctIndex: 1 },
+        { question: "The Secretariat cross-references employment with:", options: ["Tax records", "Expenditure data", "Bank statements", "Immigration records"], correctIndex: 1 },
+      ],
+    },
+    { title: "Review, Export & Submit", content: "## The Final Steps\n\n### 1. AI Narrative Drafting\nClick **Generate** for each section. The AI writes your Comparative Analysis Report using your actual data and LCA terminology. Edit as needed.\n\n### 2. Review & Compliance Check\nThe Review page runs validation:\n- All sections populated?\n- Employment meets minimums?\n- Certificate IDs valid?\n- Narratives complete?\n\n### 3. Export Three Files\n- **Excel Report** — Secretariat Version 4.1 format\n- **Narrative PDF** — Comparative Analysis Report\n- **Notice of Submission** — Required cover letter\n\n### 4. Submit\nChoose platform submission (instant) or email.\n\n### 5. Attestation\nCheck the attestation box confirming accuracy. This locks the report permanently.\n\n## After Submission\n- Report is locked (read-only)\n- Data snapshot saved\n- Receipt PDF available\n- Next period auto-created\n- Confirmation email sent",
+      quiz: [
+        { question: "How many files are submitted to the Secretariat?", options: ["1", "2", "3", "4"], correctIndex: 2 },
+        { question: "After attestation, the report is:", options: ["Editable for 24 hours", "Locked permanently", "Sent for review", "Deleted"], correctIndex: 1 },
+        { question: "AI Narrative Drafting uses:", options: ["Generic templates", "Your actual filing data", "Last year's report", "Manual input only"], correctIndex: 1 },
+        { question: "The Notice of Submission is:", options: ["Optional", "Required by the Secretariat", "Generated by the Secretariat", "Only for large companies"], correctIndex: 1 },
+        { question: "After submitting H1, what happens?", options: ["Nothing", "H2 is auto-created", "Account is locked", "You must call the Secretariat"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
+// ─── COURSE: UNDERSTANDING THE FIRST SCHEDULE ───────────────────
+
+export async function seedFirstScheduleCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "first-schedule")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "first-schedule",
+    title: "Understanding the First Schedule",
+    description: "Deep dive into the 40+ reserved sector categories in the LCA First Schedule. Know exactly what counts as local content in your operations.",
+    audience: "filer",
+    jurisdictionCode: "GY",
+    moduleCount: 3,
+    badgeLabel: "Sector Expert",
+    badgeColor: "gold",
+    estimatedMinutes: 25,
+  }).returning();
+
+  const mods = [
+    { title: "What is the First Schedule?", content: "## The First Schedule of the LCA\n\nThe First Schedule of the Local Content Act lists all sector categories where minimum local content levels apply.\n\n## Why It Matters\nEvery expenditure you record must be classified into one of these sectors. The Secretariat uses this to measure whether contractors are giving first consideration to Guyanese suppliers.\n\n## Key Categories Include:\n- Rental of Office Space\n- Accommodation Services\n- Equipment Rental\n- Surveying\n- Construction Work (Onshore)\n- Structural Fabrication\n- Waste Management (Hazardous & Non-Hazardous)\n- Storage Services (Warehousing)\n- Catering and Food Services\n- Transportation (Trucking, Ground, Marine)\n- Security Services\n- ICT and Network Services\n- And 30+ more...\n\n## The 'Other' Category\nIf your procurement doesn't fit any listed category, use 'Other'. But the Secretariat may ask you to justify why a specific category wasn't used.",
+      quiz: [
+        { question: "The First Schedule lists:", options: ["Employment rules", "40+ reserved sector categories", "Penalty amounts", "Filing deadlines"], correctIndex: 1 },
+        { question: "Every expenditure must be classified into:", options: ["Any category you choose", "A First Schedule sector category", "The cheapest category", "Multiple categories"], correctIndex: 1 },
+        { question: "The 'Other' category should be used:", options: ["For all international suppliers", "When no specific category fits", "For the largest payments", "Never"], correctIndex: 1 },
+        { question: "Storage Services falls under:", options: ["Transportation", "Warehousing (its own category)", "Equipment Rental", "Admin Support"], correctIndex: 1 },
+        { question: "The Secretariat uses sector classification to:", options: ["Calculate taxes", "Measure first consideration compliance", "Set prices", "Hire staff"], correctIndex: 1 },
+      ],
+    },
+    { title: "High-Impact Sectors", content: "## Sectors Where Local Content Matters Most\n\n### Catering and Food Services\nOne of the highest-adoption sectors. Most contractors use Guyanese catering companies for onshore and some offshore operations.\n\n### Transportation Services\nGround transportation, trucking, and marine logistics have strong Guyanese participation. Companies like G-Boats Inc. and local trucking firms dominate.\n\n### Engineering and Machining\nGrowing sector with companies like Raghunath Engineering Solutions, ProTech Engineering. Structural fabrication is increasingly localized.\n\n### Environmental Services\nEnvironmental Impact Assessments, waste management, and remediation are required for all petroleum activities. Several Guyanese firms now provide these.\n\n### Security Services\nAll onshore facilities require security. This is nearly 100% localized.\n\n### ICT and Network Services\nTelecommunications, network installation, and IT support for offices and operations.\n\n## Sectors Still Dominated by International Firms\n- Drilling and Well Services (highly specialized)\n- Subsea Services (requires deep-water equipment)\n- ROV Services (remote operated vehicles)\n- FPSO Operations (floating production)",
+      quiz: [
+        { question: "Which sector has the highest local adoption?", options: ["Drilling", "Catering and Food Services", "Subsea Services", "ROV Services"], correctIndex: 1 },
+        { question: "Security services are approximately:", options: ["10% local", "50% local", "Nearly 100% local", "0% local"], correctIndex: 2 },
+        { question: "Drilling services are dominated by:", options: ["Guyanese firms", "International firms", "Government agencies", "No one"], correctIndex: 1 },
+        { question: "Environmental services are:", options: ["Optional", "Required for all petroleum activities", "Only for onshore", "Only for international firms"], correctIndex: 1 },
+        { question: "Structural fabrication is:", options: ["Declining locally", "Increasingly localized", "Banned for local firms", "Only done offshore"], correctIndex: 1 },
+      ],
+    },
+    { title: "Classifying Your Expenditure", content: "## How to Choose the Right Sector\n\n### Step 1: Read the Description\nEach sector has a specific definition. 'Storage Services (Warehousing)' is different from 'Laydown Yard Facilities'.\n\n### Step 2: Match the Primary Activity\nClassify by the primary service provided, not the supplier's general business. A logistics company providing trucking should be classified under 'Transportation Services: Trucking', not 'Cargo Management'.\n\n### Step 3: When in Doubt\nAsk: 'What am I paying for?' The answer points to the correct sector.\n\n## Common Mistakes\n- Classifying all SLB payments as 'Engineering' when some are 'Borehole Testing'\n- Using 'Other' when 'Admin Support & Facilities Management' fits\n- Mixing up 'Construction Work (Onshore)' with 'Structural Fabrication'\n- Classifying meals as 'Food Supply' when it's 'Catering Services'\n\n## The LCA Expert Can Help\nAsk the AI: 'Which sector category should I use for [description]?' It knows all 40+ categories and their definitions.",
+      quiz: [
+        { question: "Classify by:", options: ["The supplier's company type", "The primary service provided", "The largest payment", "Alphabetical order"], correctIndex: 1 },
+        { question: "A logistics company providing trucking is classified as:", options: ["Cargo Management", "Transportation Services: Trucking", "Engineering", "Other"], correctIndex: 1 },
+        { question: "Meals provided to staff should be classified as:", options: ["Food Supply", "Catering Services", "Admin Support", "Other"], correctIndex: 1 },
+        { question: "When unsure about classification, you should:", options: ["Use 'Other' always", "Ask the LCA Expert AI", "Skip the record", "Call the Secretariat"], correctIndex: 1 },
+        { question: "'Storage Services' is different from:", options: ["Warehousing", "Laydown Yard Facilities", "Equipment Rental", "Security Services"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
+// ─── COURSE: PREPARING FOR A SECRETARIAT AUDIT ──────────────────
+
+export async function seedAuditPrepCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "audit-prep")).limit(1);
+  if (existing) return existing.id;
+
+  const [course] = await db.insert(courses).values({
+    slug: "audit-prep",
+    title: "Preparing for a Secretariat Audit",
+    description: "What the Secretariat looks for, common rejection reasons, and how to self-audit your submission before filing. Reduce your risk of amendment requests.",
+    audience: "filer",
+    jurisdictionCode: "GY",
+    moduleCount: 3,
+    badgeLabel: "Audit Ready",
+    badgeColor: "gold",
+    estimatedMinutes: 20,
+  }).returning();
+
+  const mods = [
+    { title: "What the Secretariat Reviews", content: "## The Review Process\n\nWhen you submit a Half-Yearly Report, the Secretariat reviews:\n\n### 1. Completeness\n- All three sub-reports present (Expenditure, Employment, Capacity)\n- All columns filled for every record\n- Narratives included for each section\n- Notice of Submission attached\n\n### 2. Accuracy\n- Do expenditure amounts match bank records?\n- Are Guyanese supplier Certificate IDs valid and current?\n- Do employment headcounts match actual payroll?\n- Are ISCO-08 classifications correct?\n\n### 3. Compliance\n- Local Content Rate vs sector benchmarks\n- Employment percentages vs LCA minimums (75/60/80)\n- First consideration evidence in narratives\n- Sole source justifications where applicable\n\n### 4. Consistency\n- Do numbers match between sub-reports?\n- Does the narrative reference actual data?\n- Are period dates correct?\n- Is the company type consistent with LCS registration?",
+      quiz: [
+        { question: "The Secretariat reviews how many aspects?", options: ["2", "3", "4", "5"], correctIndex: 2 },
+        { question: "ISCO-08 classifications are checked for:", options: ["Completeness only", "Accuracy", "Whether they exist", "Formatting"], correctIndex: 1 },
+        { question: "First consideration evidence is found in:", options: ["The Excel report", "The narratives", "The Notice of Submission", "Separate documentation"], correctIndex: 1 },
+        { question: "Consistency means:", options: ["All numbers are high", "Numbers match between sub-reports", "Everything is formatted correctly", "All suppliers are Guyanese"], correctIndex: 1 },
+        { question: "Employment percentages are checked against:", options: ["Industry averages", "LCA minimums (75/60/80)", "Previous reports", "International standards"], correctIndex: 1 },
+      ],
+    },
+    { title: "Common Rejection Reasons", content: "## Top 10 Amendment Request Triggers\n\n### 1. Missing Supplier Certificate IDs\nGuyanese suppliers without valid LCSR- numbers. The Secretariat can't verify local content claims.\n\n### 2. Employment Below Minimums\nManagerial <75%, Technical <60%, or Non-Technical <80% without justification.\n\n### 3. Vague Narratives\n'We gave first consideration to local suppliers' without specific examples, numbers, or sector references.\n\n### 4. Misclassified Sectors\nUsing 'Other' when a specific First Schedule category applies.\n\n### 5. Missing Capacity Development\nNo training records for a company with 100+ employees raises flags.\n\n### 6. Inconsistent Headcounts\nEmployment sub-report says 50 employees but narrative mentions 75.\n\n### 7. No Sole Source Justification\nNon-Guyanese procurement without a Sole Source Code or explanation.\n\n### 8. Expired LCS Certificates\nUsing Certificate IDs that expired during the reporting period.\n\n### 9. Missing Remuneration Data\nV4 requires remuneration data for all positions — total and Guyanese-only.\n\n### 10. Late Filing\nH1 due July 30, H2 due January 30. Late submissions trigger penalties.",
+      quiz: [
+        { question: "The #1 rejection trigger is:", options: ["Late filing", "Missing Supplier Certificate IDs", "Low LC rate", "Bad formatting"], correctIndex: 1 },
+        { question: "If Technical employment is 55%, you need:", options: ["Nothing", "Justification for being below 60% minimum", "To fire non-Guyanese staff", "To stop filing"], correctIndex: 1 },
+        { question: "An expired LCS Certificate:", options: ["Still counts as Guyanese", "Does NOT count for that period", "Never expires", "Can be renewed retroactively"], correctIndex: 1 },
+        { question: "Capacity Development records are expected when:", options: ["Always", "Only for large companies", "Company has significant workforce", "Never"], correctIndex: 2 },
+        { question: "V4 requires remuneration data that is:", options: ["Optional", "Total and Guyanese-only breakdown", "Only for managers", "Only in GYD"], correctIndex: 1 },
+      ],
+    },
+    { title: "Self-Audit Checklist", content: "## Before You Submit: The Self-Audit\n\nRun through this checklist before clicking 'Attest & Submit':\n\n### Expenditure\n- [ ] Every Guyanese supplier has a valid LCSR- Certificate ID\n- [ ] Supplier Type (Guyanese/Non-Guyanese) set for all records\n- [ ] Non-Guyanese suppliers without Sole Source Code are justified\n- [ ] Sector categories match actual procurement (not all 'Other')\n- [ ] Payment amounts match actual bank records\n- [ ] Currency is correct (GYD vs USD)\n\n### Employment\n- [ ] All three categories (Managerial/Technical/Non-Technical) represented\n- [ ] Guyanese percentages meet or exceed minimums\n- [ ] ISCO-08 classifications assigned\n- [ ] Remuneration data filled for all positions\n- [ ] Headcounts match actual payroll\n\n### Capacity Development\n- [ ] All training activities recorded\n- [ ] Participant types correctly categorized\n- [ ] Guyanese participant counts accurate\n- [ ] Training expenditure documented\n\n### Narratives\n- [ ] All three sections drafted (Expenditure, Employment, Capacity)\n- [ ] Specific examples and numbers referenced\n- [ ] First consideration explained concretely\n- [ ] Sole source situations justified\n\n### Export\n- [ ] All three files generated (Excel, Narrative PDF, Notice of Submission)\n- [ ] Notice of Submission has correct period and company name\n\n## Use the AI Compliance Scan\nThe Review page runs an automated check. Fix all flagged issues before submitting.",
+      quiz: [
+        { question: "Before submitting, you should:", options: ["Just click submit", "Run through the self-audit checklist", "Call the Secretariat", "Wait for an email"], correctIndex: 1 },
+        { question: "The AI Compliance Scan runs on:", options: ["The Dashboard", "The Review page", "After submission", "The Settings page"], correctIndex: 1 },
+        { question: "How many files should be generated before submission?", options: ["1", "2", "3", "4"], correctIndex: 2 },
+        { question: "Narratives should include:", options: ["Generic statements", "Specific examples and numbers", "Only legal references", "Minimal text"], correctIndex: 1 },
+        { question: "If headcounts don't match payroll:", options: ["Submit anyway", "Fix before submitting", "The Secretariat won't notice", "It doesn't matter"], correctIndex: 1 },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < mods.length; i++) {
+    await db.insert(courseModules).values({ courseId: course.id, orderIndex: i + 1, title: mods[i].title, content: mods[i].content, quizQuestions: JSON.stringify(mods[i].quiz) });
+  }
+  return course.id;
+}
+
 // ─── JURISDICTION HELPERS ────────────────────────────────────────
 
 export async function getEntityJurisdictionCode(entityId: string): Promise<string> {
