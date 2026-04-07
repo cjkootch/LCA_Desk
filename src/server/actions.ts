@@ -84,7 +84,7 @@ function requirePlan(plan: string, required: "lite" | "pro" | "enterprise", tria
   const effective = getEffectivePlan(plan, trialEndsAt);
   const rank: Record<string, number> = { lite: 0, starter: 0, pro: 1, enterprise: 2 };
   if ((rank[effective.code] ?? 0) < rank[required]) {
-    const planNames: Record<string, string> = { lite: "Lite", pro: "Pro", enterprise: "Enterprise" };
+    const planNames: Record<string, string> = { lite: "Essentials", pro: "Professional", enterprise: "Enterprise" };
     throw new Error(`This feature requires the ${planNames[required] || required} plan. Upgrade in Settings > Billing.`);
   }
 }
@@ -641,6 +641,7 @@ export async function addExpenditure(
       relatedSector: (data.related_sector as string) || null,
       descriptionOfGoodService: (data.description_of_good_service as string) || null,
       supplierName: data.supplier_name as string,
+      supplierType: (data.supplier_type as string) || null,
       soleSourceCode: (data.sole_source_code as string) || null,
       supplierCertificateId: (data.supplier_certificate_id as string) || null,
       actualPayment: String(data.actual_payment),
@@ -676,6 +677,7 @@ export async function updateExpenditure(id: string, data: Record<string, unknown
       relatedSector: (data.related_sector as string) || null,
       descriptionOfGoodService: (data.description_of_good_service as string) || null,
       supplierName: data.supplier_name as string,
+      supplierType: (data.supplier_type as string) || null,
       soleSourceCode: (data.sole_source_code as string) || null,
       supplierCertificateId: (data.supplier_certificate_id as string) || null,
       actualPayment: String(data.actual_payment),
@@ -1533,6 +1535,7 @@ export async function duplicatePeriod(sourcePeriodId: string, newReportType: str
         relatedSector: e.relatedSector,
         descriptionOfGoodService: e.descriptionOfGoodService,
         supplierName: e.supplierName,
+        supplierType: e.supplierType,
         soleSourceCode: e.soleSourceCode,
         supplierCertificateId: e.supplierCertificateId,
         actualPayment: "0",
