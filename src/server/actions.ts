@@ -44,7 +44,7 @@ import {
   lcsCertApplications,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
-import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining } from "@/lib/plans";
+import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -76,6 +76,7 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
     plan: (membership.tenant.plan as string) || "free",
     trialEndsAt: membership.tenant.trialEndsAt ?? null,
     stripeSubscriptionId: membership.tenant.stripeSubscriptionId ?? null,
+    stripeSubscriptionStatus: membership.tenant.stripeSubscriptionStatus ?? null,
   };
 }
 
@@ -1250,11 +1251,15 @@ export async function fetchPlanAndUsage() {
   ).length;
 
   const stripeSubId = tenant.stripeSubscriptionId ?? null;
+  const stripeSubStatus = tenant.stripeSubscriptionStatus ?? null;
+  const billingAccess = getBillingAccess(plan, trialEndsAt, stripeSubId, stripeSubStatus);
 
   return {
     plan,
     trialEndsAt,
     stripeSubscriptionId: stripeSubId,
+    stripeSubscriptionStatus: stripeSubStatus,
+    billingAccess,
     isInTrial: isInTrial(trialEndsAt),
     isTrialExpired: isTrialExpired(trialEndsAt, stripeSubId),
     trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),

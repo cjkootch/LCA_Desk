@@ -6,32 +6,37 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
+import type { BillingAccess } from "@/lib/plans";
 
 interface DashboardShellProps {
   children: React.ReactNode;
-  trialExpired: boolean;
+  billingAccess: BillingAccess;
 }
 
-const BILLING_PATHS = [
+const ALLOWED_PATHS = [
   "/dashboard/settings/billing",
   "/dashboard/trial-expired",
+  "/dashboard/payment-required",
 ];
 
-export function DashboardShell({ children, trialExpired }: DashboardShellProps) {
+export function DashboardShell({ children, billingAccess }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isBillingPath = BILLING_PATHS.some(p => pathname?.startsWith(p));
+  const isAllowedPath = ALLOWED_PATHS.some(p => pathname?.startsWith(p));
 
-  // Redirect expired trial users to the upgrade page (once, not a hard lock)
   useEffect(() => {
-    if (trialExpired && !isBillingPath) {
-      router.replace("/dashboard/trial-expired");
+    if (!billingAccess.canAccess && !isAllowedPath) {
+      if (billingAccess.state === "trial_expired") {
+        router.replace("/dashboard/trial-expired");
+      } else if (billingAccess.state === "locked") {
+        router.replace(`/dashboard/payment-required?reason=${billingAccess.lockReason || "canceled"}`);
+      }
     }
-  }, [trialExpired, isBillingPath, router]);
+  }, [billingAccess, isAllowedPath, router]);
 
-  if (trialExpired && !isBillingPath) return null;
+  if (!billingAccess.canAccess && !isAllowedPath) return null;
 
   return (
     <div className="flex min-h-screen">
@@ -46,7 +51,9 @@ export function DashboardShell({ children, trialExpired }: DashboardShellProps) 
           </button>
           <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
         </div>
-        <div className="px-4 sm:px-8 pt-4"><UsageBanner /></div>
+        <div className="px-4 sm:px-8 pt-4">
+          <UsageBanner billingAccess={billingAccess} />
+        </div>
         {children}
       </main>
       <OnboardingTour />

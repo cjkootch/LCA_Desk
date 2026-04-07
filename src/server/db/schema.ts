@@ -124,6 +124,7 @@ export const tenants = pgTable("tenants", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripePriceId: text("stripe_price_id"),
+  stripeSubscriptionStatus: text("stripe_subscription_status"), // active | past_due | unpaid | canceled | trialing
   // Feature preferences (JSON)
   featurePreferences: text("feature_preferences"),
   stakeholderEmails: text("stakeholder_emails"), // JSON: [{ email, name, role }] for deadline escalation

@@ -274,3 +274,89 @@ export function getPerReportFee(planCode: string | null | undefined): number {
 export function getPlanDisplayName(planCode: string | null | undefined): string {
   return getPlan(planCode).displayName;
 }
+
+// ─── BILLING ACCESS HELPERS ────────────────────────────────────────
+
+export type AccessState =
+  | "active"
+  | "trial"
+  | "past_due"
+  | "locked"
+  | "trial_expired";
+
+export interface BillingAccess {
+  state: AccessState;
+  canAccess: boolean;
+  showWarning: boolean;
+  warningUrgency: "low" | "high" | "critical";
+  lockReason?: string;
+}
+
+export function getBillingAccess(
+  plan: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined,
+  stripeSubscriptionId: string | null | undefined,
+  stripeSubscriptionStatus: string | null | undefined
+): BillingAccess {
+  // Active paid subscription
+  if (stripeSubscriptionId && stripeSubscriptionStatus === "active") {
+    return { state: "active", canAccess: true, showWarning: false, warningUrgency: "low" };
+  }
+
+  // Active trial
+  if (isInTrial(trialEndsAt)) {
+    const days = getTrialDaysRemaining(trialEndsAt) ?? 0;
+    return {
+      state: "trial",
+      canAccess: true,
+      showWarning: true,
+      warningUrgency: days <= 3 ? "critical" : days <= 7 ? "high" : "low",
+    };
+  }
+
+  // Past due — payment failed, Stripe retrying
+  if (stripeSubscriptionId && stripeSubscriptionStatus === "past_due") {
+    return {
+      state: "past_due",
+      canAccess: true,
+      showWarning: true,
+      warningUrgency: "critical",
+    };
+  }
+
+  // Unpaid — all retries exhausted
+  if (stripeSubscriptionId && stripeSubscriptionStatus === "unpaid") {
+    return {
+      state: "locked",
+      canAccess: false,
+      showWarning: true,
+      warningUrgency: "critical",
+      lockReason: "unpaid",
+    };
+  }
+
+  // Canceled — subscription deleted
+  if (stripeSubscriptionStatus === "canceled") {
+    return {
+      state: "locked",
+      canAccess: false,
+      showWarning: true,
+      warningUrgency: "critical",
+      lockReason: "canceled",
+    };
+  }
+
+  // Trial expired — had a trial, it ended, never paid
+  if (trialEndsAt && !stripeSubscriptionId) {
+    return {
+      state: "trial_expired",
+      canAccess: false,
+      showWarning: true,
+      warningUrgency: "critical",
+      lockReason: "trial_expired",
+    };
+  }
+
+  // Free tier or no trial/subscription — allow access
+  return { state: "active", canAccess: true, showWarning: false, warningUrgency: "low" };
+}

@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Sparkles, X, Clock } from "lucide-react";
+import { AlertTriangle, Sparkles, X, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { fetchPlanAndUsage } from "@/server/actions";
-import { getEffectivePlan } from "@/lib/plans";
+import { getEffectivePlan, type BillingAccess } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
-export function UsageBanner() {
+interface UsageBannerProps {
+  billingAccess?: BillingAccess;
+}
+
+export function UsageBanner({ billingAccess }: UsageBannerProps) {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchPlanAndUsage>> | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -17,7 +21,37 @@ export function UsageBanner() {
     fetchPlanAndUsage().then(setData).catch(() => {});
   }, []);
 
-  if (!data || dismissed) return null;
+  if (!data) return null;
+
+  const access = billingAccess ?? data.billingAccess;
+
+  // ── PAST DUE — non-dismissable, payment action required ───────
+  if (access?.state === "past_due") {
+    return (
+      <div className="rounded-lg border-2 border-danger bg-danger-light p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-danger" />
+          <div className="flex-1">
+            <p className="font-semibold text-danger text-sm">
+              Payment failed — update your payment method now
+            </p>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Your payment could not be processed. We&apos;re retrying automatically, but please update your payment method to avoid losing access.
+            </p>
+            <Link href="/dashboard/settings/billing" className="inline-block mt-2">
+              <Button size="sm" variant="primary">
+                <CreditCard className="h-4 w-4 mr-1" />
+                Update Payment Method
+              </Button>
+            </Link>
+          </div>
+          {/* No dismiss button — past_due banner cannot be dismissed */}
+        </div>
+      </div>
+    );
+  }
+
+  if (dismissed) return null;
 
   // ── Trial banner ──
   if (data.isInTrial && data.trialDaysRemaining !== null) {

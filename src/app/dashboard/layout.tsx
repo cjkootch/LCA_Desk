@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/server/db";
 import { tenantMembers } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { isTrialExpired } from "@/lib/plans";
+import { getBillingAccess } from "@/lib/plans";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 
 export default async function DashboardLayout({
@@ -22,10 +22,15 @@ export default async function DashboardLayout({
   if (!membership?.tenant) redirect("/auth/login");
 
   const { tenant } = membership;
-  const expired = isTrialExpired(tenant.trialEndsAt, tenant.stripeSubscriptionId);
+  const billingAccess = getBillingAccess(
+    tenant.plan,
+    tenant.trialEndsAt,
+    tenant.stripeSubscriptionId,
+    tenant.stripeSubscriptionStatus
+  );
 
   return (
-    <DashboardShell trialExpired={expired}>
+    <DashboardShell billingAccess={billingAccess}>
       {children}
     </DashboardShell>
   );

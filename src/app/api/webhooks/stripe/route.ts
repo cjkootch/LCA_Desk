@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
   }
 
   let event: Stripe.Event;
-
   try {
     event = getStripe().webhooks.constructEvent(
       body,
@@ -40,10 +39,10 @@ export async function POST(req: NextRequest) {
   }
 
   switch (event.type) {
+
+    // ── Payment succeeded — subscription activated ──────────────
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const tenantId = session.metadata?.tenantId;
-      const plan = session.metadata?.plan;
 
       // LCS Certificate application payment
       if (session.metadata?.type === "lcs_cert_application") {
@@ -63,65 +62,102 @@ export async function POST(req: NextRequest) {
       }
 
       // Standard subscription checkout
+      const tenantId = session.metadata?.tenantId;
+      const plan = session.metadata?.plan;
       if (tenantId && plan) {
-        await db
-          .update(tenants)
-          .set({
-            plan,
-            stripeSubscriptionId: session.subscription as string,
-            stripeCustomerId: session.customer as string,
-            trialEndsAt: null, // Clear trial — they've paid
-          })
-          .where(eq(tenants.id, tenantId));
+        await db.update(tenants).set({
+          plan,
+          stripeSubscriptionId: session.subscription as string,
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionStatus: "active",
+          trialEndsAt: null,
+        }).where(eq(tenants.id, tenantId));
       }
       break;
     }
 
+    // ── Subscription state changed ──────────────────────────────
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
       const priceId = subscription.items.data[0]?.price?.id;
       const plan = priceId ? getPlanFromPriceId(priceId) : "lite";
 
-      const [tenant] = await db
-        .select()
-        .from(tenants)
-        .where(eq(tenants.stripeCustomerId, customerId))
-        .limit(1);
+      const [tenant] = await db.select().from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId)).limit(1);
 
-      if (tenant && (subscription.status === "active" || subscription.status === "trialing")) {
-        await db
-          .update(tenants)
-          .set({ plan, stripeSubscriptionId: subscription.id, stripePriceId: priceId || null, trialEndsAt: null })
-          .where(eq(tenants.id, tenant.id));
+      if (tenant) {
+        await db.update(tenants).set({
+          plan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId || null,
+          stripeSubscriptionStatus: subscription.status,
+          trialEndsAt: null,
+        }).where(eq(tenants.id, tenant.id));
       }
       break;
     }
 
+    // ── Payment failed — Stripe will retry ──────────────────────
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;
-      console.error(`Payment failed for customer ${customerId}`);
-      // Don't downgrade immediately — Stripe retries. Just log.
-      // After final retry fails, subscription.deleted fires.
+      const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string;
+
+      const [tenant] = await db.select().from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId)).limit(1);
+
+      if (tenant) {
+        let status = "past_due";
+        try {
+          const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+          status = sub.status;
+        } catch { /* use default */ }
+
+        await db.update(tenants).set({
+          stripeSubscriptionStatus: status,
+        }).where(eq(tenants.id, tenant.id));
+
+        console.error(
+          `Payment failed for tenant ${tenant.id} (${tenant.name}), ` +
+          `customer ${customerId}, attempt ${invoice.attempt_count}. Status: ${status}`
+        );
+      }
       break;
     }
 
+    // ── Invoice paid — clears past_due on successful retry ──────
+    case "invoice.paid": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId = invoice.customer as string;
+
+      const [tenant] = await db.select().from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId)).limit(1);
+
+      if (tenant) {
+        await db.update(tenants).set({
+          stripeSubscriptionStatus: "active",
+        }).where(eq(tenants.id, tenant.id));
+      }
+      break;
+    }
+
+    // ── Subscription deleted — all retries exhausted ────────────
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
 
-      const [tenant] = await db
-        .select()
-        .from(tenants)
-        .where(eq(tenants.stripeCustomerId, customerId))
-        .limit(1);
+      const [tenant] = await db.select().from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId)).limit(1);
 
       if (tenant) {
-        await db
-          .update(tenants)
-          .set({ plan: "free", stripeSubscriptionId: null, stripePriceId: null })
-          .where(eq(tenants.id, tenant.id));
+        await db.update(tenants).set({
+          stripeSubscriptionStatus: "canceled",
+          stripeSubscriptionId: null,
+          stripePriceId: null,
+        }).where(eq(tenants.id, tenant.id));
+
+        console.error(`Subscription canceled for tenant ${tenant.id} (${tenant.name})`);
       }
       break;
     }
