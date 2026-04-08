@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { tenants, lcsCertApplications, supplierProfiles } from "@/server/db/schema";
+import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
 function getStripe() {
@@ -100,6 +100,17 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionStatus: "active",
           trialEndsAt: null,
         }).where(eq(tenants.id, tenantId));
+
+        // Sync payment to HubSpot
+        try {
+          const [owner] = await db.select({ email: users.email }).from(tenantMembers)
+            .innerJoin(users, eq(tenantMembers.userId, users.id))
+            .where(eq(tenantMembers.tenantId, tenantId)).limit(1);
+          if (owner?.email) {
+            const { syncPayment } = await import("@/lib/hubspot-sync");
+            await syncPayment(owner.email, plan, session.customer as string);
+          }
+        } catch {}
       }
       break;
     }
@@ -146,6 +157,17 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionStatus: status,
         }).where(eq(tenants.id, tenant.id));
 
+        // Sync to HubSpot
+        try {
+          const [owner] = await db.select({ email: users.email }).from(tenantMembers)
+            .innerJoin(users, eq(tenantMembers.userId, users.id))
+            .where(eq(tenantMembers.tenantId, tenant.id)).limit(1);
+          if (owner?.email) {
+            const { syncPaymentFailed } = await import("@/lib/hubspot-sync");
+            await syncPaymentFailed(owner.email);
+          }
+        } catch {}
+
         console.error(
           `Payment failed for tenant ${tenant.id} (${tenant.name}), ` +
           `customer ${customerId}, attempt ${invoice.attempt_count}. Status: ${status}`
@@ -184,6 +206,17 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: null,
           stripePriceId: null,
         }).where(eq(tenants.id, tenant.id));
+
+        // Sync churn to HubSpot
+        try {
+          const [owner] = await db.select({ email: users.email }).from(tenantMembers)
+            .innerJoin(users, eq(tenantMembers.userId, users.id))
+            .where(eq(tenantMembers.tenantId, tenant.id)).limit(1);
+          if (owner?.email) {
+            const { syncChurn } = await import("@/lib/hubspot-sync");
+            await syncChurn(owner.email);
+          }
+        } catch {}
 
         console.error(`Subscription canceled for tenant ${tenant.id} (${tenant.name})`);
       }

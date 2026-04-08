@@ -159,14 +159,8 @@ export async function POST(req: NextRequest) {
 
       // Sync filer to HubSpot
       try {
-        const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
-        await upsertHubspotContact({
-          email,
-          companyName: companyName || name,
-          country: "GY",
-          registrationStatus: "filer_trial",
-          expiryDate: trialEndsAt.toISOString().slice(0, 10),
-        });
+        const { syncSignup } = await import("@/lib/hubspot-sync");
+        await syncSignup(email, name, companyName || name, "filer", trialEndsAt);
       } catch {}
 
       return NextResponse.json({
@@ -209,13 +203,8 @@ export async function POST(req: NextRequest) {
 
       // Sync supplier to HubSpot
       try {
-        const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
-        await upsertHubspotContact({
-          email,
-          companyName: parsed.data.lcsLegalName || companyName || name,
-          country: "GY",
-          registrationStatus: "supplier_registered",
-        });
+        const { syncSignup } = await import("@/lib/hubspot-sync");
+        await syncSignup(email, name, parsed.data.lcsLegalName || companyName || name, "supplier");
       } catch {}
 
       return NextResponse.json({

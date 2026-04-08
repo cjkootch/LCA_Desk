@@ -4,7 +4,7 @@ const hubspotClient = new Client({
   accessToken: process.env.HUBSPOT_ACCESS_TOKEN,
 });
 
-export async function upsertHubspotContact(data: {
+interface HubSpotContactData {
   email: string;
   companyName: string;
   country: string;
@@ -16,7 +16,23 @@ export async function upsertHubspotContact(data: {
   lcsCertId?: string;
   serviceCategories?: string[];
   tradingName?: string;
-}) {
+  // Lifecycle tracking
+  lcaDeskRole?: string;       // filer | supplier | seeker
+  lcaDeskPlan?: string;       // essentials | professional | enterprise | supplier_pro
+  trialStartDate?: string;    // ISO date
+  trialEndDate?: string;      // ISO date
+  signupDate?: string;        // ISO date
+  upgradeDate?: string;       // ISO date
+  churnDate?: string;         // ISO date
+  stripeCustomerId?: string;
+  lcaDeskUserId?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export async function upsertHubspotContact(data: HubSpotContactData) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+
   const search = await hubspotClient.crm.contacts.searchApi.doSearch({
     filterGroups: [
       {
@@ -34,28 +50,43 @@ export async function upsertHubspotContact(data: {
     limit: 1,
   });
 
-  // Split company name into first/last as best guess for contact name
-  const nameParts = data.companyName.split(" ");
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-
   const properties: Record<string, string> = {
     email: data.email,
     company: data.companyName,
     country: data.country,
     registration_status: data.registrationStatus,
-    registration_expiration_date: data.expiryDate || "",
   };
 
-  // Only set name if we have it (don't overwrite with company name split)
-  if (firstName) properties.firstname = firstName;
-  if (lastName) properties.lastname = lastName;
+  // Names — use explicit first/last if provided, otherwise split company name
+  if (data.firstName) {
+    properties.firstname = data.firstName;
+  } else if (!search.results.length) {
+    // Only set from company name on CREATE, not update (don't overwrite real names)
+    const parts = data.companyName.split(" ");
+    properties.firstname = parts[0] || "";
+    if (parts.length > 1) properties.lastname = parts.slice(1).join(" ");
+  }
+  if (data.lastName) properties.lastname = data.lastName;
+
+  // LCS register fields
+  if (data.expiryDate) properties.registration_expiration_date = data.expiryDate;
   if (data.phone) properties.phone = data.phone;
   if (data.address) properties.address = data.address;
   if (data.website) properties.website = data.website;
   if (data.lcsCertId) properties.lcs_cert_id = data.lcsCertId;
   if (data.serviceCategories?.length) properties.industry = data.serviceCategories[0];
   if (data.tradingName) properties.jobtitle = `t/a ${data.tradingName}`;
+
+  // Lifecycle tracking — only set if provided (don't clear existing values)
+  if (data.lcaDeskRole) properties.lca_desk_role = data.lcaDeskRole;
+  if (data.lcaDeskPlan) properties.lca_desk_plan = data.lcaDeskPlan;
+  if (data.trialStartDate) properties.trial_start_date = data.trialStartDate;
+  if (data.trialEndDate) properties.trial_end_date = data.trialEndDate;
+  if (data.signupDate) properties.signup_date = data.signupDate;
+  if (data.upgradeDate) properties.upgrade_date = data.upgradeDate;
+  if (data.churnDate) properties.churn_date = data.churnDate;
+  if (data.stripeCustomerId) properties.stripe_customer_id = data.stripeCustomerId;
+  if (data.lcaDeskUserId) properties.lca_desk_user_id = data.lcaDeskUserId;
 
   if (search.results.length > 0) {
     return hubspotClient.crm.contacts.basicApi.update(
@@ -64,7 +95,66 @@ export async function upsertHubspotContact(data: {
     );
   }
 
+  // On create, set first_scraped_date if this is coming from the scraper
+  if (data.registrationStatus === "Active" || data.registrationStatus === "Approved") {
+    properties.first_scraped_date = new Date().toISOString().slice(0, 10);
+  }
+
   return hubspotClient.crm.contacts.basicApi.create({
     properties,
+  });
+}
+
+// Convenience wrappers for specific lifecycle events
+
+export async function syncSignup(email: string, name: string, companyName: string, role: string, trialEndsAt?: Date) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+  const nameParts = name.split(" ");
+  await upsertHubspotContact({
+    email,
+    companyName,
+    country: "GY",
+    registrationStatus: role === "filer" ? "filer_trial" : `${role}_registered`,
+    lcaDeskRole: role,
+    firstName: nameParts[0],
+    lastName: nameParts.slice(1).join(" ") || undefined,
+    signupDate: new Date().toISOString().slice(0, 10),
+    trialStartDate: trialEndsAt ? new Date().toISOString().slice(0, 10) : undefined,
+    trialEndDate: trialEndsAt ? trialEndsAt.toISOString().slice(0, 10) : undefined,
+  });
+}
+
+export async function syncPayment(email: string, plan: string, stripeCustomerId?: string) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+  const planNames: Record<string, string> = { lite: "essentials", pro: "professional", enterprise: "enterprise" };
+  await upsertHubspotContact({
+    email,
+    companyName: "", // won't overwrite — only updates specific fields
+    country: "GY",
+    registrationStatus: `paying_${planNames[plan] || plan}`,
+    lcaDeskPlan: planNames[plan] || plan,
+    upgradeDate: new Date().toISOString().slice(0, 10),
+    stripeCustomerId,
+  });
+}
+
+export async function syncPaymentFailed(email: string) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+  await upsertHubspotContact({
+    email,
+    companyName: "",
+    country: "GY",
+    registrationStatus: "payment_failed",
+  });
+}
+
+export async function syncChurn(email: string) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+  await upsertHubspotContact({
+    email,
+    companyName: "",
+    country: "GY",
+    registrationStatus: "churned",
+    churnDate: new Date().toISOString().slice(0, 10),
   });
 }
