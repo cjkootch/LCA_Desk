@@ -229,7 +229,7 @@ async function upsertProfile(db: ReturnType<typeof getDb>, profile: ScrapedProfi
     // Sync to HubSpot if email exists
     if (profile.email) {
       try {
-        const { upsertHubspotContact } = await import("../../lib/hubspot-sync");
+        const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
         await upsertHubspotContact({
           email: profile.email,
           companyName: profile.legalName,

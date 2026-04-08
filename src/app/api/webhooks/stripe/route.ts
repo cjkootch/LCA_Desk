@@ -57,6 +57,21 @@ export async function POST(req: NextRequest) {
             status: "under_review",
             updatedAt: new Date(),
           }).where(eq(lcsCertApplications.id, applicationId));
+
+          // Sync cert applicant to HubSpot
+          try {
+            const [app] = await db.select({ email: lcsCertApplications.applicantEmail, name: lcsCertApplications.applicantName, company: lcsCertApplications.legalName })
+              .from(lcsCertApplications).where(eq(lcsCertApplications.id, applicationId)).limit(1);
+            if (app?.email) {
+              const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
+              await upsertHubspotContact({
+                email: app.email,
+                companyName: app.company || app.name || "Unknown",
+                country: "GY",
+                registrationStatus: `lcs_cert_${tier}`,
+              });
+            }
+          } catch {}
         }
         break;
       }

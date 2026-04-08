@@ -157,6 +157,18 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // Sync filer to HubSpot
+      try {
+        const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
+        await upsertHubspotContact({
+          email,
+          companyName: companyName || name,
+          country: "GY",
+          registrationStatus: "filer_trial",
+          expiryDate: trialEndsAt.toISOString().slice(0, 10),
+        });
+      } catch {}
+
       return NextResponse.json({
         success: true,
         userId: user.id,
@@ -194,6 +206,17 @@ export async function POST(req: NextRequest) {
         legalName: parsed.data.lcsLegalName || companyName || null,
         serviceCategories: parsed.data.serviceCategories || [],
       });
+
+      // Sync supplier to HubSpot
+      try {
+        const { upsertHubspotContact } = await import("@/lib/hubspot-sync");
+        await upsertHubspotContact({
+          email,
+          companyName: parsed.data.lcsLegalName || companyName || name,
+          country: "GY",
+          registrationStatus: "supplier_registered",
+        });
+      } catch {}
 
       return NextResponse.json({
         success: true,
