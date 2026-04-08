@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Briefcase, Search, Send, Pin, Calendar, Building2 } from "lucide-react";
 import { fetchSupplierOpportunities, respondToOpportunity, fetchMySupplierProfile } from "@/server/actions";
+import { decodeHtml } from "@/lib/utils/decode-html";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +89,7 @@ export default function SupplierOpportunities() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {opp.pinned && <Pin className="h-3 w-3 text-gold shrink-0" />}
-                      <h3 className="text-sm font-semibold text-text-primary">{opp.title}</h3>
+                      <h3 className="text-sm font-semibold text-text-primary">{decodeHtml(opp.title)}</h3>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-text-muted">
                       <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{opp.company}</span>
@@ -120,7 +121,7 @@ export default function SupplierOpportunities() {
           {respondingTo && (
             <div className="space-y-4 mt-2">
               <div className="bg-bg-primary rounded-lg p-3">
-                <p className="text-sm font-medium text-text-primary">{respondingTo.title}</p>
+                <p className="text-sm font-medium text-text-primary">{decodeHtml(respondingTo.title)}</p>
                 <p className="text-xs text-text-muted">{respondingTo.company}</p>
               </div>
               <div>

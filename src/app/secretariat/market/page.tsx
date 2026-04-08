@@ -10,6 +10,7 @@ import {
   MessageSquare, FileText, Eye, Save, UserCheck,
 } from "lucide-react";
 import { fetchSecretariatMarketIntel, moderateOpportunity, moderateEmploymentNotice } from "@/server/actions";
+import { decodeHtml } from "@/lib/utils/decode-html";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -166,7 +167,7 @@ export default function MarketIntelPage() {
                   {data.opportunities.mostSaved.slice(0, 8).map(item => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
                       <div className="truncate mr-2">
-                        <span className="text-text-primary font-medium">{item.title.slice(0, 40)}</span>
+                        <span className="text-text-primary font-medium">{decodeHtml(item.title).slice(0, 40)}</span>
                         <span className="text-text-muted ml-1">— {item.company}</span>
                       </div>
                       <div className="flex items-center gap-1 text-accent shrink-0">
@@ -243,7 +244,7 @@ export default function MarketIntelPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {opp.pinned && <Pin className="h-3 w-3 text-gold shrink-0" />}
-                      <h3 className="text-sm font-semibold text-text-primary truncate">{opp.title}</h3>
+                      <h3 className="text-sm font-semibold text-text-primary truncate">{decodeHtml(opp.title)}</h3>
                     </div>
                     <p className="text-xs text-text-muted">{opp.company} · {opp.type} · {opp.postedDate}</p>
                     {opp.deadline && <p className="text-[10px] text-text-muted">Deadline: {opp.deadline}</p>}
@@ -302,7 +303,7 @@ export default function MarketIntelPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {job.pinned && <Pin className="h-3 w-3 text-gold shrink-0" />}
-                      <h3 className="text-sm font-semibold text-text-primary truncate">{job.title}</h3>
+                      <h3 className="text-sm font-semibold text-text-primary truncate">{decodeHtml(job.title)}</h3>
                     </div>
                     <p className="text-xs text-text-muted">{job.company} · {job.category || "Uncategorized"} · {job.postedDate}</p>
                     {job.closingDate && <p className="text-[10px] text-text-muted">Closing: {job.closingDate}</p>}

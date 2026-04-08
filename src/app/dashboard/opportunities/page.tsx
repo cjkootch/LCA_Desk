@@ -29,9 +29,7 @@ const NOTICE_TYPE_VARIANT: Record<string, "accent" | "gold" | "warning" | "defau
   EOI: "accent", RFQ: "gold", RFP: "warning", RFI: "default",
 };
 
-function decodeHtml(s: string) {
-  return s.replace(/&#038;/g, "&").replace(/&#8211;/g, "\u2013").replace(/&#8217;/g, "\u2019").replace(/\s*[\u2013\-]\s*Local Content Register$/i, "");
-}
+import { decodeHtml } from "@/lib/utils/decode-html";
 
 
 export default function OpportunitiesPage() {

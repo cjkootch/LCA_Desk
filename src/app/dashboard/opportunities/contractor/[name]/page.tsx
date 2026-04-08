@@ -11,6 +11,7 @@ import {
   ExternalLink, Sparkles, Clock,
 } from "lucide-react";
 import { fetchContractorProfile } from "@/server/actions";
+import { decodeHtml } from "@/lib/utils/decode-html";
 import Link from "next/link";
 import { CompanyLogo } from "@/components/shared/CompanyLogo";
 
@@ -179,7 +180,7 @@ export default function ContractorProfilePage() {
                           {summary && <Sparkles className="h-3 w-3 text-accent" />}
                         </div>
                         <p className="text-sm font-medium text-text-primary line-clamp-1">
-                          {n.title.replace(/&#038;/g, "&").replace(/&#8211;/g, "\u2013")}
+                          {decodeHtml(n.title)}
                         </p>
                         {summary?.scope_of_work && (
                           <p className="text-xs text-text-muted mt-1 line-clamp-2">{summary.scope_of_work}</p>

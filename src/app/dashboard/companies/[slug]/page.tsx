@@ -15,6 +15,7 @@ import {
   Flag, Lock, Crown,
 } from "lucide-react";
 import { fetchCompanyProfile, claimCompanyProfile, fetchPlanAndUsage } from "@/server/actions";
+import { decodeHtml } from "@/lib/utils/decode-html";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -336,7 +337,7 @@ export default function CompanyProfilePage() {
                         {summary && <Sparkles className="h-3 w-3 text-accent" />}
                       </div>
                       <p className="text-sm font-medium text-text-primary line-clamp-1">
-                        {o.title.replace(/&#038;/g, "&").replace(/&#8211;/g, "\u2013")}
+                        {decodeHtml(o.title)}
                       </p>
                       {summary?.scope_of_work && (
                         <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{summary.scope_of_work}</p>

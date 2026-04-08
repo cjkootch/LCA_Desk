@@ -18,9 +18,7 @@ import { fetchSeekerOpportunities, seekerSaveOpportunity, seekerUnsaveOpportunit
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-function decodeHtml(s: string) {
-  return s.replace(/&#038;/g, "&").replace(/&#8211;/g, "\u2013").replace(/&#8217;/g, "\u2019").replace(/\s*[\u2013\-]\s*Local Content Register$/i, "");
-}
+import { decodeHtml } from "@/lib/utils/decode-html";
 
 export default function SeekerOpportunitiesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
