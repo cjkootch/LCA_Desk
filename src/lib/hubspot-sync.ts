@@ -10,6 +10,12 @@ export async function upsertHubspotContact(data: {
   country: string;
   registrationStatus: string;
   expiryDate?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  lcsCertId?: string;
+  serviceCategories?: string[];
+  tradingName?: string;
 }) {
   const search = await hubspotClient.crm.contacts.searchApi.doSearch({
     filterGroups: [
@@ -28,13 +34,28 @@ export async function upsertHubspotContact(data: {
     limit: 1,
   });
 
-  const properties = {
+  // Split company name into first/last as best guess for contact name
+  const nameParts = data.companyName.split(" ");
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+  const properties: Record<string, string> = {
     email: data.email,
     company: data.companyName,
     country: data.country,
     registration_status: data.registrationStatus,
     registration_expiration_date: data.expiryDate || "",
   };
+
+  // Only set name if we have it (don't overwrite with company name split)
+  if (firstName) properties.firstname = firstName;
+  if (lastName) properties.lastname = lastName;
+  if (data.phone) properties.phone = data.phone;
+  if (data.address) properties.address = data.address;
+  if (data.website) properties.website = data.website;
+  if (data.lcsCertId) properties.lcs_cert_id = data.lcsCertId;
+  if (data.serviceCategories?.length) properties.industry = data.serviceCategories[0];
+  if (data.tradingName) properties.jobtitle = `t/a ${data.tradingName}`;
 
   if (search.results.length > 0) {
     return hubspotClient.crm.contacts.basicApi.update(

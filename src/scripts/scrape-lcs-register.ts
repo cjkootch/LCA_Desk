@@ -236,6 +236,12 @@ async function upsertProfile(db: ReturnType<typeof getDb>, profile: ScrapedProfi
           country: "GY",
           registrationStatus: profile.status || "Unknown",
           expiryDate: profile.expirationDate || undefined,
+          phone: profile.phone || undefined,
+          address: profile.address || undefined,
+          website: profile.website || undefined,
+          lcsCertId: profile.certId || undefined,
+          serviceCategories: profile.serviceCategories?.length ? profile.serviceCategories : undefined,
+          tradingName: profile.tradingName || undefined,
         });
       } catch (hubErr) {
         // HubSpot sync failure should never break the scraper
