@@ -1,4 +1,5 @@
 import { Client } from "@hubspot/api-client";
+import { FilterOperatorEnum } from "@hubspot/api-client/lib/codegen/crm/contacts";
 
 const hubspotClient = new Client({
   accessToken: process.env.HUBSPOT_ACCESS_TOKEN,
@@ -17,7 +18,7 @@ export async function upsertHubspotContact(data: {
         filters: [
           {
             propertyName: "email",
-            operator: "EQ",
+            operator: FilterOperatorEnum.Eq,
             value: data.email,
           },
         ],

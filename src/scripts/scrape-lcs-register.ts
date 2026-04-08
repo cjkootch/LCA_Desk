@@ -225,6 +225,23 @@ async function upsertProfile(db: ReturnType<typeof getDb>, profile: ScrapedProfi
         scrapedAt: new Date(), scrapeError: profile.scrapeError, updatedAt: new Date(),
       },
     });
+
+    // Sync to HubSpot if email exists
+    if (profile.email) {
+      try {
+        const { upsertHubspotContact } = await import("../../lib/hubspot-sync");
+        await upsertHubspotContact({
+          email: profile.email,
+          companyName: profile.legalName,
+          country: "GY",
+          registrationStatus: profile.status || "Unknown",
+          expiryDate: profile.expirationDate || undefined,
+        });
+      } catch (hubErr) {
+        // HubSpot sync failure should never break the scraper
+        console.log(`  ⚠ HubSpot sync failed for ${profile.legalName}: ${hubErr instanceof Error ? hubErr.message : "unknown"}`);
+      }
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (!msg.includes("duplicate key") && !msg.includes("unique")) throw err;
