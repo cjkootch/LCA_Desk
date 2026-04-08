@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { label: "My Applications", href: "/seeker/applications", icon: FileText },
   { label: "Resume Builder", href: "/seeker/resume", icon: Sparkles },
   { label: "Learn", href: "/seeker/learn", icon: GraduationCap },
-  { label: "Opportunities", href: "/seeker/opportunities", icon: Megaphone },
   { label: "Saved", href: "/seeker/saved", icon: Bookmark },
   { label: "My Profile", href: "/seeker/profile", icon: User },
   { label: "Settings", href: "/seeker/settings", icon: Settings },
