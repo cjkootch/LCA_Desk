@@ -30,7 +30,7 @@ export async function upsertHubspotContact(data: {
 
   const properties = {
     email: data.email,
-    company_name: data.companyName,
+    company: data.companyName,
     country: data.country,
     registration_status: data.registrationStatus,
     registration_expiration_date: data.expiryDate || "",
