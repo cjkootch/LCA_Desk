@@ -240,19 +240,18 @@ function DemoContent() {
                       <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "gold" : "default"} className="text-[11px]">
                         {user.plan}
                       </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-text-secondary leading-relaxed mt-0.5">{user.description}</p>
-                    <p className="text-[11px] text-text-muted mt-1.5 font-mono tracking-tight">{user.email}</p>
+                    )}
                   </div>
-                  {signingIn === user.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent shrink-0 mt-1" />
-                  ) : (
-                    <div className="text-text-muted group-hover:text-accent transition-colors shrink-0 mt-1">
-                      <Search className="h-3.5 w-3.5" />
-                    </div>
-                  )}
+                  <p className="text-xs text-text-secondary leading-relaxed mt-0.5">{user.description}</p>
+                  <p className="text-[11px] text-text-muted mt-1.5 font-mono tracking-tight">{user.email}</p>
                 </div>
+                {signingIn === user.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent shrink-0 mt-1" />
+                ) : (
+                  <div className="text-text-muted group-hover:text-accent transition-colors shrink-0 mt-1">
+                    <Search className="h-3.5 w-3.5" />
+                  </div>
+                )}
               </div>
             </button>
           ))}
