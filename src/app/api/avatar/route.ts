@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const userId = url.searchParams.get("id");
 
   if (!userId) {
-    return new NextResponse(null, { status: 400 });
+    return new NextResponse("Missing id", { status: 400 });
   }
 
   try {
@@ -19,17 +19,32 @@ export async function GET(request: Request) {
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user?.avatarUrl) {
+    const rawUrl = user?.avatarUrl;
+    if (!rawUrl) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const rawUrl = user.avatarUrl;
+    console.log("[avatar] rawUrl:", rawUrl.slice(0, 100));
 
-    // If it's a blob URL, get a signed download URL and proxy it
-    if (rawUrl.includes("blob.vercel-storage.com")) {
-      const signedUrl = await getDownloadUrl(rawUrl);
+    // Old proxy format: /api/submission/download?key=BLOB_URL&name=...
+    // Extract the actual blob URL from the key param
+    let blobUrl = rawUrl;
+    if (rawUrl.startsWith("/api/submission/download")) {
+      try {
+        const parsed = new URL(rawUrl, "https://app.lcadesk.com");
+        blobUrl = parsed.searchParams.get("key") || rawUrl;
+        console.log("[avatar] extracted from proxy:", blobUrl.slice(0, 100));
+      } catch {}
+    }
+
+    // Vercel Blob URL — get signed download and proxy bytes
+    if (blobUrl.includes("blob.vercel-storage.com")) {
+      const signedUrl = await getDownloadUrl(blobUrl);
       const res = await fetch(signedUrl);
-      if (!res.ok) return new NextResponse(null, { status: 404 });
+      if (!res.ok) {
+        console.error("[avatar] blob fetch failed:", res.status);
+        return new NextResponse(null, { status: 502 });
+      }
 
       return new NextResponse(res.body, {
         headers: {
@@ -39,13 +54,15 @@ export async function GET(request: Request) {
       });
     }
 
-    // If it's any other URL, redirect
-    if (rawUrl.startsWith("http")) {
-      return NextResponse.redirect(rawUrl);
+    // Any other http URL — redirect
+    if (blobUrl.startsWith("http")) {
+      return NextResponse.redirect(blobUrl);
     }
 
+    console.error("[avatar] unrecognized format:", blobUrl.slice(0, 100));
     return new NextResponse(null, { status: 404 });
-  } catch {
+  } catch (err) {
+    console.error("[avatar] error:", err);
     return new NextResponse(null, { status: 500 });
   }
 }
