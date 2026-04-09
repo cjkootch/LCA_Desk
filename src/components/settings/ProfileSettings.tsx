@@ -1,14 +1,40 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Camera, Globe, Save, Link2, Phone } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { User, Camera, Globe, Save, Link2, Phone, ZoomIn, ZoomOut } from "lucide-react";
 import { fetchUserSettings, updateUserSettings } from "@/server/actions";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
+// ─── Crop helper ────────────────────────────────────────────────
+function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = Math.min(crop.width, crop.height);
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("No canvas context"));
+      ctx.drawImage(image, crop.x, crop.y, size, size, 0, 0, 512, 512);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas to blob failed"))),
+        "image/jpeg",
+        0.92
+      );
+    };
+    image.onerror = reject;
+    image.src = imageSrc;
+  });
+}
 
 export function ProfileSettings() {
   const { update: updateSession } = useSession();
@@ -23,6 +49,13 @@ export function ProfileSettings() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Crop state
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+
   useEffect(() => {
     fetchUserSettings().then(u => {
       if (u) {
@@ -36,20 +69,34 @@ export function ProfileSettings() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const handleAvatarUpload = async (file: File) => {
+  const onFileSelect = (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image must be under 10 MB"); return; }
+    setCropFile(file);
+    setCropSrc(URL.createObjectURL(file));
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
+    setCroppedArea(croppedPixels);
+  }, []);
+
+  const handleCropSave = async () => {
+    if (!cropSrc || !croppedArea) return;
     setUploading(true);
     try {
+      const croppedBlob = await getCroppedImg(cropSrc, croppedArea);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", new File([croppedBlob], cropFile?.name || "avatar.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // fileKey is now a direct Vercel Blob URL
       setAvatarUrl(data.fileKey);
       await updateUserSettings({ avatarUrl: data.fileKey });
       toast.success("Profile picture updated");
+      setCropSrc(null);
+      setCropFile(null);
     } catch { toast.error("Failed to upload image"); }
     setUploading(false);
   };
@@ -58,7 +105,6 @@ export function ProfileSettings() {
     setSaving(true);
     try {
       await updateUserSettings({ name, phone, linkedinUrl, twitterUrl, websiteUrl });
-      // Update the session so sidebar reflects new name immediately
       await updateSession({ name });
       toast.success("Profile updated");
     } catch { toast.error("Failed to save"); }
@@ -89,15 +135,58 @@ export function ProfileSettings() {
                 <Camera className="h-3.5 w-3.5" />
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }} />
+                onChange={e => { const f = e.target.files?.[0]; if (f) onFileSelect(f); e.target.value = ""; }} />
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">{name || "Your Name"}</p>
-              <p className="text-xs text-text-muted">{uploading ? "Uploading..." : "Click the camera icon to change your photo"}</p>
+              <p className="text-xs text-text-muted">Click the camera icon to change your photo</p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Crop dialog */}
+      <Dialog open={!!cropSrc} onOpenChange={open => { if (!open) { setCropSrc(null); setCropFile(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Your Photo</DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full h-72 bg-black rounded-lg overflow-hidden mt-2">
+            {cropSrc && (
+              <Cropper
+                image={cropSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-3">
+            <ZoomOut className="h-4 w-4 text-text-muted shrink-0" />
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              onChange={e => setZoom(Number(e.target.value))}
+              className="flex-1 accent-accent h-1.5"
+            />
+            <ZoomIn className="h-4 w-4 text-text-muted shrink-0" />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => { setCropSrc(null); setCropFile(null); }}>Cancel</Button>
+            <Button onClick={handleCropSave} loading={uploading}>
+              <Save className="h-4 w-4 mr-1" /> Save Photo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Name & Socials */}
       <Card>
