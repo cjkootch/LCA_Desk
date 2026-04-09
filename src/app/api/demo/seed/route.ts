@@ -314,6 +314,147 @@ Available upon request.`,
     }
     results.push(`✓ Job Seeker: ${seeker.email}`);
 
+    // ═══ 6b. Additional Job Seekers (display-only, no login needed) ═══
+
+    // --- Keisha Persaud: All training complete, all badges earned ---
+    const seeker2 = await ensureUser("demo-seeker-2@lcadesk.com", "Keisha Persaud", "job_seeker");
+    const [existingSeeker2] = await db.select().from(jobSeekerProfiles).where(eq(jobSeekerProfiles.userId, seeker2.id)).limit(1);
+    if (!existingSeeker2) {
+      await db.insert(jobSeekerProfiles).values({
+        userId: seeker2.id, currentJobTitle: "HSE Coordinator",
+        employmentCategory: "Management", yearsExperience: 8,
+        isGuyanese: true, guyaneseStatus: "citizen", nationality: "Guyanese",
+        educationLevel: "masters", educationField: "Occupational Health & Safety",
+        skills: ["HSE management", "Risk assessment", "Incident investigation", "OSHA standards", "Permit to Work", "Emergency response", "ISO 14001", "Environmental auditing"],
+        certifications: ["NEBOSH IGC", "IOSH Managing Safely", "Lead Auditor ISO 45001", "First Aid at Work"],
+        locationPreference: "Georgetown", contractTypePreference: "Full-time",
+        headline: "HSE Coordinator | 8 years O&G safety leadership | NEBOSH certified",
+        profileVisible: true, alertsEnabled: true,
+        resumeContent: `KEISHA PERSAUD
+HSE Coordinator | Oil & Gas Safety Leadership
+
+Georgetown, Guyana · keisha.persaud@email.com · +592-600-5678
+
+PROFESSIONAL SUMMARY
+Experienced HSE Coordinator with 8 years managing safety programs across onshore and offshore petroleum operations. Led implementation of ISO 45001 management systems and reduced recordable incident rates by 60%. Passionate about building safety culture and mentoring local HSE professionals in Guyana's growing energy sector.
+
+EXPERIENCE
+
+HSE Coordinator — CNOOC Petroleum Guyana (2021–Present)
+• Manage HSE programs for Payara development project, overseeing 200+ personnel
+• Led ISO 45001 certification achieving zero major non-conformities
+• Reduced Total Recordable Incident Rate (TRIR) from 1.8 to 0.7 over 2 years
+• Conduct monthly safety leadership workshops for local supervisors
+
+HSE Officer — Tullow Oil Guyana (2018–2021)
+• Managed Permit to Work system for offshore drilling campaigns
+• Investigated 50+ incidents using ICAM methodology with corrective action tracking
+• Developed emergency response procedures for offshore platforms
+
+Safety Officer — Guyana Energy Agency (2016–2018)
+• Conducted safety inspections across petroleum storage facilities
+• Developed national safety guidelines for emerging petroleum sector
+
+EDUCATION
+MSc Occupational Health & Safety — University of the West Indies (2016)
+BSc Environmental Science — University of Guyana (2014)
+
+CERTIFICATIONS
+• NEBOSH International General Certificate (IGC) — 2019
+• IOSH Managing Safely — 2020
+• Lead Auditor ISO 45001 — 2021
+• Advanced First Aid at Work — Current`,
+      });
+    }
+    // Seed ALL course badges for Keisha (all training complete)
+    const allCourses = await db.select({ id: courses.id }).from(courses);
+    for (const course of allCourses) {
+      const [existingProgress] = await db.select({ id: userCourseProgress.id }).from(userCourseProgress)
+        .where(and(eq(userCourseProgress.userId, seeker2.id), eq(userCourseProgress.courseId, course.id))).limit(1);
+      if (!existingProgress) {
+        await db.insert(userCourseProgress).values({
+          userId: seeker2.id, courseId: course.id, status: "completed",
+          completedAt: new Date(), badgeEarnedAt: new Date(), quizScore: 95,
+        });
+      }
+    }
+    results.push(`✓ Job Seeker 2 (all badges): ${seeker2.email}`);
+
+    // --- Ryan Bacchus: 2 badges, mid-career technical ---
+    const seeker3 = await ensureUser("demo-seeker-3@lcadesk.com", "Ryan Bacchus", "job_seeker");
+    const [existingSeeker3] = await db.select().from(jobSeekerProfiles).where(eq(jobSeekerProfiles.userId, seeker3.id)).limit(1);
+    if (!existingSeeker3) {
+      await db.insert(jobSeekerProfiles).values({
+        userId: seeker3.id, currentJobTitle: "Subsea Engineer",
+        employmentCategory: "Technical", yearsExperience: 3,
+        isGuyanese: true, guyaneseStatus: "citizen", nationality: "Guyanese",
+        educationLevel: "bachelors", educationField: "Civil Engineering",
+        skills: ["Subsea systems", "Pipeline engineering", "ROV operations", "Structural analysis", "DNV standards"],
+        certifications: ["BOSIET", "Marine Survival"],
+        locationPreference: "Georgetown", contractTypePreference: "Full-time",
+        headline: "Subsea Engineer | Pipeline & ROV specialist",
+        profileVisible: true, alertsEnabled: true,
+        resumeContent: `RYAN BACCHUS
+Subsea Engineer
+
+Georgetown, Guyana · ryan.bacchus@email.com · +592-600-9012
+
+PROFESSIONAL SUMMARY
+Subsea engineer with 3 years of experience in pipeline design, installation support, and ROV inspection campaigns. Strong background in structural analysis and compliance with DNV offshore standards.
+
+EXPERIENCE
+
+Subsea Engineer — TechnipFMC Guyana (2022–Present)
+• Support subsea installation campaigns for Liza Phase 2 and Payara developments
+• Perform pipeline route analysis and seabed survey data interpretation
+• Coordinate ROV inspection scopes and report defect classification
+• Assist with subsea equipment maintenance planning
+
+Graduate Engineer — Guyana Shore Base Inc. (2021–2022)
+• Structural analysis for port facility upgrades
+• Supported logistics planning for offshore supply vessel operations
+
+EDUCATION
+BSc Civil Engineering — University of Guyana (2021)
+
+CERTIFICATIONS
+• BOSIET — OPITO Certified, 2022
+• Marine Survival — Current`,
+      });
+    }
+    // Seed 2 badges for Ryan (LCA Fundamentals + Platform Mastery)
+    const twoBadgeCourses = await db.select({ id: courses.id }).from(courses)
+      .where(sql`${courses.slug} IN ('lca-fundamentals', 'mastering-lca-desk')`).limit(2);
+    for (const course of twoBadgeCourses) {
+      const [existing] = await db.select({ id: userCourseProgress.id }).from(userCourseProgress)
+        .where(and(eq(userCourseProgress.userId, seeker3.id), eq(userCourseProgress.courseId, course.id))).limit(1);
+      if (!existing) {
+        await db.insert(userCourseProgress).values({
+          userId: seeker3.id, courseId: course.id, status: "completed",
+          completedAt: new Date(), badgeEarnedAt: new Date(), quizScore: 88,
+        });
+      }
+    }
+    results.push(`✓ Job Seeker 3 (2 badges): ${seeker3.email}`);
+
+    // --- Priya Doobay: No badges, entry-level, just registered ---
+    const seeker4 = await ensureUser("demo-seeker-4@lcadesk.com", "Priya Doobay", "job_seeker");
+    const [existingSeeker4] = await db.select().from(jobSeekerProfiles).where(eq(jobSeekerProfiles.userId, seeker4.id)).limit(1);
+    if (!existingSeeker4) {
+      await db.insert(jobSeekerProfiles).values({
+        userId: seeker4.id, currentJobTitle: "Recent Graduate",
+        employmentCategory: "Non-Technical", yearsExperience: 0,
+        isGuyanese: true, guyaneseStatus: "citizen", nationality: "Guyanese",
+        educationLevel: "bachelors", educationField: "Business Administration",
+        skills: ["Microsoft Office", "Data entry", "Customer service", "Report writing"],
+        certifications: [],
+        locationPreference: "Georgetown", contractTypePreference: "Full-time",
+        headline: "Business Administration graduate seeking entry-level O&G role",
+        profileVisible: true, alertsEnabled: true,
+      });
+    }
+    results.push(`✓ Job Seeker 4 (no badges, entry-level): ${seeker4.email}`);
+
     // ═══ 7. Supplier (with full profile) ═══
     const supplier = await ensureUser("demo-supplier@lcadesk.com", "Anil Raghunath", "supplier");
     const [existingSupplier] = await db.select().from(supplierProfiles).where(eq(supplierProfiles.userId, supplier.id)).limit(1);
