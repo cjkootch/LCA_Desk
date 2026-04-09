@@ -136,25 +136,47 @@ async function scrapeOilNow(): Promise<ScrapedArticle[]> {
 async function fetchArticleContent(url: string): Promise<string> {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "LCA Desk News Scraper (compliance platform)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LCA Desk News)" },
     });
     if (!res.ok) return "";
     const html = await res.text();
 
-    // Strip HTML tags, get text content
-    const bodyMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
-      || html.match(/<div[^>]*class="[^"]*entry-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-      || html.match(/<div[^>]*class="[^"]*post-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    // Try multiple content extraction strategies
+    let content = "";
 
-    if (!bodyMatch) return "";
+    // Strategy 1: <article> tag
+    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    if (articleMatch) content = articleMatch[1];
 
-    return bodyMatch[1]
+    // Strategy 2: entry-content div
+    if (!content) {
+      const entryMatch = html.match(/<div[^>]*class="[^"]*entry-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (entryMatch) content = entryMatch[1];
+    }
+
+    // Strategy 3: sidebar_content (Kaieteur News)
+    if (!content) {
+      const sidebarMatch = html.match(/<div[^>]*class="sidebar_content"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+      if (sidebarMatch) content = sidebarMatch[1];
+    }
+
+    // Strategy 4: Extract all <p> tags from the main post div
+    if (!content) {
+      const paragraphs = html.match(/<p>[^<]{30,}<\/p>/gi);
+      if (paragraphs && paragraphs.length > 0) {
+        content = paragraphs.slice(0, 15).join(" ");
+      }
+    }
+
+    if (!content) return "";
+
+    return content
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 3000); // First 3000 chars for AI
+      .slice(0, 3000);
   } catch {
     return "";
   }
