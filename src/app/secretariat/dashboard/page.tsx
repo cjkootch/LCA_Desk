@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
-import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
+import { DashboardIdentity, DashboardStats, StatusCard } from "@/components/dashboard/shared/DashboardTemplate";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -150,29 +150,40 @@ export default function SecretariatDashboardPage() {
   return (
     <div className="p-4 sm:p-8 max-w-6xl space-y-8">
       <AnnouncementBanner userRole="secretariat" />
-      <DashboardHero
-        badge="Local Content Secretariat"
-        title="Regulatory Dashboard"
-        subtitle="Real-time sector compliance monitoring"
-        date={new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-        kpis={analytics ? [
-          { label: "Local Spend", value: formatCurrency(analytics.localSpend), color: "text-emerald-300", sublabel: `${analytics.guyaneseSupplierCount} suppliers · ${analytics.overallLcRate}% LC rate` },
-          { label: "Guyanese Jobs", value: analytics.jobsCreated.toLocaleString(), color: "text-sky-300", sublabel: `${analytics.totalEmployees.toLocaleString()} total · ${analytics.employmentPct}% Guyanese` },
-          { label: "Hours Saved", value: analytics.staffHoursSaved.toLocaleString(), color: "text-amber-300", sublabel: `${analytics.totalSubmissions} digital submissions` },
-          { label: "Economic Impact", value: formatCurrency(analytics.economicImpact), sublabel: `${analytics.uniqueFilers} companies filing` },
-        ] : undefined}
+
+      {/* Identity */}
+      <DashboardIdentity
+        name="Local Content Secretariat"
+        subtitle={`Regulatory Dashboard · ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}`}
+        status={{ label: "Monitoring", variant: "success" }}
+        badge="Secretariat"
       />
 
-      {/* Secondary metrics row */}
+      {/* KPI stats */}
       {analytics && (
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalSubmissions}</p><p className="text-xs text-text-muted font-medium">Submissions</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.uniqueFilers}</p><p className="text-xs text-text-muted font-medium">Companies</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-xs text-text-muted font-medium">Trained</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-xs text-text-muted font-medium">Training Days</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-xs text-text-muted font-medium">Capacity $</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-xs text-text-muted font-medium">GY Suppliers</p></Card>
-        </div>
+        <DashboardStats items={[
+          { label: "Local Spend", value: formatCurrency(analytics.localSpend), color: "success", sublabel: `${analytics.overallLcRate}% LC rate` },
+          { label: "Guyanese Jobs", value: analytics.jobsCreated.toLocaleString(), color: "accent", sublabel: `${analytics.employmentPct}% Guyanese` },
+          { label: "Staff Hours Saved", value: analytics.staffHoursSaved.toLocaleString(), color: "gold", sublabel: `${analytics.totalSubmissions} submissions` },
+          { label: "Economic Impact", value: formatCurrency(analytics.economicImpact), sublabel: `${analytics.uniqueFilers} companies` },
+        ]} />
+      )}
+
+      {/* Sector compliance status */}
+      {analytics && (
+        <StatusCard
+          title="Sector Compliance Overview"
+          status={analytics.overallLcRate >= 50 ? "Meeting Target" : "Below Target"}
+          statusVariant={analytics.overallLcRate >= 50 ? "success" : "warning"}
+          details={[
+            { label: "Overall LC Rate", value: `${analytics.overallLcRate}%` },
+            { label: "Companies Filing", value: String(analytics.uniqueFilers) },
+            { label: "Pending Reviews", value: String(data.stats.pending) },
+            { label: "GY Suppliers", value: String(analytics.guyaneseSupplierCount) },
+            { label: "Training Participants", value: analytics.totalTrainingParticipants.toLocaleString() },
+            { label: "Capacity Investment", value: formatCurrency(analytics.totalCapacitySpend) },
+          ]}
+        />
       )}
 
       {/* ── Submission Queue ─────────────────────────────────── */}

@@ -6,16 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
-import { CompanyIdentity } from "@/components/shared/CompanyIdentity";
+import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
 import Link from "next/link";
-import {
-  Shield, Briefcase, FileText, TrendingUp, ArrowRight,
-  CheckCircle, AlertTriangle, XCircle, Eye, Sparkles, Lock,
-} from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import { fetchSupplierDashboard } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { decodeHtml } from "@/lib/utils/decode-html";
 
 type DashboardData = Awaited<ReturnType<typeof fetchSupplierDashboard>>;
 
@@ -35,102 +33,66 @@ export default function SupplierDashboard() {
 
   const { profile, stats, matchingOpportunities, recentResponses } = data;
   const isExpired = profile.lcsExpirationDate && new Date(profile.lcsExpirationDate) < new Date();
-  const isExpiring = profile.lcsExpirationDate && !isExpired &&
-    new Date(profile.lcsExpirationDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const isPro = profile.tier === "pro";
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
       <AnnouncementBanner userRole="supplier" />
 
-      {/* Company identity */}
-      <div className="mb-6">
-        <CompanyIdentity
-          name={profile.legalName || "Your Company"}
-          subtitle={profile.tradingName ? `t/a ${profile.tradingName}` : undefined}
-          certId={profile.lcsCertId || undefined}
-          status={isExpired ? "expired" : profile.lcsVerified ? "active" : "pending"}
-          planName={isPro ? "Supplier Pro" : "Starter"}
-          avatarUrl={profile.logoUrl || undefined}
-        />
-      </div>
-
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-heading font-bold text-text-primary">{profile.legalName || "Supplier Dashboard"}</h1>
-          <p className="text-sm text-text-secondary">{profile.tradingName ? `t/a ${profile.tradingName} · ` : ""}{profile.serviceCategories.join(", ") || "No categories set"}</p>
-        </div>
-        <Badge variant={isPro ? "accent" : "default"} className="text-xs">{isPro ? "Supplier Pro" : "Starter"}</Badge>
-      </div>
-
-      {/* Upgrade banner for free users */}
-      {!isPro && (
-        <Card className="mb-6 border-accent/20 bg-accent-light">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5 text-accent shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-text-primary">Upgrade to Supplier Pro — $99/mo</p>
-                <p className="text-xs text-text-secondary">Unlimited responses, bid tracker, analytics, priority placement</p>
-              </div>
-            </div>
-            <Link href="/supplier-portal/settings"><Button size="sm"><Sparkles className="h-3 w-3 mr-1" /> Upgrade</Button></Link>
-          </CardContent>
-        </Card>
-      )}
+      {/* Identity */}
+      <DashboardIdentity
+        name={profile.legalName || "Your Company"}
+        subtitle={[
+          profile.tradingName ? `t/a ${profile.tradingName}` : null,
+          profile.lcsCertId,
+          profile.serviceCategories?.slice(0, 2).join(", "),
+        ].filter(Boolean).join(" · ")}
+        avatarUrl={profile.logoUrl || undefined}
+        status={
+          isExpired ? { label: "LCS Expired", variant: "danger" } :
+          profile.lcsVerified ? { label: "LCS Verified", variant: "success" } :
+          { label: "Pending Verification", variant: "warning" }
+        }
+        badge={isPro ? "Supplier Pro" : "Starter"}
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Card className="p-4 text-center">
-          <Shield className={cn("h-5 w-5 mx-auto mb-1", isExpired ? "text-danger" : isExpiring ? "text-warning" : "text-success")} />
-          <p className="text-lg font-bold font-mono">{profile.lcsCertId || "—"}</p>
-          <Badge variant={isExpired ? "danger" : profile.lcsVerified ? "success" : "warning"} className="text-xs">
-            {isExpired ? "Expired" : profile.lcsVerified ? "LCS Verified" : profile.lcsCertId ? "Pending" : "Not Registered"}
-          </Badge>
-        </Card>
-        <Card className="p-4 text-center">
-          <Briefcase className="h-5 w-5 text-accent mx-auto mb-1" />
-          <p className="text-2xl font-bold">{matchingOpportunities.length}</p>
-          <p className="text-xs text-text-muted">Matching Opportunities</p>
-        </Card>
-        <Card className="p-4 text-center">
-          <FileText className="h-5 w-5 text-gold mx-auto mb-1" />
-          <p className="text-2xl font-bold">{stats.totalResponses}</p>
-          <p className="text-xs text-text-muted">Total Responses</p>
-        </Card>
-        <Card className="p-4 text-center">
-          {isPro ? (
-            <>
-              <Eye className="h-5 w-5 text-accent mx-auto mb-1" />
-              <p className="text-2xl font-bold">{profile.profileViews}</p>
-              <p className="text-xs text-text-muted">Profile Views</p>
-            </>
-          ) : (
-            <>
-              <Lock className="h-5 w-5 text-text-muted mx-auto mb-1" />
-              <p className="text-lg font-bold text-text-muted">Upgrade</p>
-              <p className="text-xs text-text-muted">Profile Analytics</p>
-            </>
-          )}
-        </Card>
-      </div>
+      <DashboardStats items={[
+        { label: "LCS Certificate", value: profile.lcsCertId || "—", color: isExpired ? "danger" : profile.lcsVerified ? "success" : "warning", sublabel: isExpired ? "Expired" : profile.lcsVerified ? "Verified" : "Not verified" },
+        { label: "Matching Opportunities", value: String(matchingOpportunities.length), color: "accent", onClick: () => window.location.href = "/supplier-portal/opportunities" },
+        { label: "Total Responses", value: String(stats.totalResponses), color: "gold" },
+        { label: isPro ? "Profile Views" : "Plan", value: isPro ? String(profile.profileViews) : "Upgrade", color: isPro ? "accent" : "warning", sublabel: isPro ? "This month" : "For analytics", onClick: !isPro ? () => window.location.href = "/supplier-portal/settings" : undefined },
+      ]} />
+
+      {/* LCS Status */}
+      <StatusCard
+        title="LCS Registration Status"
+        status={isExpired ? "Expired" : profile.lcsVerified ? "Active" : "Pending"}
+        statusVariant={isExpired ? "danger" : profile.lcsVerified ? "success" : "warning"}
+        details={[
+          { label: "Certificate ID", value: profile.lcsCertId || "Not registered" },
+          { label: "Expiration", value: profile.lcsExpirationDate ? new Date(profile.lcsExpirationDate).toLocaleDateString() : "—" },
+          { label: "Service Categories", value: String(profile.serviceCategories?.length || 0) },
+          { label: "Employee Count", value: profile.employeeCount ? String(profile.employeeCount) : "—" },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Matching opportunities */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-text-primary">Matching Opportunities</p>
-              <Link href="/supplier-portal/opportunities" className="text-xs text-accent hover:text-accent-hover">View All</Link>
-            </div>
-            {matchingOpportunities.length === 0 ? (
-              <p className="text-xs text-text-muted py-4 text-center">No matching opportunities. Update your service categories in Profile.</p>
-            ) : (
-              <div className="space-y-2">
-                {matchingOpportunities.map(opp => (
-                  <div key={opp.id} className="flex items-center justify-between p-2 rounded-lg bg-bg-primary">
+        <DashboardSection title="Matching Opportunities" action={
+          <Link href="/supplier-portal/opportunities" className="text-xs text-accent hover:text-accent-hover flex items-center gap-1">
+            View All <ArrowRight className="h-3 w-3" />
+          </Link>
+        }>
+          {matchingOpportunities.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-sm text-text-muted">No matching opportunities. Update your service categories in Profile.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {matchingOpportunities.slice(0, 5).map(opp => (
+                <Card key={opp.id} className="hover:border-accent/20 transition-colors">
+                  <CardContent className="p-3 flex items-center justify-between">
                     <div className="min-w-0 flex-1 mr-2">
-                      <p className="text-xs font-medium text-text-primary truncate">{opp.title}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{decodeHtml(opp.title)}</p>
                       <p className="text-xs text-text-muted">{opp.company} · {opp.deadline ? `Due ${opp.deadline}` : "No deadline"}</p>
                     </div>
                     {opp.responded ? (
@@ -138,59 +100,50 @@ export default function SupplierDashboard() {
                     ) : (
                       <Link href="/supplier-portal/opportunities"><ArrowRight className="h-3.5 w-3.5 text-accent shrink-0" /></Link>
                     )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Response pipeline */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-text-primary">Response Pipeline</p>
-              {isPro && <Link href="/supplier-portal/responses" className="text-xs text-accent hover:text-accent-hover">View All</Link>}
-            </div>
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {[
-                { label: "Interested", count: stats.interested, color: "text-accent" },
-                { label: "Contacted", count: stats.contacted, color: "text-warning" },
-                { label: "Shortlisted", count: stats.shortlisted, color: "text-gold" },
-                { label: "Awarded", count: stats.awarded, color: "text-success" },
-              ].map(s => (
-                <div key={s.label} className="text-center">
-                  <p className={cn("text-xl font-bold", s.color)}>{s.count}</p>
-                  <p className="text-xs text-text-muted">{s.label}</p>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-            {!isPro && recentResponses.length > 0 && (
-              <div className="bg-bg-primary rounded-lg p-3 text-center">
-                <Lock className="h-4 w-4 text-text-muted mx-auto mb-1" />
-                <p className="text-xs text-text-muted">Upgrade to Pro to track individual responses</p>
-              </div>
-            )}
-            {isPro && recentResponses.length > 0 && (
-              <div className="space-y-2">
-                {recentResponses.map(r => (
-                  <div key={r.id} className="flex items-center justify-between text-xs">
-                    <span className="text-text-secondary truncate mr-2">{r.opportunityTitle}</span>
-                    <Badge variant={r.status === "awarded" ? "success" : r.status === "shortlisted" ? "gold" : "default"} className="text-xs shrink-0">{r.status}</Badge>
+          )}
+        </DashboardSection>
+
+        {/* Response pipeline */}
+        <DashboardSection title="Response Pipeline">
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: "Interested", count: stats.interested, color: "text-accent" },
+                  { label: "Contacted", count: stats.contacted, color: "text-warning" },
+                  { label: "Shortlisted", count: stats.shortlisted, color: "text-gold" },
+                  { label: "Awarded", count: stats.awarded, color: "text-success" },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <p className={cn("text-xl font-bold", s.color)}>{s.count}</p>
+                    <p className="text-xs text-text-muted">{s.label}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {!isPro && (
+                <div className="bg-bg-primary rounded-lg p-3 text-center">
+                  <Lock className="h-4 w-4 text-text-muted mx-auto mb-1" />
+                  <p className="text-xs text-text-muted">Upgrade to Pro to track individual responses</p>
+                </div>
+              )}
+              {isPro && recentResponses.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {recentResponses.slice(0, 4).map(r => (
+                    <div key={r.id} className="flex items-center justify-between text-sm py-1 border-b border-border-light last:border-0">
+                      <span className="text-text-secondary truncate mr-2">{r.opportunityTitle}</span>
+                      <Badge variant={r.status === "awarded" ? "success" : r.status === "shortlisted" ? "gold" : "default"} className="text-xs shrink-0">{r.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </DashboardSection>
       </div>
-
-      {/* Free tier response counter */}
-      {!isPro && (
-        <div className="mt-6 text-center text-xs text-text-muted">
-          {profile.responsesThisMonth}/3 responses used this month · <Link href="/supplier-portal/settings" className="text-accent hover:text-accent-hover">Upgrade for unlimited</Link>
-        </div>
-      )}
 
       {/* CTA tiles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
@@ -207,14 +160,16 @@ export default function SupplierDashboard() {
         <PromoCTA
           variant="dark"
           title="Complete Your Profile"
-          description="Companies with complete profiles get 3x more visibility. Add your capability statement and service categories."
+          description="Companies with complete profiles get 3x more visibility from contractors."
           buttonText="Edit Profile"
           buttonHref="/supplier-portal/profile"
         />
       </div>
 
-      {/* Industry News */}
-      <IndustryNewsFeed userType="supplier" />
+      {/* News */}
+      <div className="mt-8">
+        <IndustryNewsFeed userType="supplier" />
+      </div>
     </div>
   );
 }

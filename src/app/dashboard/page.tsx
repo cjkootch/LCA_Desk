@@ -6,19 +6,16 @@ import { ComplianceCalendar } from "@/components/dashboard/ComplianceCalendar";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
-import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
-import { CompanyIdentity } from "@/components/shared/CompanyIdentity";
+import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
-import { StatCard } from "@/components/dashboard/shared/StatCard";
-import { SectionHeader } from "@/components/dashboard/shared/SectionHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-import { Building2, FileText, AlertTriangle, TrendingUp, Plus, GraduationCap, Clock, ArrowRight } from "lucide-react";
+import { Building2, Plus, GraduationCap, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
 import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
@@ -77,59 +74,28 @@ export default function DashboardPage() {
   }
 
   const lcRate = health?.lcRate || 0;
-  const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
+  const billingState = ctx?.billing?.state;
 
   return (
-    <div className="p-4 sm:p-8">
+    <div className="p-4 sm:p-8 max-w-6xl">
       <AnnouncementBanner userRole="filer" />
 
-      {/* Company identity */}
-      {ctx && (
-        <div className="mb-6">
-          <CompanyIdentity
-            name={ctx.tenant?.name || "Your Company"}
-            subtitle={entities.length > 0 ? `${entities.length} entit${entities.length === 1 ? "y" : "ies"} · ${ctx.tenant?.jurisdiction?.name || "Guyana"}` : undefined}
-            certId={entities[0]?.lcs_certificate_id || undefined}
-            status={ctx.billing?.state === "active" ? "active" : ctx.billing?.state === "trial" ? "trial" : ctx.billing?.state === "locked" ? "expired" : "active"}
-            planName={ctx.plan ? ctx.plan.charAt(0).toUpperCase() + ctx.plan.slice(1) : undefined}
-          />
-        </div>
-      )}
-
-      {/* Hero */}
-      <DashboardHero
-        title={`${greeting}`}
-        subtitle={
-          overdueCount > 0
-            ? `${overdueCount} overdue report${overdueCount !== 1 ? "s" : ""} — immediate attention required`
-            : dueSoonCount > 0
-            ? `${dueSoonCount} report${dueSoonCount !== 1 ? "s" : ""} due soon`
-            : entities.length > 0
-            ? "Your compliance dashboard is up to date"
-            : "Let's set up your first entity and start filing"
+      {/* Identity header */}
+      <DashboardIdentity
+        name={ctx?.tenant?.name || "Your Company"}
+        subtitle={[
+          entities.length > 0 ? `${entities.length} entit${entities.length === 1 ? "y" : "ies"}` : null,
+          ctx?.tenant?.jurisdiction?.name || "Guyana",
+          entities[0]?.lcs_certificate_id || null,
+        ].filter(Boolean).join(" · ")}
+        status={
+          billingState === "active" ? { label: "Active", variant: "success" } :
+          billingState === "trial" ? { label: "Trial", variant: "accent" } :
+          billingState === "locked" ? { label: "Expired", variant: "danger" } :
+          { label: "Active", variant: "success" }
         }
-        date={new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-        gradient="from-accent to-emerald-800"
-        kpis={entities.length > 0 ? [
-          { label: "LC Rate", value: `${lcRate.toFixed(1)}%`, color: lcRate >= 50 ? "text-emerald-300" : "text-amber-300", sublabel: lcRate >= 50 ? "Meeting target" : "Below target" },
-          { label: "Entities", value: String(entities.length), color: "text-sky-300", sublabel: `${entities.length} active` },
-          { label: "Due Soon", value: String(dueSoonCount), color: dueSoonCount > 0 ? "text-amber-300" : "text-emerald-300", sublabel: dueSoonCount > 0 ? "Action needed" : "All clear" },
-          { label: "Overdue", value: String(overdueCount), color: overdueCount > 0 ? "text-red-300" : "text-emerald-300", sublabel: overdueCount > 0 ? "Immediate attention" : "None" },
-        ] : undefined}
-      >
-        {entities.length === 0 && (
-          <div className="flex gap-3 mt-6">
-            <Button onClick={() => router.push("/dashboard/entities/new")} className="bg-white text-accent hover:bg-white/90">
-              <Plus className="h-4 w-4 mr-1" /> Add Your First Entity
-            </Button>
-            <Link href="/dashboard/training">
-              <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
-                <GraduationCap className="h-4 w-4 mr-1" /> Take Onboarding Course
-              </Button>
-            </Link>
-          </div>
-        )}
-      </DashboardHero>
+        badge={ctx?.plan ? ctx.plan.charAt(0).toUpperCase() + ctx.plan.slice(1) : undefined}
+      />
 
       {entities.length === 0 ? (
         <EmptyState
@@ -143,33 +109,50 @@ export default function DashboardPage() {
         />
       ) : (
         <>
-          {/* Mobile: compliance widget */}
-          <div className="lg:hidden mb-6">
-            <ComplianceHealthWidget />
-          </div>
+          {/* KPI stats row */}
+          <DashboardStats items={[
+            { label: "LC Rate", value: `${lcRate.toFixed(1)}%`, color: lcRate >= 50 ? "success" : "warning", sublabel: lcRate >= 50 ? "Meeting target" : "Below 50% target" },
+            { label: "Entities", value: String(entities.length), color: "accent", sublabel: `${entities.length} active` },
+            { label: "Due Soon", value: String(dueSoonCount), color: dueSoonCount > 0 ? "warning" : "success", sublabel: dueSoonCount > 0 ? "Action needed" : "All clear", onClick: () => router.push("/dashboard/calendar") },
+            { label: "Overdue", value: String(overdueCount), color: overdueCount > 0 ? "danger" : "success", sublabel: overdueCount > 0 ? "Immediate attention" : "None", onClick: () => router.push("/dashboard/calendar") },
+          ]} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* Compliance status card */}
+          <StatusCard
+            title="LCS Compliance Status"
+            status={lcRate >= 50 ? "Compliant" : overdueCount > 0 ? "Action Required" : "Below Target"}
+            statusVariant={lcRate >= 50 && overdueCount === 0 ? "success" : overdueCount > 0 ? "danger" : "warning"}
+            details={[
+              { label: "Local Content Rate", value: `${lcRate.toFixed(1)}%` },
+              { label: "Target", value: "50% minimum" },
+              { label: "Overdue Reports", value: String(overdueCount) },
+              { label: "Next Deadline", value: upcomingDeadlines[0] ? `${upcomingDeadlines[0].days_remaining}d` : "None" },
+            ]}
+            footer={health ? `Based on ${formatCurrency(health.totalExpenditure || 0)} total expenditure across ${entities.length} entit${entities.length === 1 ? "y" : "ies"}` : undefined}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
-              <SectionHeader title="Your Entities" action={
+              <DashboardSection title="Your Entities" action={
                 <Link href="/dashboard/entities/new">
                   <Button size="sm" variant="outline" className="gap-1"><Plus className="h-3.5 w-3.5" /> Add Entity</Button>
                 </Link>
-              } />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {entities.map((entity) => (
-                  <PortfolioCard key={entity.id} entity={entity} />
-                ))}
-              </div>
+              }>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {entities.map((entity) => (
+                    <PortfolioCard key={entity.id} entity={entity} />
+                  ))}
+                </div>
+              </DashboardSection>
 
-              {/* Upcoming deadlines inline */}
+              {/* Upcoming deadlines */}
               {upcomingDeadlines.length > 0 && (
-                <div>
-                  <SectionHeader title="Upcoming Deadlines" action={
-                    <Link href="/dashboard/calendar" className="text-xs text-accent hover:text-accent-hover">
-                      View Calendar <ArrowRight className="inline h-3 w-3" />
-                    </Link>
-                  } />
+                <DashboardSection title="Upcoming Deadlines" action={
+                  <Link href="/dashboard/calendar" className="text-xs text-accent hover:text-accent-hover flex items-center gap-1">
+                    View Calendar <ArrowRight className="h-3 w-3" />
+                  </Link>
+                }>
                   <div className="space-y-2">
                     {upcomingDeadlines.slice(0, 5).map((d, i) => (
                       <Card key={i} className={cn("border-0 shadow-sm", d.status === "overdue" ? "bg-danger/5" : d.status === "due_soon" ? "bg-warning/5" : "")}>
@@ -195,18 +178,15 @@ export default function DashboardPage() {
                       </Card>
                     ))}
                   </div>
-                </div>
+                </DashboardSection>
               )}
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <div className="hidden lg:block">
-                <ComplianceHealthWidget />
-              </div>
+              <ComplianceHealthWidget />
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
-              <IndustryNewsFeed userType="filer" />
             </div>
           </div>
 
@@ -225,20 +205,16 @@ export default function DashboardPage() {
             <PromoCTA
               variant="dark"
               title="Managed Compliance Service"
-              description="Let our team handle data collection, report preparation, and Secretariat submission on your behalf."
+              description="Let our team handle data collection, report preparation, and Secretariat submission."
               tags={["Report Preparation", "Submission Handling", "Audit Defense"]}
               buttonText="Get a Quote"
               onButtonClick={() => window.open("mailto:hello@lcadesk.com?subject=Managed%20Service%20Inquiry", "_blank")}
             />
-            {isPro && (
-              <PromoCTA
-                variant="gold"
-                title="Training & Certification"
-                description="Complete compliance courses to strengthen your team's understanding of the Local Content Act."
-                buttonText="Browse Courses"
-                buttonHref="/dashboard/training"
-              />
-            )}
+          </div>
+
+          {/* News */}
+          <div className="mt-8">
+            <IndustryNewsFeed userType="filer" />
           </div>
         </>
       )}
