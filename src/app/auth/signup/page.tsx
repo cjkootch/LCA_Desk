@@ -114,8 +114,8 @@ function SignupContent() {
               <div className="space-y-3 mb-6">
                 {[
                   { id: "filer" as const, icon: Building2, label: "I need to file LCA reports", desc: "Contractor, Sub-Contractor, or Licensee with a filing obligation" },
-                  { id: "supplier" as const, icon: Truck, label: "I'm a Guyanese supplier", desc: "LCS-registered or seeking to be listed in the supplier directory" },
-                  { id: "job_seeker" as const, icon: Search, label: "I'm looking for work", desc: "Search petroleum sector jobs and build your compliance profile" },
+                  { id: "supplier" as const, icon: Truck, label: "I'm a local supplier", desc: "Registered or seeking to be listed in the supplier directory" },
+                  { id: "job_seeker" as const, icon: Search, label: "I'm looking for work", desc: "Search petroleum sector jobs and build your professional profile" },
                 ].map(r => (
                   <button key={r.id} onClick={() => setRole(r.id)}
                     className={cn("w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
@@ -200,7 +200,7 @@ function SignupContent() {
                 {role === "filer" && accountType === "self" && "Set up your company's compliance account."}
                 {role === "filer" && accountType === "others" && "Set up your consulting firm's account."}
                 {role === "supplier" && "Set up your supplier account to get discovered by contractors."}
-                {role === "job_seeker" && "Create your profile to find petroleum sector opportunities."}
+                {role === "job_seeker" && "Create your profile to find energy sector opportunities."}
               </p>
 
               <form onSubmit={handleSignup} className="space-y-4">
@@ -246,8 +246,8 @@ function SignupContent() {
         <div className="absolute bottom-32 left-16 w-40 h-40 rounded-full bg-gold/5" />
         <div className="text-center z-10 px-12">
           <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
-          <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
-            AI-powered local content compliance for Guyana&apos;s petroleum sector
+          <p className="text-white/50 text-lg font-light max-w-sm mx-auto leading-relaxed">
+            Multi-jurisdiction local content compliance — built for the petroleum sector
           </p>
         </div>
       </div>

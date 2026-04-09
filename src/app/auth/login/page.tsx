@@ -134,8 +134,8 @@ function LoginForm() {
 
         <div className="text-center z-10 px-12">
           <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
-          <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
-            AI-powered local content compliance for Guyana&apos;s petroleum sector
+          <p className="text-white/50 text-lg font-light max-w-sm mx-auto leading-relaxed">
+            Multi-jurisdiction local content compliance — built for the petroleum sector
           </p>
         </div>
       </div>
