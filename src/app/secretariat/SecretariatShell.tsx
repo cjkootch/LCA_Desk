@@ -12,27 +12,49 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
 
-const NAV_ITEMS = [
-  // Core workflow
-  { label: "Submissions", href: "/secretariat/dashboard", icon: FileText },
-  { label: "Filing Compliance", href: "/secretariat/compliance", icon: ClipboardCheck },
-  { label: "Deadline Calendar", href: "/secretariat/calendar", icon: Calendar },
-  { label: "Reports", href: "/secretariat/reports", icon: PieChart },
-  // Data & Directory
-  { label: "Market Intel", href: "/secretariat/market", icon: BarChart3 },
-  { label: "Talent Pool", href: "/secretariat/talent", icon: Users },
-  { label: "Supplier Directory", href: "/secretariat/suppliers", icon: Building2 },
-  { label: "LCS Applications", href: "/secretariat/applications", icon: UserPlus },
-  { label: "Documents", href: "/secretariat/documents", icon: FolderOpen },
-  // Tools
-  { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
-  { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
-  { label: "Training", href: "/secretariat/training", icon: GraduationCap },
-  // Admin
-  { label: "Audit Trail", href: "/secretariat/audit", icon: History },
-  { label: "Notifications", href: "/secretariat/notifications", icon: Bell },
-  { label: "Team", href: "/secretariat/team", icon: Users },
-  { label: "Settings", href: "/secretariat/settings", icon: Settings },
+interface NavSection { label?: string; items: { label: string; href: string; icon: React.ElementType }[] }
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: "Dashboard", href: "/secretariat/dashboard", icon: FileText },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      { label: "Filing Compliance", href: "/secretariat/compliance", icon: ClipboardCheck },
+      { label: "Deadline Calendar", href: "/secretariat/calendar", icon: Calendar },
+      { label: "Reports", href: "/secretariat/reports", icon: PieChart },
+      { label: "LCS Applications", href: "/secretariat/applications", icon: UserPlus },
+    ],
+  },
+  {
+    label: "Directory",
+    items: [
+      { label: "Market Intel", href: "/secretariat/market", icon: BarChart3 },
+      { label: "Talent Pool", href: "/secretariat/talent", icon: Users },
+      { label: "Supplier Directory", href: "/secretariat/suppliers", icon: Building2 },
+      { label: "Documents", href: "/secretariat/documents", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
+      { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
+      { label: "Training", href: "/secretariat/training", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { label: "Audit Trail", href: "/secretariat/audit", icon: History },
+      { label: "Notifications", href: "/secretariat/notifications", icon: Bell },
+      { label: "Team", href: "/secretariat/team", icon: Users },
+      { label: "Settings", href: "/secretariat/settings", icon: Settings },
+    ],
+  },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -66,18 +88,25 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(item => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
-                )}>
-                <item.icon className="h-4 w-4" />{item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {NAV_SECTIONS.map((section, si) => (
+            <div key={si}>
+              {section.label && <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-white/30">{section.label}</p>}
+              <div className="space-y-0.5">
+                {section.items.map(item => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
+                      className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                      )}>
+                      <item.icon className="h-4 w-4" />{item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-white/10 px-3 py-4">

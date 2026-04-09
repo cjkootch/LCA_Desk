@@ -7,17 +7,38 @@ import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings,
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
-  { label: "Find Jobs", href: "/seeker/jobs", icon: Search },
-  { label: "Opportunities", href: "/seeker/opportunities", icon: Briefcase },
-  { label: "My Applications", href: "/seeker/applications", icon: FileText },
-  { label: "Resume Builder", href: "/seeker/resume", icon: Sparkles },
-  { label: "Learn", href: "/seeker/learn", icon: GraduationCap },
-  { label: "Saved", href: "/seeker/saved", icon: Bookmark },
-  { label: "Notifications", href: "/seeker/notifications", icon: Bell },
-  { label: "My Profile", href: "/seeker/profile", icon: User },
-  { label: "Settings", href: "/seeker/settings", icon: Settings },
+interface NavSection { label?: string; items: { label: string; href: string; icon: React.ElementType }[] }
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Jobs",
+    items: [
+      { label: "Find Jobs", href: "/seeker/jobs", icon: Search },
+      { label: "Opportunities", href: "/seeker/opportunities", icon: Briefcase },
+      { label: "My Applications", href: "/seeker/applications", icon: FileText },
+      { label: "Saved", href: "/seeker/saved", icon: Bookmark },
+    ],
+  },
+  {
+    label: "Career",
+    items: [
+      { label: "My Profile", href: "/seeker/profile", icon: User },
+      { label: "Resume Builder", href: "/seeker/resume", icon: Sparkles },
+      { label: "Learn", href: "/seeker/learn", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { label: "Notifications", href: "/seeker/notifications", icon: Bell },
+      { label: "Settings", href: "/seeker/settings", icon: Settings },
+    ],
+  },
 ];
 
 export function SeekerSidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?: () => void }) {
@@ -55,30 +76,37 @@ export function SeekerSidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavi
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/seeker/dashboard"
-              ? pathname === "/seeker/dashboard"
-              : pathname.startsWith(item.href);
+      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si}>
+            {section.label && <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-sidebar-text-muted/50">{section.label}</p>}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive =
+                  item.href === "/seeker/dashboard"
+                    ? pathname === "/seeker/dashboard"
+                    : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-active text-sidebar-text"
-                  : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-active text-sidebar-text"
+                        : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User menu */}

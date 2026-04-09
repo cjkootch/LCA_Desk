@@ -10,15 +10,36 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
 
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/supplier-portal/dashboard", icon: LayoutDashboard },
-  { label: "Opportunities", href: "/supplier-portal/opportunities", icon: Briefcase },
-  { label: "My Responses", href: "/supplier-portal/responses", icon: FileText },
-  { label: "Analytics", href: "/supplier-portal/analytics", icon: BarChart3 },
-  { label: "Training", href: "/supplier-portal/training", icon: GraduationCap },
-  { label: "Notifications", href: "/supplier-portal/notifications", icon: Bell },
-  { label: "Profile", href: "/supplier-portal/profile", icon: UserCog },
-  { label: "Settings", href: "/supplier-portal/settings", icon: Settings },
+interface NavSection { label?: string; items: { label: string; href: string; icon: React.ElementType }[] }
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: "Dashboard", href: "/supplier-portal/dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { label: "Opportunities", href: "/supplier-portal/opportunities", icon: Briefcase },
+      { label: "My Responses", href: "/supplier-portal/responses", icon: FileText },
+      { label: "Analytics", href: "/supplier-portal/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { label: "Training", href: "/supplier-portal/training", icon: GraduationCap },
+      { label: "Company Profile", href: "/supplier-portal/profile", icon: UserCog },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { label: "Notifications", href: "/supplier-portal/notifications", icon: Bell },
+      { label: "Settings", href: "/supplier-portal/settings", icon: Settings },
+    ],
+  },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -51,18 +72,25 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(item => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-                className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
-                )}>
-                <item.icon className="h-4 w-4" />{item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {NAV_SECTIONS.map((section, si) => (
+            <div key={si}>
+              {section.label && <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-white/30">{section.label}</p>}
+              <div className="space-y-0.5">
+                {section.items.map(item => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
+                      className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                      )}>
+                      <item.icon className="h-4 w-4" />{item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-white/10 px-3 py-4">
