@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
+import { PromoCTA } from "@/components/shared/PromoCTA";
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Briefcase, FileText, Bookmark, TrendingUp, CheckCircle, XCircle,
@@ -287,6 +288,26 @@ export default function SeekerDashboard() {
             </div>
           </div>
         )}
+
+        {/* CTA tiles */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PromoCTA
+            variant="accent"
+            title="Build Your Resume"
+            description="Create a professional resume that highlights your petroleum sector experience and LCA compliance knowledge."
+            tags={["3 Templates", "Export PDF", "Auto-fill from Profile"]}
+            buttonText="Resume Builder"
+            buttonHref="/seeker/resume"
+          />
+          <PromoCTA
+            variant="dark"
+            title="Get Certified"
+            description="Complete compliance courses to earn badges that boost your profile visibility with employers."
+            tags={["Free Courses", "Earn Badges", "Stand Out"]}
+            buttonText="Start Learning"
+            buttonHref="/seeker/learn"
+          />
+        </div>
 
         {/* Industry News */}
         <IndustryNewsFeed userType="seeker" />

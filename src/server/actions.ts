@@ -5702,6 +5702,7 @@ export async function fetchSupplierDashboard() {
       employeeCount: profile.employeeCount,
       yearEstablished: profile.yearEstablished,
       isGuyaneseOwned: profile.isGuyaneseOwned,
+      logoUrl: profile.logoUrl,
     },
     stats: {
       totalResponses: responses.length,

@@ -27,6 +27,13 @@
   --sidebar-text-muted: rgba(255, 255, 255, 0.6);
   --sidebar-hover: rgba(255, 255, 255, 0.1);
   --sidebar-active: rgba(255, 255, 255, 0.15);
+  /* Extended palette — complementary to emerald/gold */
+  --slate-dark: #1E293B;
+  --slate-medium: #334155;
+  --teal: #0D9488;
+  --teal-light: #F0FDFA;
+  --sky: #0284C7;
+  --sky-light: #F0F9FF;
 }
 
 @theme inline {

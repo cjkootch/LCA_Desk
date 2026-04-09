@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
+import { CompanyIdentity } from "@/components/shared/CompanyIdentity";
+import { PromoCTA } from "@/components/shared/PromoCTA";
 import Link from "next/link";
 import {
   Shield, Briefcase, FileText, TrendingUp, ArrowRight,
@@ -40,6 +42,19 @@ export default function SupplierDashboard() {
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
       <AnnouncementBanner userRole="supplier" />
+
+      {/* Company identity */}
+      <div className="mb-6">
+        <CompanyIdentity
+          name={profile.legalName || "Your Company"}
+          subtitle={profile.tradingName ? `t/a ${profile.tradingName}` : undefined}
+          certId={profile.lcsCertId || undefined}
+          status={isExpired ? "expired" : profile.lcsVerified ? "active" : "pending"}
+          planName={isPro ? "Supplier Pro" : "Starter"}
+          avatarUrl={profile.logoUrl || undefined}
+        />
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-heading font-bold text-text-primary">{profile.legalName || "Supplier Dashboard"}</h1>
@@ -176,6 +191,27 @@ export default function SupplierDashboard() {
           {profile.responsesThisMonth}/3 responses used this month · <Link href="/supplier-portal/settings" className="text-accent hover:text-accent-hover">Upgrade for unlimited</Link>
         </div>
       )}
+
+      {/* CTA tiles */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        {!isPro && (
+          <PromoCTA
+            variant="accent"
+            title="Upgrade to Supplier Pro"
+            description="Unlimited responses, profile analytics, priority placement, and direct contact visibility."
+            tags={["Unlimited Responses", "Analytics", "Priority Placement"]}
+            buttonText="Upgrade Now"
+            buttonHref="/supplier-portal/settings"
+          />
+        )}
+        <PromoCTA
+          variant="dark"
+          title="Complete Your Profile"
+          description="Companies with complete profiles get 3x more visibility. Add your capability statement and service categories."
+          buttonText="Edit Profile"
+          buttonHref="/supplier-portal/profile"
+        />
+      </div>
 
       {/* Industry News */}
       <IndustryNewsFeed userType="supplier" />

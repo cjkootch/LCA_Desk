@@ -8,6 +8,8 @@ import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
+import { CompanyIdentity } from "@/components/shared/CompanyIdentity";
+import { PromoCTA } from "@/components/shared/PromoCTA";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { SectionHeader } from "@/components/dashboard/shared/SectionHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -19,7 +21,7 @@ import Link from "next/link";
 import { Building2, FileText, AlertTriangle, TrendingUp, Plus, GraduationCap, Clock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
-import { fetchEntities, fetchComplianceHealth } from "@/server/actions";
+import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
 import type { Entity } from "@/types/database.types";
@@ -35,6 +37,9 @@ export default function DashboardPage() {
   const [entities, setEntities] = useState<Entity[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [health, setHealth] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [ctx, setCtx] = useState<any>(null);
+  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -46,6 +51,8 @@ export default function DashboardPage() {
       } catch {}
       setLoading(false);
       fetchComplianceHealth().then(setHealth).catch(() => {});
+      fetchUserContext().then(setCtx).catch(() => {});
+      fetchPlanAndUsage().then(p => setIsPro(p.effectivePlan === "pro" || p.effectivePlan === "enterprise")).catch(() => {});
     };
     load();
   }, []);
@@ -75,6 +82,20 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-8">
       <AnnouncementBanner userRole="filer" />
+
+      {/* Company identity */}
+      {ctx && (
+        <div className="mb-6">
+          <CompanyIdentity
+            name={ctx.tenant?.name || "Your Company"}
+            subtitle={entities.length > 0 ? `${entities.length} entit${entities.length === 1 ? "y" : "ies"} · ${ctx.tenant?.jurisdiction?.name || "Guyana"}` : undefined}
+            certId={entities[0]?.lcs_certificate_id || undefined}
+            status={ctx.billing?.state === "active" ? "active" : ctx.billing?.state === "trial" ? "trial" : ctx.billing?.state === "locked" ? "expired" : "active"}
+            planName={ctx.plan ? ctx.plan.charAt(0).toUpperCase() + ctx.plan.slice(1) : undefined}
+          />
+        </div>
+      )}
+
       {/* Hero */}
       <DashboardHero
         title={`${greeting}`}
@@ -187,6 +208,37 @@ export default function DashboardPage() {
               <RecentActivity />
               <IndustryNewsFeed userType="filer" />
             </div>
+          </div>
+
+          {/* CTA tiles */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+            {!isPro && (
+              <PromoCTA
+                variant="accent"
+                title="Unlock AI Compliance Tools"
+                description="AI Narrative Drafting, Compliance Gap Detection, and unlimited expert chat."
+                tags={["AI Drafts", "Compliance Scan", "Expert Chat"]}
+                buttonText="Upgrade to Professional"
+                buttonHref="/dashboard/settings/billing"
+              />
+            )}
+            <PromoCTA
+              variant="dark"
+              title="Managed Compliance Service"
+              description="Let our team handle data collection, report preparation, and Secretariat submission on your behalf."
+              tags={["Report Preparation", "Submission Handling", "Audit Defense"]}
+              buttonText="Get a Quote"
+              onButtonClick={() => window.open("mailto:hello@lcadesk.com?subject=Managed%20Service%20Inquiry", "_blank")}
+            />
+            {isPro && (
+              <PromoCTA
+                variant="gold"
+                title="Training & Certification"
+                description="Complete compliance courses to strengthen your team's understanding of the Local Content Act."
+                buttonText="Browse Courses"
+                buttonHref="/dashboard/training"
+              />
+            )}
           </div>
         </>
       )}
