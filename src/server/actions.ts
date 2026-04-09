@@ -4937,7 +4937,10 @@ export async function fetchAdminStats() {
   const allTenants = await db.select({
     id: tenants.id, name: tenants.name, slug: tenants.slug, plan: tenants.plan, trialEndsAt: tenants.trialEndsAt, isDemo: tenants.isDemo,
     stripeSubscriptionId: tenants.stripeSubscriptionId, createdAt: tenants.createdAt,
-  }).from(tenants).orderBy(desc(tenants.createdAt)).limit(200);
+    jurisdictionCode: jurisdictions.code, jurisdictionName: jurisdictions.name,
+  }).from(tenants)
+    .leftJoin(jurisdictions, eq(tenants.jurisdictionId, jurisdictions.id))
+    .orderBy(desc(tenants.createdAt)).limit(200);
   const paying = allTenants.filter(t => t.stripeSubscriptionId);
   const trialing = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) > now && !t.stripeSubscriptionId);
   const expired = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) <= now && !t.stripeSubscriptionId);

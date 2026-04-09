@@ -22,6 +22,7 @@ export default function AdminPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
   const [hideDemo, setHideDemo] = useState(false);
+  const [jurisdictionFilter, setJurisdictionFilter] = useState("all");
   const router = useRouter();
 
   useEffect(() => {
@@ -63,21 +64,26 @@ export default function AdminPage() {
       <div className="p-4 sm:p-6 max-w-7xl">
 
         {/* Filters */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
           <button
             onClick={() => setHideDemo(!hideDemo)}
             className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
               hideDemo ? "bg-gold text-white" : "bg-bg-primary text-text-muted hover:text-text-primary"
             )}
           >
-            {hideDemo ? "Showing Real Only" : "Show All (incl. Demo)"}
+            {hideDemo ? "Real Only" : "All (incl. Demo)"}
           </button>
-          <span className="text-xs text-text-muted">
-            {hideDemo
-              ? `${data.users.latest.filter((u: {isDemo: boolean | null}) => !u.isDemo).length} real users`
-              : `${data.users.total} total users (${data.users.latest.filter((u: {isDemo: boolean | null}) => u.isDemo).length} demo)`
-            }
-          </span>
+          <div className="h-4 w-px bg-border" />
+          {["all", ...new Set(data.tenants.list.map((t: { jurisdictionCode: string | null }) => t.jurisdictionCode).filter(Boolean))].map((j: string) => (
+            <button key={j}
+              onClick={() => setJurisdictionFilter(j)}
+              className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                jurisdictionFilter === j ? "bg-accent text-white" : "bg-bg-primary text-text-muted hover:text-text-primary"
+              )}
+            >
+              {j === "all" ? "All Jurisdictions" : j}
+            </button>
+          ))}
         </div>
 
         {/* Top stats */}
@@ -274,16 +280,20 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Company</th>
+                    <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Jurisdiction</th>
                     <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Plan</th>
-                    <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Trial</th>
-                    <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Stripe</th>
+                    <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Status</th>
                     <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.tenants.list
-                    .filter((t: { isDemo: boolean | null }) => hideDemo ? !t.isDemo : true)
-                    .map((t: { id: string; name: string; slug: string | null; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; createdAt: Date | null; isDemo: boolean | null }) => {
+                    .filter((t: { isDemo: boolean | null; jurisdictionCode: string | null }) => {
+                      if (hideDemo && t.isDemo) return false;
+                      if (jurisdictionFilter !== "all" && t.jurisdictionCode !== jurisdictionFilter) return false;
+                      return true;
+                    })
+                    .map((t: { id: string; name: string; slug: string | null; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; createdAt: Date | null; isDemo: boolean | null; jurisdictionCode: string | null }) => {
                     const trialActive = t.trialEndsAt && new Date(t.trialEndsAt) > new Date();
                     const trialExpired = t.trialEndsAt && new Date(t.trialEndsAt) <= new Date();
                     return (
@@ -293,18 +303,21 @@ export default function AdminPage() {
                           {t.isDemo && <span className="ml-1.5 text-[10px] text-warning font-normal">demo</span>}
                         </td>
                         <td className="py-2 px-3">
+                          {t.jurisdictionCode
+                            ? <Badge variant="default" className="text-xs">{t.jurisdictionCode}</Badge>
+                            : <span className="text-text-muted text-xs">—</span>
+                          }
+                        </td>
+                        <td className="py-2 px-3">
                           <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
                             {t.plan || "lite"}
                           </Badge>
                         </td>
                         <td className="py-2 px-3">
-                          {trialActive && <Badge variant="accent" className="text-xs">Active</Badge>}
-                          {trialExpired && !t.stripeSubscriptionId && <Badge variant="danger" className="text-xs">Expired</Badge>}
-                          {!t.trialEndsAt && <span className="text-text-muted text-xs">—</span>}
-                        </td>
-                        <td className="py-2 px-3">
                           {t.stripeSubscriptionId
                             ? <Badge variant="success" className="text-xs">Paying</Badge>
+                            : trialActive ? <Badge variant="accent" className="text-xs">Trial</Badge>
+                            : trialExpired ? <Badge variant="danger" className="text-xs">Expired</Badge>
                             : <span className="text-text-muted text-xs">Free</span>
                           }
                         </td>
