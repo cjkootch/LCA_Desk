@@ -51,7 +51,7 @@ import {
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
-import { entitySchema, expenditureSchema, employmentSchema, capacitySchema, employeeSchema, jobPostingSchema, supplierSchema } from "@/server/schemas";
+import { entitySchema } from "@/server/schemas";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
