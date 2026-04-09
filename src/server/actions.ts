@@ -3708,7 +3708,7 @@ export async function fetchComplianceHealth() {
   const nonTechnical = empByCategory("Non-Technical");
 
   // Supplier cert expiry warnings
-  const supplierCerts = [...new Set(allExp.filter(e => e.supplierCertificateId).map(e => e.supplierCertificateId))];
+  const supplierCerts = [...new Set(realExp.filter(e => e.supplierCertificateId).map(e => e.supplierCertificateId))];
   const expiringCerts: Array<{ certId: string; supplierName: string; expiresAt: string; daysLeft: number }> = [];
   for (const certId of supplierCerts) {
     if (!certId) continue;
@@ -5319,11 +5319,15 @@ export async function addSecretariatMember(officeId: string, email: string, role
 }
 
 export async function fetchSubmissionDetail(periodId: string) {
-  await getSecretariatContext(); // auth check
+  await getSecretariatContext();
+  const demo = await getDemoFilter();
 
   const [period] = await db.select().from(reportingPeriods)
     .where(eq(reportingPeriods.id, periodId)).limit(1);
   if (!period) throw new Error("Submission not found");
+
+  // Demo boundary: prevent cross-demo/real data access
+  if (!demo.includeTenant(period.tenantId)) throw new Error("Submission not found");
 
   const [entity] = await db.select().from(entities)
     .where(eq(entities.id, period.entityId)).limit(1);
@@ -5487,20 +5491,20 @@ export async function fetchSecretariatAnalytics() {
 
   // Unique filers
   const uniqueTenants = new Set(realSubmitted.map(p => p.tenantId)).size;
-  const uniqueEntities = new Set(allSubmitted.map(p => p.entityId)).size;
+  const uniqueEntities = new Set(realSubmitted.map(p => p.entityId)).size;
 
   // Staff hours saved estimate:
   // Manual review of a half-yearly report: ~4 hours (data entry check, cross-reference, calculations)
   // LCA Desk automated review: ~15 minutes
   // Net saving: ~3.75 hours per submission
   const hoursPerSubmission = 3.75;
-  const staffHoursSaved = Math.round(allSubmitted.length * hoursPerSubmission);
+  const staffHoursSaved = Math.round(realSubmitted.length * hoursPerSubmission);
 
   // Guyanese supplier count (unique companies)
-  const guyaneseSupplierNames = new Set(allExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").map(e => e.supplierName));
+  const guyaneseSupplierNames = new Set(realExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").map(e => e.supplierName));
 
   return {
-    totalSubmissions: allSubmitted.length,
+    totalSubmissions: realSubmitted.length,
     uniqueFilers: uniqueTenants,
     uniqueEntities: uniqueEntities,
     overallLcRate,
@@ -5596,9 +5600,11 @@ export async function fetchFilingCompliance(fiscalYear: number, reportType: stri
 
 export async function fetchEntityFilingProfile(entityId: string) {
   await getSecretariatContext();
+  const demo = await getDemoFilter();
 
   const [entity] = await db.select().from(entities).where(eq(entities.id, entityId)).limit(1);
   if (!entity) throw new Error("Entity not found");
+  if (!demo.includeTenant(entity.tenantId)) throw new Error("Entity not found");
 
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, entity.tenantId)).limit(1);
 
@@ -5664,6 +5670,11 @@ export async function fetchEntityFilingProfile(entityId: string) {
 
 export async function fetchPeriodComparison(entityId: string) {
   await getSecretariatContext();
+  const demo = await getDemoFilter();
+
+  // Verify entity belongs to the right demo/real boundary
+  const [entity] = await db.select({ tenantId: entities.tenantId }).from(entities).where(eq(entities.id, entityId)).limit(1);
+  if (entity && !demo.includeTenant(entity.tenantId)) throw new Error("Not found");
 
   const periods = await db.select().from(reportingPeriods)
     .where(eq(reportingPeriods.entityId, entityId))
@@ -5763,8 +5774,9 @@ export async function fetchAmendmentRequests(periodId: string) {
 
 export async function fetchSecretariatMarketIntel() {
   await getSecretariatContext();
+  const demo = await getDemoFilter();
 
-  // Opportunities data
+  // Opportunities data (public scraped data — not demo-filtered)
   const opportunities = await db.select().from(lcsOpportunities)
     .orderBy(desc(lcsOpportunities.postedDate)).limit(500);
 
@@ -5777,9 +5789,10 @@ export async function fetchSecretariatMarketIntel() {
     opportunityId: savedOpportunities.opportunityId,
   }).from(savedOpportunities).limit(2000);
 
-  // Job seeker stats
-  const seekers = await db.select({
+  // Job seeker stats (exclude demo seekers)
+  const allSeekers = await db.select({
     id: jobSeekerProfiles.id,
+    userId: jobSeekerProfiles.userId,
     employmentCategory: jobSeekerProfiles.employmentCategory,
     isGuyanese: jobSeekerProfiles.isGuyanese,
     educationLevel: jobSeekerProfiles.educationLevel,
@@ -5787,6 +5800,7 @@ export async function fetchSecretariatMarketIntel() {
     yearsExperience: jobSeekerProfiles.yearsExperience,
     locationPreference: jobSeekerProfiles.locationPreference,
   }).from(jobSeekerProfiles).limit(1000);
+  const seekers = allSeekers.filter(s => demo.includeUser(s.userId));
 
   // Job applications
   const applications = await db.select({
@@ -6632,8 +6646,8 @@ export async function fetchSecretariatTalentPool(filters?: {
   category?: string;
   guyaneseOnly?: boolean;
 }) {
-  // Secretariat sees everything — no plan gating
-  const profiles = await db
+  const demo = await getDemoFilter();
+  const allProfiles = await db
     .select({
       id: jobSeekerProfiles.id,
       userId: jobSeekerProfiles.userId,
@@ -6659,6 +6673,8 @@ export async function fetchSecretariatTalentPool(filters?: {
     .from(jobSeekerProfiles)
     .innerJoin(users, eq(jobSeekerProfiles.userId, users.id))
     .limit(500);
+
+  const profiles = allProfiles.filter(p => demo.includeUser(p.userId));
 
   // Get badges
   const allUserIds = profiles.map(p => p.userId);
@@ -6729,10 +6745,12 @@ export async function fetchSecretariatSupplierDirectory(filters?: {
 // ─── SECRETARIAT: DEADLINE CALENDAR ───────────────────────────
 
 export async function fetchSecretariatDeadlines() {
-  const periods = await db
+  const demo = await getDemoFilter();
+  const allPeriods = await db
     .select({
       id: reportingPeriods.id,
       entityId: reportingPeriods.entityId,
+      tenantId: entities.tenantId,
       reportType: reportingPeriods.reportType,
       periodStart: reportingPeriods.periodStart,
       periodEnd: reportingPeriods.periodEnd,
@@ -6749,6 +6767,7 @@ export async function fetchSecretariatDeadlines() {
     .innerJoin(tenants, eq(entities.tenantId, tenants.id))
     .orderBy(asc(reportingPeriods.dueDate));
 
+  const periods = allPeriods.filter(p => demo.includeTenant(p.tenantId));
   const now = new Date();
   return {
     periods,
@@ -6765,6 +6784,7 @@ export async function fetchSecretariatAuditTrail(filters?: {
   action?: string;
   limit?: number;
 }) {
+  const demo = await getDemoFilter();
   const rows = await db
     .select({
       id: auditLogs.id,
@@ -6786,7 +6806,7 @@ export async function fetchSecretariatAuditTrail(filters?: {
     .orderBy(desc(auditLogs.createdAt))
     .limit(filters?.limit || 200);
 
-  let filtered = rows;
+  let filtered = rows.filter(r => r.tenantId ? demo.includeTenant(r.tenantId) : true);
   if (filters?.action && filters.action !== "all") {
     filtered = filtered.filter(r => r.action === filters.action);
   }
@@ -6809,6 +6829,7 @@ export async function fetchSecretariatNotifications(filters?: {
   type?: string;
   limit?: number;
 }) {
+  const demo = await getDemoFilter();
   const rows = await db
     .select({
       id: notifications.id,
@@ -6828,7 +6849,7 @@ export async function fetchSecretariatNotifications(filters?: {
     .orderBy(desc(notifications.createdAt))
     .limit(filters?.limit || 200);
 
-  let filtered = rows;
+  let filtered = rows.filter(r => demo.includeUser(r.userId));
   if (filters?.type && filters.type !== "all") {
     filtered = filtered.filter(r => r.type === filters.type);
   }
@@ -6840,10 +6861,12 @@ export async function fetchSecretariatNotifications(filters?: {
 // ─── SECRETARIAT: DOCUMENT LIBRARY ────────────────────────────
 
 export async function fetchSecretariatDocuments() {
-  const subs = await db
+  const demo = await getDemoFilter();
+  const allSubs = await db
     .select({
       id: submissionLogs.id,
       entityId: submissionLogs.entityId,
+      tenantId: entities.tenantId,
       reportingPeriodId: submissionLogs.reportingPeriodId,
       submissionMethod: submissionLogs.submissionMethod,
       uploadedFileName: submissionLogs.uploadedFileName,
@@ -6861,5 +6884,5 @@ export async function fetchSecretariatDocuments() {
     .orderBy(desc(submissionLogs.createdAt))
     .limit(200);
 
-  return subs;
+  return allSubs.filter(s => demo.includeTenant(s.tenantId));
 }
