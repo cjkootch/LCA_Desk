@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { fetchActiveAnnouncements } from "@/server/actions";
-import { X, Megaphone, AlertTriangle, Info } from "lucide-react";
+import { X, AlertTriangle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+/* eslint-disable @next/next/no-img-element */
 
 interface AnnouncementBannerProps {
   userRole: "filer" | "supplier" | "seeker" | "secretariat";
@@ -38,64 +39,81 @@ export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
   if (visible.length === 0) return null;
 
   return (
-    <div className="space-y-2 mb-4">
+    <div className="space-y-3 mb-6">
       {visible.map((a: Announcement) => {
         const isUrgent = a.priority === "urgent";
         const isImportant = a.priority === "important";
+
+        // Urgent = red-tinted banner, important = amber-tinted, normal = dark teal
+        const bgClass = isUrgent
+          ? "bg-gradient-to-r from-red-900 to-red-800"
+          : isImportant
+          ? "bg-gradient-to-r from-amber-900 to-amber-800"
+          : "bg-gradient-to-r from-[#1a3a4a] to-[#2a4f5f]";
 
         return (
           <div
             key={a.id}
             className={cn(
-              "rounded-lg border px-4 py-3 flex items-start gap-3",
-              isUrgent && "bg-danger/5 border-danger/20",
-              isImportant && "bg-warning/5 border-warning/20",
-              !isUrgent && !isImportant && "bg-accent/5 border-accent/20"
+              "relative rounded-xl overflow-hidden",
+              bgClass
             )}
           >
-            <div className={cn(
-              "p-1.5 rounded-lg shrink-0 mt-0.5",
-              isUrgent && "bg-danger/10",
-              isImportant && "bg-warning/10",
-              !isUrgent && !isImportant && "bg-accent/10"
-            )}>
-              {isUrgent ? (
-                <AlertTriangle className="h-4 w-4 text-danger" />
-              ) : isImportant ? (
-                <AlertTriangle className="h-4 w-4 text-warning" />
-              ) : (
-                <Megaphone className="h-4 w-4 text-accent" />
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className={cn(
-                "text-sm font-semibold",
-                isUrgent ? "text-danger" : isImportant ? "text-warning" : "text-text-primary"
-              )}>
-                {a.title}
-              </p>
-              <p className="text-xs text-text-secondary mt-0.5 whitespace-pre-line">{a.body}</p>
-              {a.authorName && (
-                <div className="flex items-center gap-1.5 mt-2">
-                  <div className="h-5 w-5 rounded-full bg-bg-primary flex items-center justify-center overflow-hidden shrink-0">
-                    {a.authorId ? (
-                      <img src={`/api/avatar?id=${a.authorId}`} alt="" className="h-full w-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = a.authorName?.charAt(0) || "S"; }} />
-                    ) : (
-                      <span className="text-[10px] font-bold text-text-muted">{a.authorName?.charAt(0)}</span>
-                    )}
+            <div className="flex items-center">
+              {/* Text content */}
+              <div className="flex-1 min-w-0 px-5 py-4 sm:px-6 sm:py-5">
+                {isUrgent && (
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-300" />
+                    <span className="text-xs font-semibold text-red-300 uppercase tracking-wider">Urgent</span>
                   </div>
-                  <p className="text-xs text-text-muted">
-                    {a.authorName}, Local Content Secretariat
-                  </p>
+                )}
+                <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
+                  {a.title}
+                </h3>
+                <p className="text-sm text-white/70 mt-1 leading-relaxed max-w-xl whitespace-pre-line">
+                  {a.body}
+                </p>
+                {a.ctaUrl ? (
+                  <a href={a.ctaUrl} className="inline-flex items-center gap-1 mt-2.5 text-sm font-semibold text-white underline underline-offset-2 decoration-white/40 hover:decoration-white transition-colors">
+                    {a.ctaLabel || "Learn more"} <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                ) : a.authorName ? (
+                  <div className="flex items-center gap-1.5 mt-3">
+                    <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
+                      {a.authorId ? (
+                        <img src={`/api/avatar?id=${a.authorId}`} alt="" className="h-full w-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = a.authorName?.charAt(0) || "S"; }} />
+                      ) : (
+                        <span className="text-[10px] font-bold text-white/80">{a.authorName?.charAt(0)}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-white/50">
+                      {a.authorName}, Local Content Secretariat
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Illustration — hidden on small screens */}
+              {!isUrgent && (
+                <div className="hidden sm:block shrink-0 w-36 md:w-44 self-stretch relative">
+                  <img
+                    src="/filing-illustration.svg"
+                    alt=""
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-28 md:h-32 w-auto opacity-80 pointer-events-none select-none"
+                  />
                 </div>
               )}
             </div>
 
+            {/* Dismiss button */}
             {!isUrgent && (
-              <button onClick={() => dismiss(a.id)} className="text-text-muted hover:text-text-secondary shrink-0 mt-0.5">
-                <X className="h-4 w-4" />
+              <button
+                onClick={() => dismiss(a.id)}
+                className="absolute top-3 right-3 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>
