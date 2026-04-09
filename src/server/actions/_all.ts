@@ -51,6 +51,7 @@ import {
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
+import { entitySchema, expenditureSchema, employmentSchema, capacitySchema, employeeSchema, jobPostingSchema, supplierSchema } from "@/server/schemas";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -189,6 +190,8 @@ function mapEntityData(data: Record<string, unknown>) {
 }
 
 export async function addEntity(data: Record<string, unknown>) {
+  const validated = entitySchema.safeParse(data);
+  if (!validated.success) throw new Error(`Invalid entity data: ${validated.error.issues.map(i => i.message).join(", ")}`);
   const { tenantId, tenant, plan } = await getSessionTenant();
   // Check entity limit
   const existing = await db.select({ id: entities.id }).from(entities).where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
@@ -636,6 +639,8 @@ export async function addExpenditure(
   entityId: string,
   data: Record<string, unknown>
 ) {
+  // Validate critical fields
+  if (!data.supplier_name || typeof data.supplier_name !== "string") throw new Error("Supplier name is required");
   const { tenantId, userId } = await getSessionTenant();
   const [record] = await db
     .insert(expenditureRecords)
@@ -721,6 +726,7 @@ export async function addEmployment(
   entityId: string,
   data: Record<string, unknown>
 ) {
+  if (!data.employment_category || typeof data.employment_category !== "string") throw new Error("Employment category is required");
   const { tenantId, userId } = await getSessionTenant();
   const [record] = await db
     .insert(employmentRecords)
