@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updates: any = { isDemo: false };
+    const updates: any = {};
+
+    if (typeof body.isDemo === "boolean") updates.isDemo = body.isDemo;
 
     if (plan) {
       updates.plan = plan;
