@@ -14,7 +14,7 @@ const registerSchema = z.object({
   companyName: z.string().optional(),
   accountType: z.enum(["self", "others"]).optional(),
   // Role-based registration
-  role: z.enum(["filer", "job_seeker", "supplier"]).default("filer"),
+  role: z.enum(["filer", "job_seeker", "supplier", "secretariat"]).default("filer"),
   // Job seeker fields
   currentJobTitle: z.string().optional(),
   employmentCategory: z.string().optional(),
@@ -122,7 +122,17 @@ export async function POST(req: NextRequest) {
           );
         }
       }
-    } catch {}
+    } catch (err) { console.error("Invite acceptance failed:", err); }
+
+    // ─── SECRETARIAT REGISTRATION (invite only, no self-reg) ─────
+    if (role === "secretariat") {
+      // Secretariat users only register via invite link — invite acceptance
+      // above handles team join. Just redirect to login.
+      return NextResponse.json(
+        { success: true, userId: user.id, role: "secretariat", redirectTo: "/auth/login" },
+        { headers: cors }
+      );
+    }
 
     // ─── FILER REGISTRATION ──────────────────────────────────────
     if (role === "filer") {

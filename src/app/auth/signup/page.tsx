@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Building2, Users, ArrowRight, ArrowLeft, Truck, Search } from "lucide-react";
 
-type UserRole = "filer" | "supplier" | "job_seeker" | null;
+type UserRole = "filer" | "supplier" | "job_seeker" | "secretariat" | null;
 type AccountType = "self" | "others" | null;
 
 function SignupContent() {
@@ -76,7 +76,8 @@ function SignupContent() {
         toast.success("Account created!");
         if (role === "job_seeker") window.location.href = "/seeker/dashboard";
         else if (role === "supplier") window.location.href = "/supplier-portal/dashboard";
-        else window.location.href = "/dashboard/activate"; // Filers must add CC before trial starts
+        else if (role === "secretariat") window.location.href = "/secretariat/dashboard";
+        else window.location.href = inviteToken ? "/auth/login?registered=1" : "/dashboard/activate";
       }
     } catch {
       toast.error("Registration failed");

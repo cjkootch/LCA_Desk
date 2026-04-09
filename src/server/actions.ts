@@ -1068,7 +1068,12 @@ export async function inviteTeamMember(data: { email: string; role: string }) {
     return member;
   }
 
-  // User doesn't exist — create a pending invite
+  // User doesn't exist — check for existing pending invite
+  const existingInvite = await db.select({ id: teamInvites.id }).from(teamInvites)
+    .where(and(eq(teamInvites.email, data.email), eq(teamInvites.tenantId, tenantId), eq(teamInvites.status, "pending")))
+    .limit(1);
+  if (existingInvite.length > 0) throw new Error("An invitation has already been sent to this email.");
+
   const { randomUUID } = await import("crypto");
   const token = randomUUID();
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
@@ -1105,9 +1110,15 @@ export async function inviteTeamMember(data: { email: string; role: string }) {
 }
 
 export async function acceptPendingInvites(userId: string, email: string) {
+  // Security: verify the caller owns this userId (called from register route with fresh user,
+  // or verify via session). Accept only if email matches a real pending invite.
+  const session = await auth();
+  if (session?.user?.id && session.user.id !== userId) throw new Error("Unauthorized");
+
   const pending = await db.select().from(teamInvites)
     .where(and(eq(teamInvites.email, email), eq(teamInvites.status, "pending")));
 
+  let accepted = 0;
   for (const invite of pending) {
     if (new Date(invite.expiresAt) < new Date()) {
       await db.update(teamInvites).set({ status: "expired" }).where(eq(teamInvites.id, invite.id));
@@ -1115,7 +1126,6 @@ export async function acceptPendingInvites(userId: string, email: string) {
     }
 
     if (invite.tenantId) {
-      // Filer team invite
       const existing = await db.query.tenantMembers.findFirst({
         where: and(eq(tenantMembers.tenantId, invite.tenantId), eq(tenantMembers.userId, userId)),
       });
@@ -1125,20 +1135,26 @@ export async function acceptPendingInvites(userId: string, email: string) {
     }
 
     if (invite.secretariatOfficeId) {
-      // Secretariat invite
-      const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, userId)).limit(1);
-      const currentRole = userData?.userRole || "";
-      if (!currentRole.includes("secretariat")) {
-        const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
-        await db.update(users).set({ userRole: newRole }).where(eq(users.id, userId));
+      // Check for existing membership to avoid duplicates
+      const existingMember = await db.select({ id: secretariatMembers.id }).from(secretariatMembers)
+        .where(and(eq(secretariatMembers.officeId, invite.secretariatOfficeId), eq(secretariatMembers.userId, userId)))
+        .limit(1);
+      if (existingMember.length === 0) {
+        const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, userId)).limit(1);
+        const currentRole = userData?.userRole || "";
+        if (!currentRole.includes("secretariat")) {
+          const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
+          await db.update(users).set({ userRole: newRole }).where(eq(users.id, userId));
+        }
+        await db.insert(secretariatMembers).values({ officeId: invite.secretariatOfficeId, userId, role: invite.role });
       }
-      await db.insert(secretariatMembers).values({ officeId: invite.secretariatOfficeId, userId, role: invite.role });
     }
 
     await db.update(teamInvites).set({ status: "accepted", acceptedAt: new Date() }).where(eq(teamInvites.id, invite.id));
+    accepted++;
   }
 
-  return pending.filter(i => new Date(i.expiresAt) >= new Date()).length;
+  return accepted;
 }
 
 export async function removeTeamMember(memberId: string) {
@@ -1691,7 +1707,7 @@ export async function fetchNotifications(limit: number = 20) {
     .select()
     .from(notifications)
     .where(eq(notifications.userId, session.user.id))
-    .orderBy(notifications.createdAt)
+    .orderBy(desc(notifications.createdAt))
     .limit(limit);
 }
 
@@ -5192,10 +5208,17 @@ export async function addSecretariatMember(officeId: string, email: string, role
   if (!session?.user?.id) throw new Error("Not authenticated");
   const ctx = await getSecretariatContext();
   if (ctx.role !== "admin") throw new Error("Only secretariat admins can add members");
+  if (officeId !== ctx.officeId) throw new Error("Cannot modify another office");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
 
   if (user) {
+    // Check for existing membership
+    const existingMember = await db.select({ id: secretariatMembers.id }).from(secretariatMembers)
+      .where(and(eq(secretariatMembers.officeId, officeId), eq(secretariatMembers.userId, user.id)))
+      .limit(1);
+    if (existingMember.length > 0) throw new Error("This user is already a member.");
+
     // User exists — add directly
     const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, user.id)).limit(1);
     const currentRole = userData?.userRole || "";
@@ -5217,7 +5240,12 @@ export async function addSecretariatMember(officeId: string, email: string, role
     return { added: true };
   }
 
-  // User doesn't exist — create a pending invite
+  // User doesn't exist — check for existing pending invite
+  const existingInvite = await db.select({ id: teamInvites.id }).from(teamInvites)
+    .where(and(eq(teamInvites.email, email), eq(teamInvites.secretariatOfficeId, officeId), eq(teamInvites.status, "pending")))
+    .limit(1);
+  if (existingInvite.length > 0) throw new Error("An invitation has already been sent to this email.");
+
   const { randomUUID } = await import("crypto");
   const token = randomUUID();
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
@@ -5449,6 +5477,7 @@ export async function fetchSecretariatAnalytics() {
 
 export async function fetchFilingCompliance(fiscalYear: number, reportType: string) {
   await getSecretariatContext();
+  const { calculateDeadlines: calcDeadlines } = await import("@/lib/compliance/deadlines");
 
   // Get ALL entities that should file (all active entities across all tenants)
   const allEntities = await db.select({
@@ -5483,8 +5512,7 @@ export async function fetchFilingCompliance(fiscalYear: number, reportType: stri
       else status = "in_progress";
     } else {
       // No period created — check if deadline has passed
-      const { calculateDeadlines } = require("@/lib/compliance/deadlines");
-      const deadlines = calculateDeadlines("GY", fiscalYear);
+      const deadlines = calcDeadlines("GY", fiscalYear);
       const deadline = deadlines.find((d: { type: string }) => d.type === reportType);
       if (deadline && deadline.due_date < now) status = "overdue";
     }

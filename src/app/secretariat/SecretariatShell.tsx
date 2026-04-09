@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen, GraduationCap } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
-import { Shield as ShieldIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchSecretariatOfficeSettings } from "@/server/actions";
@@ -169,7 +168,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         title="Compliance Analyst"
         subtitle="Regulatory AI with sector-wide data"
         accentColor="bg-[#1e293b]"
-        icon={ShieldIcon}
+        icon={Shield}
         quickQuestions={[
           "Which companies are below employment minimums?",
           "Summarize this period's sector compliance posture",
