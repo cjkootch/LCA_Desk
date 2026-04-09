@@ -774,6 +774,7 @@ export const jobSeekerProfiles = pgTable(
     lcaAttestationDate: timestamp("lca_attestation_date"), // when they attested their status
     lcaAttestationText: text("lca_attestation_text"), // stored attestation
     cvUrl: text("cv_url"),
+    resumeContent: text("resume_content"), // full resume text from builder
     skills: text("skills").array(),
     locationPreference: text("location_preference").default("Any"),
     contractTypePreference: text("contract_type_preference"),

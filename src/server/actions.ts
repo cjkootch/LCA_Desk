@@ -2305,7 +2305,9 @@ export async function updateMyProfile(data: {
   locationPreference?: string;
   contractTypePreference?: string;
   alertsEnabled?: boolean;
+  profileVisible?: boolean;
   name?: string;
+  resumeContent?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -2333,6 +2335,8 @@ export async function updateMyProfile(data: {
       skills: data.skills ?? undefined,
       locationPreference: data.locationPreference ?? undefined,
       contractTypePreference: data.contractTypePreference ?? undefined,
+      profileVisible: data.profileVisible ?? undefined,
+      resumeContent: data.resumeContent ?? undefined,
       updatedAt: new Date(),
   };
 

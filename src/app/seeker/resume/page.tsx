@@ -21,6 +21,7 @@ export default function ResumeBuilderPage() {
   const [enhancing, setEnhancing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [resumeStyle, setResumeStyle] = useState<"modern" | "traditional" | "compact">("modern");
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
@@ -144,6 +145,7 @@ export default function ResumeBuilderPage() {
           headline: profile?.currentJobTitle || "",
           content: resumeText,
           skills,
+          style: resumeStyle,
         }),
       });
       if (!res.ok) throw new Error();
@@ -157,6 +159,18 @@ export default function ResumeBuilderPage() {
       toast.success("Resume PDF downloaded");
     } catch { toast.error("Failed to export PDF"); }
     setExporting(false);
+  };
+
+  const handleSaveToProfile = async () => {
+    if (!resumeText.trim()) { toast.error("No resume content to save"); return; }
+    try {
+      await updateMyProfile({
+        resumeContent: resumeText,
+        skills: skills.length > 0 ? skills : undefined,
+        profileVisible: true,
+      });
+      toast.success("Resume saved to profile and Talent Pool enabled!");
+    } catch { toast.error("Failed to save to profile"); }
   };
 
   const addSkill = () => {
@@ -186,6 +200,9 @@ export default function ResumeBuilderPage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleExportPdf} loading={exporting} className="gap-1.5">
               <Download className="h-3.5 w-3.5" /> Export PDF
+            </Button>
+            <Button size="sm" onClick={handleSaveToProfile} className="gap-1.5">
+              <User className="h-3.5 w-3.5" /> Save to Talent Pool
             </Button>
           </div>
         }
@@ -244,6 +261,25 @@ export default function ResumeBuilderPage() {
           <Button onClick={handleExtractSkills} loading={extracting} variant="outline" className="gap-1.5">
             <RefreshCw className="h-4 w-4" /> Extract Skills to Profile
           </Button>
+        </div>
+
+        {/* Resume style selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-text-muted font-medium">Style:</span>
+          {([
+            { id: "modern" as const, label: "Modern", desc: "Clean layout, accent colors" },
+            { id: "traditional" as const, label: "Traditional", desc: "Classic format, serif-ready" },
+            { id: "compact" as const, label: "Compact", desc: "Dense, single page" },
+          ]).map(s => (
+            <button key={s.id} onClick={() => setResumeStyle(s.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+                resumeStyle === s.id
+                  ? "border-accent bg-accent-light text-accent"
+                  : "border-border text-text-muted hover:border-accent/30"
+              }`}>
+              {s.label}
+            </button>
+          ))}
         </div>
 
         {/* Editor / Preview tabs */}
