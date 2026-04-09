@@ -85,6 +85,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (token as any).isSuperAdmin = user.isSuperAdmin ?? false;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
