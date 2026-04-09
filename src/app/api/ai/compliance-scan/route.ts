@@ -1,6 +1,7 @@
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { auth } from "@/auth";
 import { NextRequest } from "next/server";
+import { incrementUsage } from "@/server/actions";
 
 const SYSTEM_PROMPT = `You are the LCA Desk Compliance Scanner. You analyze submission data for Local Content Half-Yearly Reports and identify issues the Secretariat is likely to scrutinize.
 
@@ -35,6 +36,9 @@ export async function POST(req: NextRequest) {
     if (!data) {
       return new Response("Missing data", { status: 400 });
     }
+
+    // Track as AI draft usage (compliance scan is an AI-powered feature)
+    try { await incrementUsage("aiDraftsUsed"); } catch {}
 
     const anthropic = getAnthropicClient();
 

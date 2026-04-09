@@ -2,6 +2,7 @@ import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { buildNarrativePrompt } from "@/lib/ai/prompts";
 import { auth } from "@/auth";
 import { NextRequest } from "next/server";
+import { incrementUsage } from "@/server/actions";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
     if (!section || !data) {
       return new Response("Missing required fields: section, data", { status: 400 });
     }
+
+    // Track AI draft usage
+    await incrementUsage("aiDraftsUsed");
 
     const prompt = buildNarrativePrompt(section, data, jurisdiction_code || "GY");
     const anthropic = getAnthropicClient();

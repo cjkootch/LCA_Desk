@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { tenantMembers, entities, reportingPeriods, expenditureRecords, employmentRecords } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest } from "next/server";
+import { incrementUsage } from "@/server/actions";
 
 const BASE_PROMPT = `You are the LCA Expert — an AI assistant built into LCA Desk, trained on the complete Local Content Act No. 18 of 2021 (Guyana), all Local Content Secretariat guidelines including Version 4.1 (June 2025), and the official Half-Yearly Report Template Version 4.0.
 
@@ -110,6 +111,11 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (session?.user?.id) {
       userContext = await buildUserContext(session.user.id);
+    }
+
+    // Track usage
+    if (session?.user?.id) {
+      try { await incrementUsage("aiChatMessagesUsed"); } catch {}
     }
 
     const anthropic = getAnthropicClient();
