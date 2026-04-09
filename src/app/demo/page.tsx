@@ -13,6 +13,7 @@ import {
   User, Search, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const DEMO_USERS = [
   {
@@ -188,7 +189,7 @@ function DemoContent() {
           <div className="text-center z-10 px-12">
             <Image src="/logo-white.svg" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
             <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
-              AI-powered local content compliance for Guyana&apos;s petroleum sector
+              Multi-jurisdiction local content compliance — built for the petroleum sector
             </p>
           </div>
         </div>
@@ -218,36 +219,42 @@ function DemoContent() {
 
       {/* Cards — overlap the dark header */}
       <div className="max-w-4xl mx-auto px-6 -mt-4 pb-12">
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-3">
           {DEMO_USERS.map((user) => (
-            <Card
+            <button
               key={user.id}
-              className="hover:shadow-lg hover:border-accent/20 transition-all cursor-pointer bg-white"
+              className="group text-left rounded-xl border-2 border-transparent bg-white p-4 hover:border-accent/40 hover:shadow-lg transition-all relative overflow-hidden"
               onClick={() => handleDemoLogin(user)}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className={`p-2.5 rounded-xl ${user.bgColor} shrink-0`}>
-                    <user.icon className={`h-5 w-5 ${user.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-text-primary">{user.label}</h3>
-                      {user.plan && (
-                        <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-xs">
-                          {user.plan}
-                        </Badge>
+              {/* Accent stripe */}
+              <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl", user.plan === "pro" ? "bg-accent" : user.plan === "enterprise" ? "bg-gold" : "bg-border")} />
+
+              <div className="flex items-start gap-3 pl-2">
+                <div className={cn("p-2 rounded-lg shrink-0 mt-0.5", user.bgColor)}>
+                  <user.icon className={cn("h-4 w-4", user.color)} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">{user.label}</h3>
+                    {user.plan && (
+                      <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "gold" : "default"} className="text-[11px]">
+                        {user.plan}
+                      </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-text-secondary leading-relaxed">{user.description}</p>
-                    <p className="text-xs text-text-muted mt-1.5 font-mono">{user.email}</p>
+                    <p className="text-xs text-text-secondary leading-relaxed mt-0.5">{user.description}</p>
+                    <p className="text-[11px] text-text-muted mt-1.5 font-mono tracking-tight">{user.email}</p>
                   </div>
-                  {signingIn === user.id && (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0 mt-1" />
+                  {signingIn === user.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent shrink-0 mt-1" />
+                  ) : (
+                    <div className="text-text-muted group-hover:text-accent transition-colors shrink-0 mt-1">
+                      <Search className="h-3.5 w-3.5" />
+                    </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </button>
           ))}
         </div>
 
