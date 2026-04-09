@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell } from "lucide-react";
+import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell, Gift } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupplierTour } from "@/components/onboarding/SupplierTour";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Account",
     items: [
+      { label: "Referrals", href: "/supplier-portal/referrals", icon: Gift },
       { label: "Notifications", href: "/supplier-portal/notifications", icon: Bell },
       { label: "Settings", href: "/supplier-portal/settings", icon: Settings },
     ],

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles, GraduationCap, Bell, Briefcase } from "lucide-react";
+import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles, GraduationCap, Bell, Briefcase, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -35,6 +35,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Account",
     items: [
+      { label: "Referrals", href: "/seeker/referrals", icon: Gift },
       { label: "Notifications", href: "/seeker/notifications", icon: Bell },
       { label: "Settings", href: "/seeker/settings", icon: Settings },
     ],
