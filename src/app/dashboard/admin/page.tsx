@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
+  const [hideDemo, setHideDemo] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +61,24 @@ export default function AdminPage() {
     <div>
       <TopBar title="Admin Dashboard" description="Platform overview and management" />
       <div className="p-4 sm:p-6 max-w-7xl">
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => setHideDemo(!hideDemo)}
+            className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+              hideDemo ? "bg-gold text-white" : "bg-bg-primary text-text-muted hover:text-text-primary"
+            )}
+          >
+            {hideDemo ? "Showing Real Only" : "Show All (incl. Demo)"}
+          </button>
+          <span className="text-xs text-text-muted">
+            {hideDemo
+              ? `${data.users.latest.filter((u: {isDemo: boolean | null}) => !u.isDemo).length} real users`
+              : `${data.users.total} total users (${data.users.latest.filter((u: {isDemo: boolean | null}) => u.isDemo).length} demo)`
+            }
+          </span>
+        </div>
 
         {/* Top stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
@@ -191,10 +210,15 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {data.users.latest.map((u: { id: string; name: string | null; email: string; userRole: string | null; createdAt: Date | null }) => (
-                  <div key={u.id} className="flex items-center justify-between text-xs py-1">
+                {data.users.latest
+                  .filter((u: { isDemo: boolean | null }) => hideDemo ? !u.isDemo : true)
+                  .map((u: { id: string; name: string | null; email: string; userRole: string | null; createdAt: Date | null; isDemo: boolean | null }) => (
+                  <div key={u.id} className={cn("flex items-center justify-between text-xs py-1", u.isDemo && "opacity-60")}>
                     <div className="min-w-0">
-                      <p className="text-text-primary font-medium truncate">{u.name || u.email}</p>
+                      <p className="text-text-primary font-medium truncate">
+                        {u.name || u.email}
+                        {u.isDemo && <span className="ml-1.5 text-[10px] text-warning font-normal">demo</span>}
+                      </p>
                       <p className="text-text-muted">{u.email}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -257,12 +281,17 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.tenants.list.map((t: { id: string; name: string; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; createdAt: Date | null }) => {
+                  {data.tenants.list
+                    .filter((t: { isDemo: boolean | null }) => hideDemo ? !t.isDemo : true)
+                    .map((t: { id: string; name: string; slug: string | null; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; createdAt: Date | null; isDemo: boolean | null }) => {
                     const trialActive = t.trialEndsAt && new Date(t.trialEndsAt) > new Date();
                     const trialExpired = t.trialEndsAt && new Date(t.trialEndsAt) <= new Date();
                     return (
-                      <tr key={t.id} className="border-b border-border-light">
-                        <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
+                      <tr key={t.id} className={cn("border-b border-border-light", t.isDemo && "opacity-60")}>
+                        <td className="py-2 px-3 font-medium text-text-primary">
+                          {t.name}
+                          {t.isDemo && <span className="ml-1.5 text-[10px] text-warning font-normal">demo</span>}
+                        </td>
                         <td className="py-2 px-3">
                           <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
                             {t.plan || "lite"}

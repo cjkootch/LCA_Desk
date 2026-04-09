@@ -4927,7 +4927,7 @@ export async function fetchAdminStats() {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Users
-  const allUsers = await db.select({ id: users.id, name: users.name, email: users.email, userRole: users.userRole, createdAt: users.createdAt }).from(users).orderBy(desc(users.createdAt)).limit(500);
+  const allUsers = await db.select({ id: users.id, name: users.name, email: users.email, userRole: users.userRole, createdAt: users.createdAt, isDemo: users.isDemo }).from(users).orderBy(desc(users.createdAt)).limit(500);
   const recentSignups = allUsers.filter(u => u.createdAt && new Date(u.createdAt) > sevenDaysAgo);
   const filers = allUsers.filter(u => u.userRole?.includes("filer"));
   const seekers = allUsers.filter(u => u.userRole?.includes("job_seeker"));
@@ -4935,7 +4935,7 @@ export async function fetchAdminStats() {
 
   // Tenants
   const allTenants = await db.select({
-    id: tenants.id, name: tenants.name, plan: tenants.plan, trialEndsAt: tenants.trialEndsAt,
+    id: tenants.id, name: tenants.name, slug: tenants.slug, plan: tenants.plan, trialEndsAt: tenants.trialEndsAt, isDemo: tenants.isDemo,
     stripeSubscriptionId: tenants.stripeSubscriptionId, createdAt: tenants.createdAt,
   }).from(tenants).orderBy(desc(tenants.createdAt)).limit(200);
   const paying = allTenants.filter(t => t.stripeSubscriptionId);
