@@ -179,7 +179,7 @@ export default function RegisterLcsPage() {
       {/* Header */}
       <div className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/"><Image src="/logo-full.png" alt="LCA Desk" width={120} height={35} /></Link>
+          <Link href="/"><Image src="/logo-full.svg" alt="LCA Desk" width={120} height={35} /></Link>
           <Link href="/auth/login"><Button variant="outline" size="sm">Sign In</Button></Link>
         </div>
       </div>

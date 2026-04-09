@@ -56,7 +56,7 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
             <button onClick={() => setSidebarOpen(true)} className="p-2 text-text-secondary hover:text-text-primary">
               <Menu className="h-5 w-5" />
             </button>
-            <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
+            <img src="/logo-full.svg" alt="LCA Desk" className="h-7" />
           </div>
           <NotificationBell />
         </div>

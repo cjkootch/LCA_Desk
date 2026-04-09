@@ -83,7 +83,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
         <div className="flex items-center justify-between h-16 px-5 border-b border-white/10">
           <Link href="/secretariat/dashboard" onClick={() => setSidebarOpen(false)}>
-            <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={40} priority />
+            <Image src="/logo-white.svg" alt="LCA Desk" width={140} height={40} priority />
           </Link>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-white/50 hover:text-white p-1">
             <X className="h-5 w-5" />

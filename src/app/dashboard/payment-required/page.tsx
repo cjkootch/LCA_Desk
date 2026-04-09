@@ -9,7 +9,7 @@ export default async function PaymentRequiredPage({ searchParams }: { searchPara
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center p-6">
       <div className="max-w-lg w-full text-center">
-        <Image src="/logo-full.png" alt="LCA Desk" width={160} height={48} className="mx-auto mb-8" />
+        <Image src="/logo-full.svg" alt="LCA Desk" width={160} height={48} className="mx-auto mb-8" />
 
         <div className="rounded-2xl border border-danger/20 bg-danger-light p-8 mb-6">
           <div className="flex justify-center mb-4">

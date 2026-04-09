@@ -37,7 +37,7 @@ function ActivateContent() {
     <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
       <div className="w-full max-w-lg">
         <div className="flex justify-center mb-8">
-          <Image src="/logo-full.png" alt="LCA Desk" width={200} height={60} priority />
+          <Image src="/logo-full.svg" alt="LCA Desk" width={200} height={60} priority />
         </div>
 
         <Card className="overflow-hidden">

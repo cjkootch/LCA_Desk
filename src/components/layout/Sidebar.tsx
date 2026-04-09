@@ -85,7 +85,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-5 border-b border-white/10">
         <Link href="/dashboard" onClick={onNavigate}>
-          <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={40} priority />
+          <Image src="/logo-white.svg" alt="LCA Desk" width={140} height={40} priority />
         </Link>
         {onNavigate && (
           <button onClick={onNavigate} className="lg:hidden text-sidebar-text-muted hover:text-sidebar-text p-1">

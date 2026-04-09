@@ -61,7 +61,7 @@ function LoginForm() {
       {/* Left — Form */}
       <div className="flex-1 flex flex-col bg-[#FAF8F5] min-h-screen">
         <div className="p-6">
-          <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} priority />
+          <Image src="/logo-full.svg" alt="LCA Desk" width={140} height={42} priority />
         </div>
 
         <div className="flex-1 flex items-center justify-center px-6 pb-12">
@@ -133,7 +133,7 @@ function LoginForm() {
         <div className="absolute top-1/4 left-1/3 w-24 h-24 rounded-full bg-white/5" />
 
         <div className="text-center z-10 px-12">
-          <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
+          <Image src="/logo-white.svg" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
           <p className="text-white/50 text-lg font-light max-w-sm mx-auto leading-relaxed">
             Multi-jurisdiction local content compliance — built for the petroleum sector
           </p>

@@ -9,7 +9,7 @@ export default function AuthErrorPage() {
     <div className="min-h-screen flex items-center justify-center bg-bg-primary">
       <div className="w-full max-w-md p-8 text-center">
         <div className="flex justify-center mb-8">
-          <Image src="/logo-white.png" alt="LCA Desk" width={180} height={60} priority />
+          <Image src="/logo-white.svg" alt="LCA Desk" width={180} height={60} priority />
         </div>
         <div className="rounded-xl border border-border bg-bg-card p-8">
           <h1 className="text-2xl font-heading font-bold text-danger mb-2">

@@ -151,7 +151,7 @@ function DemoContent() {
         {/* Left — Password form */}
         <div className="flex-1 flex flex-col bg-[#FAF8F5] min-h-screen">
           <div className="p-6">
-            <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} priority />
+            <Image src="/logo-full.svg" alt="LCA Desk" width={140} height={42} priority />
           </div>
           <div className="flex-1 flex items-center justify-center px-6 pb-12">
             <div className="w-full max-w-sm">
@@ -179,7 +179,7 @@ function DemoContent() {
           <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-accent/5" />
           <div className="absolute bottom-32 left-16 w-40 h-40 rounded-full bg-gold/5" />
           <div className="text-center z-10 px-12">
-            <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
+            <Image src="/logo-white.svg" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
             <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
               AI-powered local content compliance for Guyana&apos;s petroleum sector
             </p>
@@ -196,7 +196,7 @@ function DemoContent() {
       <div className="bg-[var(--slate-dark)] px-6 py-8 pb-12">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={42} />
+            <Image src="/logo-white.svg" alt="LCA Desk" width={140} height={42} />
             <p className="text-xs text-white/40 mt-1">Demo Panel</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setAuthenticated(false)} className="gap-1.5 border-white/20 text-white/60 hover:text-white hover:bg-white/10">
