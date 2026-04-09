@@ -3777,6 +3777,12 @@ export async function fetchTalentPool(filters?: {
       contractTypePreference: jobSeekerProfiles.contractTypePreference,
       headline: jobSeekerProfiles.headline,
       cvUrl: jobSeekerProfiles.cvUrl,
+      resumeContent: jobSeekerProfiles.resumeContent,
+      educationLevel: jobSeekerProfiles.educationLevel,
+      educationField: jobSeekerProfiles.educationField,
+      certifications: jobSeekerProfiles.certifications,
+      guyaneseStatus: jobSeekerProfiles.guyaneseStatus,
+      lcaAttestationDate: jobSeekerProfiles.lcaAttestationDate,
       userName: users.name,
       userEmail: users.email,
     })
@@ -3807,6 +3813,8 @@ export async function fetchTalentPool(filters?: {
       ...p,
       userEmail: callerIsPro ? p.userEmail : null,
       cvUrl: callerIsPro ? p.cvUrl : null,
+      resumeContent: callerIsPro ? p.resumeContent : null,
+      lcaAttested: !!p.lcaAttestationDate,
       badges: userBadges,
     };
   });
