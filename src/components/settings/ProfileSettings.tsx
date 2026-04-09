@@ -37,7 +37,8 @@ function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
 }
 
 export function ProfileSettings() {
-  const { update: updateSession } = useSession();
+  const { data: session, update: updateSession } = useSession();
+  const userId = session?.user?.id;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -61,13 +62,14 @@ export function ProfileSettings() {
       if (u) {
         setName(u.name || "");
         setPhone(u.phone || "");
-        setAvatarUrl(u.avatarUrl || "");
+        // Use avatar proxy endpoint if user has an avatar
+        setAvatarUrl(u.avatarUrl ? `/api/avatar?id=${userId}&t=${Date.now()}` : "");
         setLinkedinUrl(u.linkedinUrl || "");
         setTwitterUrl(u.twitterUrl || "");
         setWebsiteUrl(u.websiteUrl || "");
       }
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [userId]);
 
   const onFileSelect = (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
@@ -92,9 +94,9 @@ export function ProfileSettings() {
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
-      const avatarSrc = data.proxyUrl || data.fileKey;
-      setAvatarUrl(avatarSrc);
-      await updateUserSettings({ avatarUrl: avatarSrc });
+      // Store the raw blob URL in DB; display via /api/avatar proxy
+      await updateUserSettings({ avatarUrl: data.fileKey });
+      setAvatarUrl(`/api/avatar?id=${userId}&t=${Date.now()}`);
       toast.success("Profile picture updated");
       setCropSrc(null);
       setCropFile(null);
