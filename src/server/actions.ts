@@ -3888,9 +3888,15 @@ export async function fetchTalentPool(filters?: {
   guyaneseOnly?: boolean;
   location?: string;
 }) {
-  // Check caller's plan to gate contact info server-side
+  // Check caller's plan + demo status
   let callerIsPro = false;
+  let callerIsDemo = false;
   try {
+    const session = await auth();
+    if (session?.user?.id) {
+      const [u] = await db.select({ isDemo: users.isDemo }).from(users).where(eq(users.id, session.user.id)).limit(1);
+      callerIsDemo = !!u?.isDemo;
+    }
     const { plan, trialEndsAt } = await getSessionTenant();
     const effective = getEffectivePlan(plan, trialEndsAt);
     callerIsPro = effective.code === "pro" || effective.code === "enterprise";
@@ -3918,14 +3924,18 @@ export async function fetchTalentPool(filters?: {
       lcaAttestationDate: jobSeekerProfiles.lcaAttestationDate,
       userName: users.name,
       userEmail: users.email,
+      userIsDemo: users.isDemo,
     })
     .from(jobSeekerProfiles)
     .innerJoin(users, eq(jobSeekerProfiles.userId, users.id))
     .where(eq(jobSeekerProfiles.profileVisible, true))
     .limit(200);
 
+  // Filter: demo users only see demo candidates, real users only see real candidates
+  const filteredProfiles = profiles.filter(p => callerIsDemo ? !!p.userIsDemo : !p.userIsDemo);
+
   // Get badges for all visible users
-  const allUserIds = profiles.map(p => p.userId);
+  const allUserIds = filteredProfiles.map(p => p.userId);
   const allBadges = allUserIds.length > 0
     ? await db.select({
         userId: userCourseProgress.userId,
@@ -3937,7 +3947,7 @@ export async function fetchTalentPool(filters?: {
     : [];
 
   // Strip contact info for non-Pro callers + add badges
-  const sanitized = profiles.map(p => {
+  const sanitized = filteredProfiles.map(p => {
     const userBadges = allBadges
       .filter(b => b.userId === p.userId)
       .map(b => b.badgeLabel)
@@ -5069,6 +5079,28 @@ async function getSecretariatContext() {
   return { userId: session.user.id, officeId: membership[0].officeId, role: membership[0].role };
 }
 
+/** Returns demo filter info — demo users see demo data, real users see real data */
+async function getDemoFilter() {
+  const session = await auth();
+  let callerIsDemo = false;
+  if (session?.user?.id) {
+    const [u] = await db.select({ isDemo: users.isDemo }).from(users).where(eq(users.id, session.user.id)).limit(1);
+    callerIsDemo = !!u?.isDemo;
+  }
+  const demoTenantRows = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.isDemo, true));
+  const demoUserRows = await db.select({ id: users.id }).from(users).where(eq(users.isDemo, true));
+  const tenantIds = new Set(demoTenantRows.map(t => t.id));
+  const userIds = new Set(demoUserRows.map(u => u.id));
+  return {
+    tenantIds,
+    userIds,
+    callerIsDemo,
+    /** Returns true if this tenantId should be included for the current caller */
+    includeTenant: (id: string) => callerIsDemo ? tenantIds.has(id) : !tenantIds.has(id),
+    includeUser: (id: string) => callerIsDemo ? userIds.has(id) : !userIds.has(id),
+  };
+}
+
 export async function fetchSecretariatOfficeSettings() {
   const { officeId } = await getSecretariatContext();
   const office = await db.select().from(secretariatOffices).where(eq(secretariatOffices.id, officeId)).limit(1);
@@ -5094,9 +5126,10 @@ export async function updateSecretariatOfficeSettings(data: {
 
 export async function fetchSecretariatDashboard() {
   const { officeId } = await getSecretariatContext();
+  const demo = await getDemoFilter();
 
-  // Get all submissions (all tenants, all periods that are submitted)
-  const submissions = await db.select({
+  // Get all submissions (exclude demo tenants)
+  const allSubmissions = await db.select({
     periodId: reportingPeriods.id,
     entityId: reportingPeriods.entityId,
     reportType: reportingPeriods.reportType,
@@ -5108,6 +5141,7 @@ export async function fetchSecretariatDashboard() {
     entityName: entities.legalName,
     companyType: entities.companyType,
     tenantName: tenants.name,
+    tenantId: reportingPeriods.tenantId,
   })
     .from(reportingPeriods)
     .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
@@ -5115,6 +5149,9 @@ export async function fetchSecretariatDashboard() {
     .where(eq(reportingPeriods.status, "submitted"))
     .orderBy(desc(reportingPeriods.submittedAt))
     .limit(100);
+
+  // Filter out demo tenants
+  const submissions = allSubmissions.filter(s => demo.includeTenant(s.tenantId));
 
   // Get submission methods from logs
   const subLogs = await db.select({
@@ -5408,8 +5445,9 @@ export async function fetchSubmissionDetail(periodId: string) {
 
 export async function fetchSecretariatAnalytics() {
   await getSecretariatContext();
+  const demo = await getDemoFilter();
 
-  // All submitted periods with data
+  // All submitted periods with data (exclude demo tenants)
   const allSubmitted = await db.select({
     id: reportingPeriods.id,
     entityId: reportingPeriods.entityId,
@@ -5418,26 +5456,37 @@ export async function fetchSecretariatAnalytics() {
     .where(eq(reportingPeriods.status, "submitted"))
     .limit(500);
 
+  // Filter out demo tenant data
+  const realSubmitted = allSubmitted.filter(s => demo.includeTenant(s.tenantId));
+
+  // Only use real (non-demo) period IDs for record lookups
+  const realPeriodIds = new Set(realSubmitted.map(s => s.id));
+
   const allExp = await db.select().from(expenditureRecords).limit(5000);
   const allEmp = await db.select().from(employmentRecords).limit(5000);
   const allCap = await db.select().from(capacityDevelopmentRecords).limit(5000);
 
+  // Filter records to only real (non-demo) periods
+  const realExp = allExp.filter(e => realPeriodIds.has(e.reportingPeriodId));
+  const realEmp = allEmp.filter(e => realPeriodIds.has(e.reportingPeriodId));
+  const realCap = allCap.filter(c => realPeriodIds.has(c.reportingPeriodId));
+
   // Aggregate LC rate across all filers
-  const totalSpend = allExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
-  const guySpend = allExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const totalSpend = realExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+  const guySpend = realExp.filter(e => !!e.supplierCertificateId || e.supplierType === "Guyanese").reduce((s, e) => s + Number(e.actualPayment || 0), 0);
   const overallLcRate = totalSpend > 0 ? Math.round((guySpend / totalSpend) * 1000) / 10 : 0;
 
   // Aggregate employment
-  const totalEmp = allEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
-  const guyEmp = allEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+  const totalEmp = realEmp.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+  const guyEmp = realEmp.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
 
   // Capacity development
-  const totalTrainingParticipants = allCap.reduce((s, c) => s + (c.totalParticipants || 0), 0);
-  const totalTrainingDays = allCap.reduce((s, c) => s + (c.durationDays || 0), 0);
-  const totalCapacitySpend = allCap.reduce((s, c) => s + Number(c.expenditureOnCapacity || 0), 0);
+  const totalTrainingParticipants = realCap.reduce((s, c) => s + (c.totalParticipants || 0), 0);
+  const totalTrainingDays = realCap.reduce((s, c) => s + (c.durationDays || 0), 0);
+  const totalCapacitySpend = realCap.reduce((s, c) => s + Number(c.expenditureOnCapacity || 0), 0);
 
   // Unique filers
-  const uniqueTenants = new Set(allSubmitted.map(p => p.tenantId)).size;
+  const uniqueTenants = new Set(realSubmitted.map(p => p.tenantId)).size;
   const uniqueEntities = new Set(allSubmitted.map(p => p.entityId)).size;
 
   // Staff hours saved estimate:
@@ -5477,10 +5526,11 @@ export async function fetchSecretariatAnalytics() {
 
 export async function fetchFilingCompliance(fiscalYear: number, reportType: string) {
   await getSecretariatContext();
+  const demo = await getDemoFilter();
   const { calculateDeadlines: calcDeadlines } = await import("@/lib/compliance/deadlines");
 
-  // Get ALL entities that should file (all active entities across all tenants)
-  const allEntities = await db.select({
+  // Get ALL entities that should file (exclude demo tenants)
+  const allEntitiesRaw = await db.select({
     id: entities.id,
     legalName: entities.legalName,
     companyType: entities.companyType,
@@ -5490,6 +5540,8 @@ export async function fetchFilingCompliance(fiscalYear: number, reportType: stri
     .innerJoin(tenants, eq(entities.tenantId, tenants.id))
     .where(eq(entities.active, true))
     .limit(500);
+
+  const allEntities = allEntitiesRaw.filter(e => demo.includeTenant(e.tenantId));
 
   // Get all periods for this report type + year
   const periods = await db.select({

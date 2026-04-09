@@ -29,9 +29,15 @@ export async function POST(req: NextRequest) {
 
   async function ensureUser(email: string, name: string, role: string, isSuperAdmin = false) {
     const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (existing) return existing;
+    if (existing) {
+      // Ensure demo flag is set on existing demo users
+      if (!existing.isDemo) {
+        await db.update(users).set({ isDemo: true }).where(eq(users.id, existing.id));
+      }
+      return existing;
+    }
     const [user] = await db.insert(users).values({
-      email, name, passwordHash, userRole: role, isSuperAdmin,
+      email, name, passwordHash, userRole: role, isSuperAdmin, isDemo: true,
     }).returning();
     return user;
   }
@@ -42,15 +48,15 @@ export async function POST(req: NextRequest) {
   ) {
     const [existing] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
     if (existing) {
-      // Update existing demo tenants to have correct billing state
+      // Ensure demo flag + correct billing state
+      const updates: Record<string, unknown> = { isDemo: true };
       if (opts?.stripeStatus) {
         const trialEndsAt = opts.trialDays ? new Date(Date.now() + opts.trialDays * 24 * 60 * 60 * 1000) : null;
-        await db.update(tenants).set({
-          stripeSubscriptionId: opts.stripeStatus !== "canceled" ? `demo_sub_${slug}` : null,
-          stripeSubscriptionStatus: opts.stripeStatus,
-          trialEndsAt,
-        }).where(eq(tenants.id, existing.id));
+        updates.stripeSubscriptionId = opts.stripeStatus !== "canceled" ? `demo_sub_${slug}` : null;
+        updates.stripeSubscriptionStatus = opts.stripeStatus;
+        updates.trialEndsAt = trialEndsAt;
       }
+      await db.update(tenants).set(updates).where(eq(tenants.id, existing.id));
       const [membership] = await db.select().from(tenantMembers)
         .where(eq(tenantMembers.userId, userId)).limit(1);
       if (!membership) {
@@ -62,7 +68,7 @@ export async function POST(req: NextRequest) {
     const trialEndsAt = opts?.trialDays ? new Date(Date.now() + opts.trialDays * 24 * 60 * 60 * 1000) : null;
     const [tenant] = await db.insert(tenants).values({
       name, slug, jurisdictionId, plan,
-      trialEndsAt,
+      trialEndsAt, isDemo: true,
       planEntityLimit: plan === "pro" ? 5 : plan === "enterprise" ? -1 : 1,
       stripeSubscriptionId: opts?.stripeStatus && opts.stripeStatus !== "canceled" ? `demo_sub_${slug}` : null,
       stripeSubscriptionStatus: opts?.stripeStatus ?? null,

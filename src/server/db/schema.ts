@@ -62,6 +62,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   isSuperAdmin: boolean("is_super_admin").default(false),
   userRole: text("user_role").default("filer"),
+  isDemo: boolean("is_demo").default(false),
   notificationPreferences: text("notification_preferences"),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -134,6 +135,7 @@ export const tenants = pgTable("tenants", {
   // Feature preferences (JSON)
   featurePreferences: text("feature_preferences"),
   stakeholderEmails: text("stakeholder_emails"), // JSON: [{ email, name, role }] for deadline escalation
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
