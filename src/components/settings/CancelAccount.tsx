@@ -72,7 +72,7 @@ export function CancelAccount({ hasPaidPlan, userType }: CancelAccountProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-primary">Cancel Subscription</p>
-                <p className="text-xs text-text-muted">Downgrade to free. Your data is preserved.</p>
+                <p className="text-xs text-text-muted">Cancel your plan. You'll keep access until the end of your billing period.</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => { setShowCancel(true); setStep("reason"); setReason(""); }}>
                 Cancel Plan
@@ -183,7 +183,7 @@ export function CancelAccount({ hasPaidPlan, userType }: CancelAccountProps) {
                     <X className="h-4 w-4 text-warning shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Cancel subscription only</p>
-                      <p className="text-xs text-text-muted font-normal">Keep your account and data. Downgrade to free.</p>
+                      <p className="text-xs text-text-muted font-normal">Keep your account and data. Access continues until billing period ends.</p>
                     </div>
                   </Button>
                 )}
