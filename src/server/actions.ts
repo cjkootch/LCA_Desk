@@ -984,10 +984,16 @@ export async function fetchMyReferralInfo() {
 
   if (!user?.referralCode) {
     // Generate one if missing (for users created before referrals existed)
-    const name = session.user.name || "USER";
-    const refBase = name.split(" ")[0].toUpperCase().slice(0, 6);
-    const refSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const code = `${refBase}-${refSuffix}`;
+    const userName = session.user.name || "USER";
+    const refBase = userName.split(" ")[0].toUpperCase().slice(0, 6);
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      const suffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+      const candidate = `${refBase}-${suffix}`;
+      const [dup] = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, candidate)).limit(1);
+      if (!dup) { code = candidate; break; }
+    }
+    if (!code) code = `${refBase}-${Date.now().toString(36).toUpperCase()}`; // fallback: timestamp-based
     await db.update(users).set({ referralCode: code }).where(eq(users.id, session.user.id));
     return { code, referrals: [], totalReferred: 0, totalSignedUp: 0, totalQualified: 0 };
   }
@@ -1042,33 +1048,36 @@ export async function qualifyReferral(referredUserId: string) {
       .limit(1);
     if (!ref) return; // No pending referral
 
-    // Mark as qualified
-    await db.update(referrals).set({
-      status: "qualified",
-      qualifiedAt: new Date(),
-    }).where(eq(referrals.id, ref.id));
+    const BONUS_DAYS = 14;
+    const bonusMs = BONUS_DAYS * 24 * 60 * 60 * 1000;
 
-    // Auto-reward: extend referrer's trial by 14 days
-    const [referrerMembership] = await db.select({ tenantId: tenantMembers.tenantId })
-      .from(tenantMembers).where(eq(tenantMembers.userId, ref.referrerUserId)).limit(1);
+    // Helper: extend a user's tenant trial by bonus days
+    const extendTrial = async (userId: string) => {
+      const [membership] = await db.select({ tenantId: tenantMembers.tenantId })
+        .from(tenantMembers).where(eq(tenantMembers.userId, userId)).limit(1);
+      if (!membership) return;
 
-    if (referrerMembership) {
       const [tenant] = await db.select({ trialEndsAt: tenants.trialEndsAt })
-        .from(tenants).where(eq(tenants.id, referrerMembership.tenantId)).limit(1);
+        .from(tenants).where(eq(tenants.id, membership.tenantId)).limit(1);
+      if (!tenant) return;
 
-      if (tenant?.trialEndsAt) {
-        const currentEnd = new Date(tenant.trialEndsAt);
-        const newEnd = new Date(currentEnd.getTime() + 14 * 24 * 60 * 60 * 1000);
-        await db.update(tenants).set({ trialEndsAt: newEnd }).where(eq(tenants.id, referrerMembership.tenantId));
-      }
-    }
+      // If trial exists, extend it. If no trial yet, set one starting now.
+      const base = tenant.trialEndsAt ? new Date(tenant.trialEndsAt) : new Date();
+      const newEnd = new Date(Math.max(base.getTime(), Date.now()) + bonusMs);
+      await db.update(tenants).set({ trialEndsAt: newEnd }).where(eq(tenants.id, membership.tenantId));
+    };
 
-    // Mark as rewarded
+    // Extend BOTH referrer and referred user's trials
+    await extendTrial(ref.referrerUserId);
+    await extendTrial(referredUserId);
+
+    // Single atomic status update: qualified + rewarded together
     await db.update(referrals).set({
       status: "rewarded",
+      qualifiedAt: new Date(),
       rewardedAt: new Date(),
       rewardType: "trial_extension",
-      rewardAmount: "+14 days",
+      rewardAmount: `+${BONUS_DAYS} days (both)`,
     }).where(eq(referrals.id, ref.id));
   } catch {} // Don't break the calling workflow
 }

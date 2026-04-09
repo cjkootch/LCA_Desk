@@ -98,10 +98,15 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Generate unique referral code: first name + random 4 chars
+    // Generate unique referral code with collision retry
     const refBase = (name || "user").split(" ")[0].toUpperCase().slice(0, 6);
-    const refSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const referralCode = `${refBase}-${refSuffix}`;
+    let referralCode: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const suffix = Math.random().toString(36).substring(2, 7).toUpperCase(); // 5 chars = ~60M combos
+      const candidate = `${refBase}-${suffix}`;
+      const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, candidate)).limit(1);
+      if (!existing) { referralCode = candidate; break; }
+    }
 
     const [user] = await db
       .insert(users)
