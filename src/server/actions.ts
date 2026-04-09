@@ -6329,3 +6329,242 @@ export async function fetchActiveAnnouncements(userRole: string) {
     }
   });
 }
+
+// ─── SECRETARIAT: TALENT POOL ─────────────────────────────────
+
+export async function fetchSecretariatTalentPool(filters?: {
+  search?: string;
+  category?: string;
+  guyaneseOnly?: boolean;
+}) {
+  // Secretariat sees everything — no plan gating
+  const profiles = await db
+    .select({
+      id: jobSeekerProfiles.id,
+      userId: jobSeekerProfiles.userId,
+      currentJobTitle: jobSeekerProfiles.currentJobTitle,
+      employmentCategory: jobSeekerProfiles.employmentCategory,
+      yearsExperience: jobSeekerProfiles.yearsExperience,
+      isGuyanese: jobSeekerProfiles.isGuyanese,
+      nationality: jobSeekerProfiles.nationality,
+      skills: jobSeekerProfiles.skills,
+      locationPreference: jobSeekerProfiles.locationPreference,
+      headline: jobSeekerProfiles.headline,
+      educationLevel: jobSeekerProfiles.educationLevel,
+      educationField: jobSeekerProfiles.educationField,
+      certifications: jobSeekerProfiles.certifications,
+      guyaneseStatus: jobSeekerProfiles.guyaneseStatus,
+      cvUrl: jobSeekerProfiles.cvUrl,
+      resumeContent: jobSeekerProfiles.resumeContent,
+      userName: users.name,
+      userEmail: users.email,
+      userPhone: users.phone,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(jobSeekerProfiles)
+    .innerJoin(users, eq(jobSeekerProfiles.userId, users.id))
+    .limit(500);
+
+  // Get badges
+  const allUserIds = profiles.map(p => p.userId);
+  const allBadges = allUserIds.length > 0
+    ? await db.select({ userId: userCourseProgress.userId, badgeLabel: courses.badgeLabel })
+        .from(userCourseProgress)
+        .innerJoin(courses, eq(userCourseProgress.courseId, courses.id))
+        .where(sql`${userCourseProgress.badgeEarnedAt} IS NOT NULL`)
+        .limit(500)
+    : [];
+
+  const enriched = profiles.map(p => ({
+    ...p,
+    badges: allBadges.filter(b => b.userId === p.userId).map(b => b.badgeLabel).filter((v, i, a) => a.indexOf(v) === i),
+  }));
+
+  let filtered = enriched;
+  if (filters?.guyaneseOnly) filtered = filtered.filter(p => p.isGuyanese);
+  if (filters?.category) filtered = filtered.filter(p => p.employmentCategory === filters.category);
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(p =>
+      p.userName?.toLowerCase().includes(q) ||
+      p.currentJobTitle?.toLowerCase().includes(q) ||
+      p.headline?.toLowerCase().includes(q) ||
+      p.skills?.some(s => s.toLowerCase().includes(q))
+    );
+  }
+
+  return filtered;
+}
+
+// ─── SECRETARIAT: SUPPLIER DIRECTORY ──────────────────────────
+
+export async function fetchSecretariatSupplierDirectory(filters?: {
+  search?: string;
+  category?: string;
+  statusFilter?: string;
+}) {
+  const rows = await db.select().from(lcsRegister).orderBy(desc(lcsRegister.legalName)).limit(1000);
+
+  let filtered = rows;
+  if (filters?.statusFilter && filters.statusFilter !== "all") {
+    filtered = filtered.filter(r => r.status?.toLowerCase() === filters.statusFilter);
+  }
+  if (filters?.category && filters.category !== "all") {
+    filtered = filtered.filter(r => r.serviceCategories?.some(c => c.toLowerCase().includes(filters.category!.toLowerCase())));
+  }
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(r =>
+      r.legalName?.toLowerCase().includes(q) ||
+      r.tradingName?.toLowerCase().includes(q) ||
+      r.certId?.toLowerCase().includes(q) ||
+      r.email?.toLowerCase().includes(q)
+    );
+  }
+
+  return {
+    suppliers: filtered,
+    total: rows.length,
+    active: rows.filter(r => r.status === "Active").length,
+    expired: rows.filter(r => r.status === "Expired" || (r.expirationDate && new Date(r.expirationDate) < new Date())).length,
+    categories: [...new Set(rows.flatMap(r => r.serviceCategories || []))].sort(),
+  };
+}
+
+// ─── SECRETARIAT: DEADLINE CALENDAR ───────────────────────────
+
+export async function fetchSecretariatDeadlines() {
+  const periods = await db
+    .select({
+      id: reportingPeriods.id,
+      entityId: reportingPeriods.entityId,
+      reportType: reportingPeriods.reportType,
+      periodStart: reportingPeriods.periodStart,
+      periodEnd: reportingPeriods.periodEnd,
+      dueDate: reportingPeriods.dueDate,
+      fiscalYear: reportingPeriods.fiscalYear,
+      status: reportingPeriods.status,
+      submittedAt: reportingPeriods.submittedAt,
+      entityName: entities.legalName,
+      tenantName: tenants.name,
+      companyType: entities.companyType,
+    })
+    .from(reportingPeriods)
+    .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
+    .innerJoin(tenants, eq(entities.tenantId, tenants.id))
+    .orderBy(asc(reportingPeriods.dueDate));
+
+  const now = new Date();
+  return {
+    periods,
+    overdue: periods.filter(p => p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) < now),
+    upcoming: periods.filter(p => p.status !== "submitted" && p.status !== "acknowledged" && new Date(p.dueDate) >= now),
+    submitted: periods.filter(p => p.status === "submitted" || p.status === "acknowledged"),
+  };
+}
+
+// ─── SECRETARIAT: AUDIT TRAIL ─────────────────────────────────
+
+export async function fetchSecretariatAuditTrail(filters?: {
+  search?: string;
+  action?: string;
+  limit?: number;
+}) {
+  const rows = await db
+    .select({
+      id: auditLogs.id,
+      tenantId: auditLogs.tenantId,
+      userId: auditLogs.userId,
+      userName: auditLogs.userName,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      fieldName: auditLogs.fieldName,
+      oldValue: auditLogs.oldValue,
+      newValue: auditLogs.newValue,
+      metadata: auditLogs.metadata,
+      createdAt: auditLogs.createdAt,
+      tenantName: tenants.name,
+    })
+    .from(auditLogs)
+    .leftJoin(tenants, eq(auditLogs.tenantId, tenants.id))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(filters?.limit || 200);
+
+  let filtered = rows;
+  if (filters?.action && filters.action !== "all") {
+    filtered = filtered.filter(r => r.action === filters.action);
+  }
+  if (filters?.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(r =>
+      r.userName?.toLowerCase().includes(q) ||
+      r.tenantName?.toLowerCase().includes(q) ||
+      r.entityType?.toLowerCase().includes(q) ||
+      r.action?.toLowerCase().includes(q)
+    );
+  }
+
+  return filtered;
+}
+
+// ─── SECRETARIAT: NOTIFICATIONS LOG ───────────────────────────
+
+export async function fetchSecretariatNotifications(filters?: {
+  type?: string;
+  limit?: number;
+}) {
+  const rows = await db
+    .select({
+      id: notifications.id,
+      userId: notifications.userId,
+      type: notifications.type,
+      title: notifications.title,
+      message: notifications.message,
+      read: notifications.read,
+      emailSent: notifications.emailSent,
+      emailSentAt: notifications.emailSentAt,
+      createdAt: notifications.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(notifications)
+    .innerJoin(users, eq(notifications.userId, users.id))
+    .orderBy(desc(notifications.createdAt))
+    .limit(filters?.limit || 200);
+
+  let filtered = rows;
+  if (filters?.type && filters.type !== "all") {
+    filtered = filtered.filter(r => r.type === filters.type);
+  }
+
+  const types = [...new Set(rows.map(r => r.type))].sort();
+  return { notifications: filtered, types, total: rows.length };
+}
+
+// ─── SECRETARIAT: DOCUMENT LIBRARY ────────────────────────────
+
+export async function fetchSecretariatDocuments() {
+  const subs = await db
+    .select({
+      id: submissionLogs.id,
+      entityId: submissionLogs.entityId,
+      reportingPeriodId: submissionLogs.reportingPeriodId,
+      submissionMethod: submissionLogs.submissionMethod,
+      uploadedFileName: submissionLogs.uploadedFileName,
+      uploadedFileKey: submissionLogs.uploadedFileKey,
+      submittedAt: submissionLogs.createdAt,
+      entityName: entities.legalName,
+      tenantName: tenants.name,
+      reportType: reportingPeriods.reportType,
+      fiscalYear: reportingPeriods.fiscalYear,
+    })
+    .from(submissionLogs)
+    .innerJoin(entities, eq(submissionLogs.entityId, entities.id))
+    .innerJoin(tenants, eq(entities.tenantId, tenants.id))
+    .innerJoin(reportingPeriods, eq(submissionLogs.reportingPeriodId, reportingPeriods.id))
+    .orderBy(desc(submissionLogs.createdAt))
+    .limit(200);
+
+  return subs;
+}
