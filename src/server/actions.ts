@@ -43,6 +43,7 @@ import {
   supplierResponses,
   lcsCertApplications,
   savedJobs,
+  industryNews,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -5960,4 +5961,12 @@ export async function reviewCertApplication(id: string, data: {
       }
     }
   }
+}
+
+// ─── INDUSTRY NEWS ──────────────────────────────────────────────
+
+export async function fetchIndustryNews(limit = 20) {
+  return db.select().from(industryNews)
+    .orderBy(desc(industryNews.publishedAt))
+    .limit(limit);
 }

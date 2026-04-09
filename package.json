@@ -14,7 +14,8 @@
     "db:seed": "tsx src/server/db/seed.ts",
     "scrape:lcs": "tsx src/scripts/scrape-lcs-register.ts",
     "scrape:opportunities": "tsx src/scripts/scrape-lcs-opportunities.ts",
-    "scrape:jobs": "tsx src/scripts/scrape-lcs-jobs.ts"
+    "scrape:jobs": "tsx src/scripts/scrape-lcs-jobs.ts",
+    "scrape:news": "tsx src/scripts/scrape-news.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",

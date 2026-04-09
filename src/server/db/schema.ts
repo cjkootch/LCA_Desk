@@ -628,6 +628,31 @@ export const lcsEmploymentNotices = pgTable(
   ]
 );
 
+// ─── INDUSTRY NEWS ──────────────────────────────────────────────
+export const industryNews = pgTable(
+  "industry_news",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    aiSummary: text("ai_summary"),
+    sourceUrl: text("source_url").notNull().unique(),
+    sourceName: text("source_name").notNull(), // "Kaieteur News" | "OilNOW"
+    imageUrl: text("image_url"),
+    publishedAt: date("published_at"),
+    category: text("category"), // "contracts" | "policy" | "production" | "local_content" | "general"
+    relevanceScore: integer("relevance_score"), // 1-10, AI-assigned
+    companies: text("companies").array(), // companies mentioned
+    country: text("country").default("GY"),
+    scrapedAt: timestamp("scraped_at").defaultNow(),
+  },
+  (table) => [
+    index("news_published_idx").on(table.publishedAt),
+    index("news_source_idx").on(table.sourceName),
+    index("news_category_idx").on(table.category),
+  ]
+);
+
 // ─── SAVED OPPORTUNITIES ─────────────────────────────────────────
 export const savedOpportunities = pgTable(
   "saved_opportunities",

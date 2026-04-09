@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PortfolioCard } from "@/components/dashboard/PortfolioCard";
 import { ComplianceCalendar } from "@/components/dashboard/ComplianceCalendar";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
@@ -182,6 +183,7 @@ export default function DashboardPage() {
               </div>
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
+              <IndustryNewsFeed />
             </div>
           </div>
         </>
