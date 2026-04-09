@@ -380,31 +380,31 @@ export default function SecretariatDashboardPage() {
 
                 {/* Tab: Compliance Trend */}
                 {detailTab === "trend" && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-text-primary">Period-over-Period Comparison</p>
+                  <div className="space-y-4">
+                    <p className="text-base font-semibold text-text-primary">Period-over-Period Comparison</p>
                     {!comparison ? (
                       <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent" /></div>
                     ) : comparison.length === 0 ? (
-                      <p className="text-xs text-text-muted py-4 text-center">No historical data available.</p>
+                      <p className="text-sm text-text-muted py-4 text-center">No historical data available.</p>
                     ) : (
                       <>
                         {/* LC Rate trend */}
-                        <Card><CardContent className="p-3">
-                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Local Content Rate</p>
-                          <div className="flex items-end gap-1 h-24">
+                        <Card><CardContent className="p-4">
+                          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Local Content Rate</p>
+                          <div className="flex items-end gap-2 h-32">
                             {comparison.slice().reverse().map((p: { periodId: string; label: string; lcRate: number }, i: number) => {
                               const maxRate = Math.max(...comparison.map((c: { lcRate: number }) => c.lcRate), 1);
                               const height = Math.max((p.lcRate / maxRate) * 100, 4);
                               const prev = i > 0 ? comparison.slice().reverse()[i - 1] : null;
                               const trending = prev ? p.lcRate - prev.lcRate : 0;
                               return (
-                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-0.5">
-                                  <span className="text-[9px] font-bold" style={{ color: p.lcRate >= 50 ? "var(--color-success)" : "var(--color-danger)" }}>{p.lcRate}%</span>
+                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-1">
+                                  <span className="text-sm font-bold" style={{ color: p.lcRate >= 50 ? "var(--color-success)" : "var(--color-danger)" }}>{p.lcRate}%</span>
                                   <div className="w-full rounded-t" style={{ height: `${height}%`, backgroundColor: p.lcRate >= 50 ? "var(--color-success)" : "var(--color-danger)", opacity: 0.7 }} />
-                                  <span className="text-[8px] text-text-muted">{p.label}</span>
+                                  <span className="text-xs text-text-muted">{p.label}</span>
                                   {trending !== 0 && (
-                                    <span className={cn("text-[8px] flex items-center", trending > 0 ? "text-success" : "text-danger")}>
-                                      {trending > 0 ? <TrendingUp className="h-2 w-2" /> : <TrendingDown className="h-2 w-2" />}
+                                    <span className={cn("text-xs flex items-center", trending > 0 ? "text-success" : "text-danger")}>
+                                      {trending > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                                       {trending > 0 ? "+" : ""}{trending.toFixed(1)}
                                     </span>
                                   )}
@@ -415,17 +415,17 @@ export default function SecretariatDashboardPage() {
                         </CardContent></Card>
 
                         {/* Employment trend */}
-                        <Card><CardContent className="p-3">
-                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Guyanese Employment %</p>
-                          <div className="flex items-end gap-1 h-24">
+                        <Card><CardContent className="p-4">
+                          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Guyanese Employment %</p>
+                          <div className="flex items-end gap-2 h-32">
                             {comparison.slice().reverse().map((p: { periodId: string; label: string; employmentPct: number }) => {
                               const maxPct = Math.max(...comparison.map((c: { employmentPct: number }) => c.employmentPct), 1);
                               const height = Math.max((p.employmentPct / maxPct) * 100, 4);
                               return (
-                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-0.5">
-                                  <span className="text-[9px] font-bold" style={{ color: p.employmentPct >= 60 ? "var(--color-success)" : "var(--color-warning)" }}>{p.employmentPct}%</span>
+                                <div key={p.periodId} className="flex-1 flex flex-col items-center gap-1">
+                                  <span className="text-sm font-bold" style={{ color: p.employmentPct >= 60 ? "var(--color-success)" : "var(--color-warning)" }}>{p.employmentPct}%</span>
                                   <div className="w-full rounded-t" style={{ height: `${height}%`, backgroundColor: p.employmentPct >= 60 ? "var(--color-success)" : "var(--color-warning)", opacity: 0.7 }} />
-                                  <span className="text-[8px] text-text-muted">{p.label}</span>
+                                  <span className="text-xs text-text-muted">{p.label}</span>
                                 </div>
                               );
                             })}
@@ -433,29 +433,29 @@ export default function SecretariatDashboardPage() {
                         </CardContent></Card>
 
                         {/* Data table */}
-                        <Card><CardContent className="p-3">
-                          <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">Detailed Breakdown</p>
+                        <Card><CardContent className="p-4">
+                          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Detailed Breakdown</p>
                           <div className="overflow-x-auto">
-                            <table className="w-full text-[11px]">
+                            <table className="w-full text-sm">
                               <thead>
-                                <tr className="border-b border-border text-text-muted">
-                                  <th className="text-left py-1 pr-2">Period</th>
-                                  <th className="text-right py-1 px-1">LC Rate</th>
-                                  <th className="text-right py-1 px-1">Emp %</th>
-                                  <th className="text-right py-1 px-1">Expenditure</th>
-                                  <th className="text-right py-1 px-1">Employees</th>
-                                  <th className="text-right py-1 pl-1">Status</th>
+                                <tr className="border-b border-border text-text-muted text-xs">
+                                  <th className="text-left py-2 pr-3">Period</th>
+                                  <th className="text-right py-2 px-2">LC Rate</th>
+                                  <th className="text-right py-2 px-2">Emp %</th>
+                                  <th className="text-right py-2 px-2">Expenditure</th>
+                                  <th className="text-right py-2 px-2">Employees</th>
+                                  <th className="text-right py-2 pl-2">Status</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {comparison.slice().reverse().map((p: { periodId: string; label: string; lcRate: number; employmentPct: number; totalExpenditure: number; totalEmployees: number; guyaneseEmployees: number; status: string }) => (
                                   <tr key={p.periodId} className="border-b border-border/50">
-                                    <td className="py-1.5 pr-2 font-medium">{p.label}</td>
-                                    <td className={cn("text-right py-1.5 px-1 font-bold", p.lcRate >= 50 ? "text-success" : "text-danger")}>{p.lcRate}%</td>
-                                    <td className={cn("text-right py-1.5 px-1", p.employmentPct >= 60 ? "text-success" : "text-warning")}>{p.employmentPct}%</td>
-                                    <td className="text-right py-1.5 px-1">{formatCurrency(p.totalExpenditure)}</td>
-                                    <td className="text-right py-1.5 px-1">{p.guyaneseEmployees}/{p.totalEmployees}</td>
-                                    <td className="text-right py-1.5 pl-1"><Badge variant={p.status === "submitted" ? "success" : "default"} className="text-[9px]">{p.status}</Badge></td>
+                                    <td className="py-2.5 pr-3 font-medium">{p.label}</td>
+                                    <td className={cn("text-right py-2.5 px-2 font-bold", p.lcRate >= 50 ? "text-success" : "text-danger")}>{p.lcRate}%</td>
+                                    <td className={cn("text-right py-2.5 px-2", p.employmentPct >= 60 ? "text-success" : "text-warning")}>{p.employmentPct}%</td>
+                                    <td className="text-right py-2.5 px-2">{formatCurrency(p.totalExpenditure)}</td>
+                                    <td className="text-right py-2.5 px-2">{p.guyaneseEmployees}/{p.totalEmployees}</td>
+                                    <td className="text-right py-2.5 pl-2"><Badge variant={p.status === "submitted" ? "success" : "default"} className="text-xs">{p.status}</Badge></td>
                                   </tr>
                                 ))}
                               </tbody>
