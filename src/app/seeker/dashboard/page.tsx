@@ -75,7 +75,7 @@ export default function SeekerDashboard() {
     <>
       <SeekerTopBar title="Dashboard" description="Your job search at a glance" />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-8 max-w-5xl space-y-4">
         <AnnouncementBanner userRole="seeker" />
 
         {/* Identity */}
@@ -113,7 +113,7 @@ export default function SeekerDashboard() {
           />
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Recent applications */}
           <DashboardSection title="Recent Applications" action={
             <Link href="/seeker/applications" className="text-xs text-accent hover:text-accent-hover flex items-center gap-1">

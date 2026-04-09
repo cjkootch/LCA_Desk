@@ -148,7 +148,7 @@ export default function SecretariatDashboardPage() {
   });
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl space-y-8">
+    <div className="p-4 sm:p-8 max-w-6xl space-y-5">
       <AnnouncementBanner userRole="secretariat" />
 
       {/* Identity */}
@@ -203,7 +203,7 @@ export default function SecretariatDashboardPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <Input placeholder="Search by company..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />

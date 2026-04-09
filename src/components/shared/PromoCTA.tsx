@@ -28,7 +28,7 @@ export function PromoCTA({
   }[variant];
 
   const content = (
-    <div className={cn("rounded-xl p-6 text-white relative overflow-hidden", bg, className)}>
+    <div className={cn("rounded-xl p-5 text-white relative overflow-hidden", bg, className)}>
       {/* Decorative circles */}
       <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/5" />
       <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-white/5" />

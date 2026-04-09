@@ -41,7 +41,7 @@ export function ComplianceHealthWidget() {
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Compliance Score */}
       <Card>
         <CardContent className="p-4">

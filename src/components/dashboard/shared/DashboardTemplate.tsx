@@ -16,7 +16,7 @@ interface IdentityProps {
 export function DashboardIdentity({ name, subtitle, avatarUrl, status, badge }: IdentityProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
   return (
-    <div className="flex items-center gap-4 mb-6">
+    <div className="flex items-center gap-4 mb-4">
       <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/10 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="h-full w-full object-cover rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -56,7 +56,7 @@ interface StatItem {
 
 export function DashboardStats({ items }: { items: StatItem[] }) {
   return (
-    <div className={cn("grid gap-3 mb-6", items.length <= 3 ? "grid-cols-3" : "grid-cols-2 lg:grid-cols-4")}>
+    <div className={cn("grid gap-3 mb-4", items.length <= 3 ? "grid-cols-3" : "grid-cols-2 lg:grid-cols-4")}>
       {items.map(item => {
         const colorClass = {
           accent: "text-accent",
@@ -96,10 +96,10 @@ export function StatusCard({ title, status, statusVariant, details, footer }: St
   const textColor = statusVariant === "success" ? "text-success" : statusVariant === "warning" ? "text-warning" : "text-danger";
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-5">
-        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">{title}</p>
-        <div className="flex items-center gap-2 mb-3">
+    <Card className="mb-4">
+      <CardContent className="p-4">
+        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</p>
+        <div className="flex items-center gap-2 mb-2">
           <div className={cn("h-3 w-3 rounded-full", dotColor)} />
           <span className={cn("text-lg font-bold", textColor)}>{status}</span>
         </div>
@@ -126,8 +126,8 @@ export function DashboardSection({ title, action, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-heading font-semibold text-text-primary">{title}</h2>
         {action}
       </div>

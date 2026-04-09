@@ -77,7 +77,7 @@ export default function SupplierDashboard() {
         ]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Matching opportunities */}
         <DashboardSection title="Matching Opportunities" action={
           <Link href="/supplier-portal/opportunities" className="text-xs text-accent hover:text-accent-hover flex items-center gap-1">
@@ -146,7 +146,7 @@ export default function SupplierDashboard() {
       </div>
 
       {/* CTA tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         {!isPro && (
           <PromoCTA
             variant="accent"
@@ -167,7 +167,7 @@ export default function SupplierDashboard() {
       </div>
 
       {/* News */}
-      <div className="mt-8">
+      <div className="mt-5">
         <IndustryNewsFeed userType="supplier" />
       </div>
     </div>

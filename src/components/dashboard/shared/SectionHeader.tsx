@@ -10,7 +10,7 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, action, className }: SectionHeaderProps) {
   return (
-    <div className={cn("flex items-center justify-between mb-4", className)}>
+    <div className={cn("flex items-center justify-between mb-3", className)}>
       <h2 className="text-lg font-heading font-semibold text-text-primary">{title}</h2>
       {action}
     </div>
