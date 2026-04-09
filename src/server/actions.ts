@@ -3924,7 +3924,6 @@ export async function fetchTalentPool(filters?: {
       lcaAttestationDate: jobSeekerProfiles.lcaAttestationDate,
       userName: users.name,
       userEmail: users.email,
-      userIsDemo: users.isDemo,
     })
     .from(jobSeekerProfiles)
     .innerJoin(users, eq(jobSeekerProfiles.userId, users.id))
@@ -3932,7 +3931,8 @@ export async function fetchTalentPool(filters?: {
     .limit(200);
 
   // Filter: demo users only see demo candidates, real users only see real candidates
-  const filteredProfiles = profiles.filter(p => callerIsDemo ? !!p.userIsDemo : !p.userIsDemo);
+  const demoFilter = await getDemoFilter();
+  const filteredProfiles = profiles.filter(p => demoFilter.includeUser(p.userId));
 
   // Get badges for all visible users
   const allUserIds = filteredProfiles.map(p => p.userId);
