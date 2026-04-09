@@ -30,11 +30,11 @@ function Shell({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="min-h-screen bg-bg-primary" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       {/* Sidebar */}
       <aside
-        className="fixed top-0 z-40 h-screen w-60 bg-[#1e293b] flex flex-col transition-all duration-200 lg:left-0"
-        style={{ left: sidebarOpen ? 0 : undefined }}
+        className="fixed z-40 w-60 bg-[#1e293b] flex flex-col transition-all duration-200 lg:left-0"
+        style={{ top: "var(--demo-banner-h, 0px)", height: "calc(100vh - var(--demo-banner-h, 0px))", left: sidebarOpen ? 0 : undefined }}
         data-open={sidebarOpen}
       >
         <style>{`aside[data-open="false"] { left: -15rem; } @media (min-width: 1024px) { aside[data-open] { left: 0 !important; } }`}</style>

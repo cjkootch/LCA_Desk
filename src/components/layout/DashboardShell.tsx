@@ -43,7 +43,7 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
   if (!billingAccess.canAccess && !isAllowedPath) return null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}

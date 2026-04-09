@@ -24,8 +24,8 @@ export function SeekerSidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavi
 
   return (
     <aside
-      className="fixed top-0 z-40 h-screen w-60 bg-sidebar-bg flex flex-col transition-all duration-200 lg:left-0"
-      style={{ left: isOpen ? 0 : undefined }}
+      className="fixed z-40 w-60 bg-sidebar-bg flex flex-col transition-all duration-200 lg:left-0"
+      style={{ top: "var(--demo-banner-h, 0px)", height: "calc(100vh - var(--demo-banner-h, 0px))", left: isOpen ? 0 : undefined }}
       data-open={isOpen}
     >
       <style>{`

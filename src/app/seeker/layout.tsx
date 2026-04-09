@@ -10,7 +10,7 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="min-h-screen bg-bg-primary" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       <SeekerSidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
 
       {/* Mobile header */}

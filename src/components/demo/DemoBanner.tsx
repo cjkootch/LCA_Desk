@@ -19,7 +19,15 @@ export function DemoBanner() {
     }
   }, [email]);
 
-  if (!email?.endsWith("@lcadesk.com") || !email?.startsWith("demo-")) return null;
+  const isDemo = !!email && email.endsWith("@lcadesk.com") && email.startsWith("demo-");
+
+  // Set CSS variable so sidebars and content can offset for the banner
+  useEffect(() => {
+    document.documentElement.style.setProperty("--demo-banner-h", isDemo ? "28px" : "0px");
+    return () => { document.documentElement.style.setProperty("--demo-banner-h", "0px"); };
+  }, [isDemo]);
+
+  if (!isDemo || !email) return null;
 
   const label = email.includes("filer-lite") ? "Filer (Lite)" :
     email.includes("filer-pro") ? "Filer (Pro)" :
@@ -35,10 +43,8 @@ export function DemoBanner() {
 
   return (
     <>
-      {/* Spacer to push page content below the fixed banner */}
-      <div className="h-7" />
       <div
-        className="fixed top-0 left-0 right-0 z-[100] bg-gold text-white text-center py-1 text-sm font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
+        className="fixed top-0 left-0 right-0 z-[100] h-7 bg-gold text-white text-center py-1 text-sm font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
         onClick={() => setExpanded(!expanded)}
       >
         <span>DEMO MODE — {label}</span>
