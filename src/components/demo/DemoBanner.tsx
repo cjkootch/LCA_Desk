@@ -19,7 +19,8 @@ export function DemoBanner() {
     }
   }, [email]);
 
-  if (!email?.endsWith("@lcadesk.com") || !email?.startsWith("demo-")) return null;
+  const isDemo = email?.endsWith("@lcadesk.com") && email?.startsWith("demo-");
+  if (!isDemo) return null;
 
   const label = email.includes("filer-lite") ? "Filer (Lite)" :
     email.includes("filer-pro") ? "Filer (Pro)" :
@@ -35,6 +36,8 @@ export function DemoBanner() {
 
   return (
     <>
+      {/* Spacer to push page content below the fixed banner */}
+      <div className="h-7" />
       <div
         className="fixed top-0 left-0 right-0 z-[100] bg-gold text-white text-center py-1 text-[11px] font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
         onClick={() => setExpanded(!expanded)}
