@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { CancelAccount } from "@/components/settings/CancelAccount";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +105,8 @@ export default function SecretariatSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <CancelAccount hasPaidPlan={false} userType="secretariat" />
       </div>
     </div>
   );

@@ -44,6 +44,7 @@ import {
   lcsCertApplications,
   savedJobs,
   industryNews,
+  cancellationFeedback,
 } from "@/server/db/schema";
 import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -6043,4 +6044,162 @@ export async function fetchIndustryNews(limit = 20, userType?: "filer" | "suppli
 
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit);
+}
+
+// ─── CANCELLATION / DELETION ──────────────────────────────────
+
+export async function submitCancellationFeedback(data: {
+  reason: string;
+  reasonDetail?: string;
+  feedback?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  await db.insert(cancellationFeedback).values({
+    userId: session.user.id,
+    userRole: (session.user as any).userRole ?? null,
+    reason: data.reason,
+    reasonDetail: data.reasonDetail ?? null,
+    feedback: data.feedback ?? null,
+  });
+}
+
+export async function cancelSubscription() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Find user's tenant
+  const [membership] = await db
+    .select({ tenantId: tenantMembers.tenantId })
+    .from(tenantMembers)
+    .where(eq(tenantMembers.userId, session.user.id))
+    .limit(1);
+
+  if (!membership) throw new Error("No subscription found");
+
+  const [tenant] = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.id, membership.tenantId))
+    .limit(1);
+
+  if (!tenant) throw new Error("Tenant not found");
+
+  // Cancel Stripe subscription if exists
+  if (tenant.stripeSubscriptionId) {
+    try {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      await stripe.subscriptions.update(tenant.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+    } catch (err) {
+      console.error("Stripe cancel error:", err);
+    }
+  }
+
+  // Update tenant plan
+  await db
+    .update(tenants)
+    .set({ stripeSubscriptionStatus: "canceled" })
+    .where(eq(tenants.id, tenant.id));
+
+  // Log to audit
+  await db.insert(auditLogs).values({
+    tenantId: tenant.id,
+    userId: session.user.id,
+    action: "cancel_subscription",
+    entityType: "tenant",
+    entityId: tenant.id,
+    metadata: JSON.stringify({ previousPlan: tenant.plan }),
+  });
+
+  // Sync HubSpot
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  if (user?.email) {
+    try {
+      const { syncChurn } = await import("@/lib/hubspot-sync");
+      await syncChurn(user.email);
+    } catch {}
+  }
+}
+
+export async function deleteAccount() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const userId = session.user.id;
+
+  // Get user data for archive
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) throw new Error("User not found");
+
+  // Get tenant membership
+  const [membership] = await db
+    .select({ tenantId: tenantMembers.tenantId })
+    .from(tenantMembers)
+    .where(eq(tenantMembers.userId, userId))
+    .limit(1);
+
+  let tenant = null;
+  if (membership) {
+    const [t] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, membership.tenantId))
+      .limit(1);
+    tenant = t ?? null;
+  }
+
+  // Cancel Stripe if active
+  if (tenant?.stripeSubscriptionId) {
+    try {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      await stripe.subscriptions.cancel(tenant.stripeSubscriptionId);
+    } catch (err) {
+      console.error("Stripe cancel error:", err);
+    }
+  }
+
+  // Archive user data to audit log before deletion
+  await db.insert(auditLogs).values({
+    tenantId: tenant?.id ?? null,
+    userId: null, // will be deleted
+    userName: user.name,
+    action: "delete_account",
+    entityType: "user",
+    entityId: userId,
+    metadata: JSON.stringify({
+      email: user.email,
+      name: user.name,
+      userRole: user.userRole,
+      tenantId: tenant?.id,
+      tenantName: tenant?.name,
+      tenantPlan: tenant?.plan,
+      deletedAt: new Date().toISOString(),
+    }),
+  });
+
+  // Sync HubSpot
+  if (user.email) {
+    try {
+      const { syncChurn } = await import("@/lib/hubspot-sync");
+      await syncChurn(user.email);
+    } catch {}
+  }
+
+  // Delete user (cascades to tenant_members, etc.)
+  await db.delete(users).where(eq(users.id, userId));
 }

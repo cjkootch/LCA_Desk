@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
-import { Bell, Lock, Shield } from "lucide-react";
+import { Bell, Lock } from "lucide-react";
 import { fetchMyProfile, updateMyProfile, updatePassword } from "@/server/actions";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { CancelAccount } from "@/components/settings/CancelAccount";
 import { toast } from "sonner";
 
 export default function SeekerSettingsPage() {
@@ -157,21 +158,8 @@ export default function SeekerSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Account */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-accent" />
-              <CardTitle className="text-sm">Account</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-text-muted">
-              Your account is secured with password authentication. For account deletion or other requests,
-              please contact support.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Cancel / Delete */}
+        <CancelAccount hasPaidPlan={false} userType="seeker" />
       </div>
     </>
   );

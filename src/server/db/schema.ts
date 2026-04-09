@@ -1397,3 +1397,17 @@ export const narrativeDraftsRelations = relations(
     }),
   })
 );
+
+// ─── CANCELLATION FEEDBACK ─────────────────────────────────────
+export const cancellationFeedback = pgTable("cancellation_feedback", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  userRole: text("user_role"),
+  plan: text("plan"),
+  reason: text("reason").notNull(),
+  reasonDetail: text("reason_detail"),
+  feedback: text("feedback"),
+  actionTaken: text("action_taken"), // canceled_plan | deleted_account
+  savedByOffer: boolean("saved_by_offer").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});

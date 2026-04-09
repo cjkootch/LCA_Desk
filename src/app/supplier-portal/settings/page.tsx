@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles, Crown } from "lucide-react";
 import { fetchMySupplierProfile } from "@/server/actions";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { CancelAccount } from "@/components/settings/CancelAccount";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -130,6 +131,8 @@ export default function SupplierSettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <CancelAccount hasPaidPlan={isPro} userType="supplier" />
     </div>
   );
 }
