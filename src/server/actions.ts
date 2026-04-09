@@ -5081,24 +5081,34 @@ async function getSecretariatContext() {
 
 /** Returns demo filter info — demo users see demo data, real users see real data */
 async function getDemoFilter() {
-  const session = await auth();
-  let callerIsDemo = false;
-  if (session?.user?.id) {
-    const [u] = await db.select({ isDemo: users.isDemo }).from(users).where(eq(users.id, session.user.id)).limit(1);
-    callerIsDemo = !!u?.isDemo;
+  try {
+    const session = await auth();
+    let callerIsDemo = false;
+    if (session?.user?.id) {
+      const [u] = await db.select({ isDemo: users.isDemo }).from(users).where(eq(users.id, session.user.id)).limit(1);
+      callerIsDemo = !!u?.isDemo;
+    }
+    const demoTenantRows = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.isDemo, true));
+    const demoUserRows = await db.select({ id: users.id }).from(users).where(eq(users.isDemo, true));
+    const tenantIds = new Set(demoTenantRows.map(t => t.id));
+    const userIds = new Set(demoUserRows.map(u => u.id));
+    return {
+      tenantIds,
+      userIds,
+      callerIsDemo,
+      includeTenant: (id: string) => callerIsDemo ? tenantIds.has(id) : !tenantIds.has(id),
+      includeUser: (id: string) => callerIsDemo ? userIds.has(id) : !userIds.has(id),
+    };
+  } catch {
+    // Fallback if isDemo column doesn't exist yet (migration pending)
+    return {
+      tenantIds: new Set<string>(),
+      userIds: new Set<string>(),
+      callerIsDemo: false,
+      includeTenant: () => true,
+      includeUser: () => true,
+    };
   }
-  const demoTenantRows = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.isDemo, true));
-  const demoUserRows = await db.select({ id: users.id }).from(users).where(eq(users.isDemo, true));
-  const tenantIds = new Set(demoTenantRows.map(t => t.id));
-  const userIds = new Set(demoUserRows.map(u => u.id));
-  return {
-    tenantIds,
-    userIds,
-    callerIsDemo,
-    /** Returns true if this tenantId should be included for the current caller */
-    includeTenant: (id: string) => callerIsDemo ? tenantIds.has(id) : !tenantIds.has(id),
-    includeUser: (id: string) => callerIsDemo ? userIds.has(id) : !userIds.has(id),
-  };
 }
 
 export async function fetchSecretariatOfficeSettings() {
