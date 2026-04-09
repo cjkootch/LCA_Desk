@@ -191,89 +191,95 @@ function DemoContent() {
 
   // ── User selection ─────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[var(--slate-dark)]">
-      {/* Header */}
-      <div className="max-w-4xl mx-auto px-6 pt-8 pb-6 flex items-center justify-between">
-        <div>
-          <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={42} />
-          <p className="text-xs text-white/40 mt-1">Demo Panel</p>
+    <div className="min-h-screen bg-[#FAF8F5]">
+      {/* Dark slate header */}
+      <div className="bg-[var(--slate-dark)] px-6 py-8 pb-12">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <Image src="/logo-white-lca.png" alt="LCA Desk" width={140} height={42} />
+            <p className="text-xs text-white/40 mt-1">Demo Panel</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setAuthenticated(false)} className="gap-1.5 border-white/20 text-white/60 hover:text-white hover:bg-white/10">
+            <Lock className="h-3.5 w-3.5" /> Lock
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setAuthenticated(false)} className="gap-1.5 border-white/20 text-white/60 hover:text-white hover:bg-white/10">
-          <Lock className="h-3.5 w-3.5" /> Lock
-        </Button>
+        <div className="max-w-4xl mx-auto mt-6">
+          <h1 className="text-2xl font-heading font-bold text-white mb-1">Select Demo User</h1>
+          <p className="text-sm text-white/50">Click a user type to sign in as that persona. Each has pre-configured data.</p>
+        </div>
       </div>
 
-      {/* Content area */}
-      <div className="max-w-4xl mx-auto px-6 pb-12">
-        <h1 className="text-2xl font-heading font-bold text-white mb-1">Select Demo User</h1>
-        <p className="text-sm text-white/50 mb-8">Click a user type to sign in as that persona. Each has pre-configured data.</p>
-
-        {/* User grid */}
+      {/* Cards — overlap the dark header */}
+      <div className="max-w-4xl mx-auto px-6 -mt-4 pb-12">
         <div className="grid sm:grid-cols-2 gap-4">
           {DEMO_USERS.map((user) => (
-            <div
+            <Card
               key={user.id}
-              className="rounded-xl bg-white/[0.07] border border-white/10 hover:bg-white/[0.12] hover:border-white/20 transition-all cursor-pointer p-5"
+              className="hover:shadow-lg hover:border-accent/20 transition-all cursor-pointer bg-white"
               onClick={() => handleDemoLogin(user)}
             >
-              <div className="flex items-start gap-4">
-                <div className={`p-2.5 rounded-xl ${user.bgColor} shrink-0`}>
-                  <user.icon className={`h-5 w-5 ${user.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className="text-sm font-semibold text-white">{user.label}</h3>
-                    {user.plan && (
-                      <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-xs">
-                        {user.plan}
-                      </Badge>
-                    )}
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className={`p-2.5 rounded-xl ${user.bgColor} shrink-0`}>
+                    <user.icon className={`h-5 w-5 ${user.color}`} />
                   </div>
-                  <p className="text-xs text-white/50 leading-relaxed">{user.description}</p>
-                  <p className="text-xs text-white/30 mt-1.5 font-mono">{user.email}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-sm font-semibold text-text-primary">{user.label}</h3>
+                      {user.plan && (
+                        <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-xs">
+                          {user.plan}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-text-secondary leading-relaxed">{user.description}</p>
+                    <p className="text-xs text-text-muted mt-1.5 font-mono">{user.email}</p>
+                  </div>
+                  {signingIn === user.id && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0 mt-1" />
+                  )}
                 </div>
-                {signingIn === user.id && (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0 mt-1" />
-                )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* Seed button */}
-        <div className="mt-8 rounded-xl bg-white/[0.05] border border-white/10 p-5 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Setup Demo Users</h3>
-            <p className="text-xs text-white/40 mt-0.5">
-              Creates all demo accounts with sample data. Safe to run multiple times.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            loading={loading}
-            className="gap-1.5 shrink-0 border-white/20 text-white/60 hover:text-white hover:bg-white/10"
-            onClick={async () => {
-              setLoading(true);
-              try {
-                const res = await fetch("/api/demo/seed", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ secret: masterPassword }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                  toast.success("Demo users created!");
-                } else {
-                  toast.error(data.error || "Setup failed");
-                }
-              } catch { toast.error("Setup failed"); }
-              setLoading(false);
-            }}
-          >
-            <User className="h-3.5 w-3.5" /> Create Demo Users
-          </Button>
-        </div>
+        <Card className="mt-6 bg-white">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Setup Demo Users</h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Creates all demo accounts with sample data. Safe to run multiple times.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={loading}
+              className="gap-1.5 shrink-0"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch("/api/demo/seed", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ secret: masterPassword }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast.success("Demo users created!");
+                  } else {
+                    toast.error(data.error || "Setup failed");
+                  }
+                } catch { toast.error("Setup failed"); }
+                setLoading(false);
+              }}
+            >
+              <User className="h-3.5 w-3.5" /> Create Demo Users
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
