@@ -3708,7 +3708,7 @@ export async function fetchComplianceHealth() {
   const nonTechnical = empByCategory("Non-Technical");
 
   // Supplier cert expiry warnings
-  const supplierCerts = [...new Set(realExp.filter(e => e.supplierCertificateId).map(e => e.supplierCertificateId))];
+  const supplierCerts = [...new Set(allExp.filter(e => e.supplierCertificateId).map(e => e.supplierCertificateId))];
   const expiringCerts: Array<{ certId: string; supplierName: string; expiresAt: string; daysLeft: number }> = [];
   for (const certId of supplierCerts) {
     if (!certId) continue;
