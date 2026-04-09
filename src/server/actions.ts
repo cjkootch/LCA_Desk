@@ -2683,6 +2683,7 @@ export async function fetchUserSettings() {
   const [user] = await db.select({
     name: users.name,
     email: users.email,
+    phone: users.phone,
     avatarUrl: users.avatarUrl,
     linkedinUrl: users.linkedinUrl,
     twitterUrl: users.twitterUrl,
@@ -2693,6 +2694,7 @@ export async function fetchUserSettings() {
 
 export async function updateUserSettings(data: {
   name?: string;
+  phone?: string;
   avatarUrl?: string;
   linkedinUrl?: string;
   twitterUrl?: string;
@@ -2702,6 +2704,7 @@ export async function updateUserSettings(data: {
   if (!session?.user?.id) throw new Error("Not authenticated");
   await db.update(users).set({
     ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.phone !== undefined ? { phone: data.phone } : {}),
     ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
     ...(data.linkedinUrl !== undefined ? { linkedinUrl: data.linkedinUrl } : {}),
     ...(data.twitterUrl !== undefined ? { twitterUrl: data.twitterUrl } : {}),

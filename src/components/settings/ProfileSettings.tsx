@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Camera, Globe, Save, Link2 } from "lucide-react";
+import { User, Camera, Globe, Save, Link2, Phone } from "lucide-react";
 import { fetchUserSettings, updateUserSettings } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ export function ProfileSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
@@ -24,6 +25,7 @@ export function ProfileSettings() {
     fetchUserSettings().then(u => {
       if (u) {
         setName(u.name || "");
+        setPhone(u.phone || "");
         setAvatarUrl(u.avatarUrl || "");
         setLinkedinUrl(u.linkedinUrl || "");
         setTwitterUrl(u.twitterUrl || "");
@@ -53,7 +55,7 @@ export function ProfileSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateUserSettings({ name, linkedinUrl, twitterUrl, websiteUrl });
+      await updateUserSettings({ name, phone, linkedinUrl, twitterUrl, websiteUrl });
       toast.success("Profile updated");
     } catch { toast.error("Failed to save"); }
     setSaving(false);
@@ -100,6 +102,10 @@ export function ProfileSettings() {
           <div>
             <label className="text-xs text-text-muted font-medium">Full Name</label>
             <Input value={name} onChange={e => setName(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-xs text-text-muted font-medium flex items-center gap-1"><Phone className="h-3 w-3" /> Phone Number</label>
+            <Input value={phone} onChange={e => setPhone(e.target.value)} className="mt-1" placeholder="+592 xxx xxxx" />
           </div>
           <div>
             <label className="text-xs text-text-muted font-medium flex items-center gap-1"><Link2 className="h-3 w-3" /> LinkedIn</label>

@@ -55,6 +55,7 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified"),
   image: text("image"),
   avatarUrl: text("avatar_url"),
+  phone: text("phone"),
   linkedinUrl: text("linkedin_url"),
   twitterUrl: text("twitter_url"),
   websiteUrl: text("website_url"),
@@ -62,6 +63,7 @@ export const users = pgTable("users", {
   isSuperAdmin: boolean("is_super_admin").default(false),
   userRole: text("user_role").default("filer"),
   notificationPreferences: text("notification_preferences"),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

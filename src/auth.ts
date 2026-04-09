@@ -50,6 +50,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
         if (!valid) return null;
 
+        // Track last login
+        db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).catch(() => {});
+
         return {
           id: user.id,
           email: user.email,
