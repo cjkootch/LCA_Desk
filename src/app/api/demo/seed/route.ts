@@ -4,9 +4,9 @@ import {
   users, tenants, tenantMembers, entities, jurisdictions,
   jobSeekerProfiles, supplierProfiles, reportingPeriods,
   expenditureRecords, employmentRecords, capacityDevelopmentRecords,
-  secretariatOffices, secretariatMembers,
+  secretariatOffices, secretariatMembers, courses, userCourseProgress,
 } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const DEMO_PASSWORD = "demo-password-2026";
