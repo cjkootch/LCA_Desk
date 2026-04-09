@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,37 +10,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const sql = neon(process.env.DATABASE_URL!);
     const results: string[] = [];
 
-    const run = async (label: string, query: string) => {
+    const run = async (label: string, query: ReturnType<typeof sql>) => {
       try {
-        await sql.transaction((tx) => [tx(query)]);
+        await db.execute(query);
         results.push(`✓ ${label}`);
       } catch (e) {
-        // Try alternative approach
-        try {
-          // @ts-expect-error - neon tagged template workaround
-          await sql([query] as unknown as TemplateStringsArray);
-          results.push(`✓ ${label}`);
-        } catch (e2) {
-          results.push(`✗ ${label}: ${e2 instanceof Error ? e2.message : e2}`);
-        }
+        results.push(`✗ ${label}: ${e instanceof Error ? e.message : e}`);
       }
     };
 
-    await run("users.is_demo", "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE");
-    await run("tenants.is_demo", "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE");
-    await run("announcements.category", "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'general'");
-    await run("offices.logo_url", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS logo_url TEXT");
-    await run("offices.phone", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS phone TEXT");
-    await run("offices.address", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS address TEXT");
-    await run("offices.website", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS website TEXT");
-    await run("offices.signatory_name", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS signatory_name TEXT");
-    await run("offices.signatory_title", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS signatory_title TEXT");
-    await run("offices.submission_email", "ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS submission_email TEXT");
-
-    await run("team_invites", `CREATE TABLE IF NOT EXISTS team_invites (
+    await run("users.is_demo", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE`);
+    await run("tenants.is_demo", sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE`);
+    await run("announcements.category", sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'general'`);
+    await run("offices.logo_url", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+    await run("offices.phone", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS phone TEXT`);
+    await run("offices.address", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS address TEXT`);
+    await run("offices.website", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS website TEXT`);
+    await run("offices.signatory_name", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS signatory_name TEXT`);
+    await run("offices.signatory_title", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS signatory_title TEXT`);
+    await run("offices.submission_email", sql`ALTER TABLE secretariat_offices ADD COLUMN IF NOT EXISTS submission_email TEXT`);
+    await run("team_invites", sql`CREATE TABLE IF NOT EXISTS team_invites (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT NOT NULL,
       token TEXT NOT NULL UNIQUE,
