@@ -28,24 +28,22 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
   // ── PAST DUE — non-dismissable, payment action required ───────
   if (access?.state === "past_due") {
     return (
-      <div className="rounded-lg border-2 border-danger bg-danger-light p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-danger" />
-          <div className="flex-1">
-            <p className="font-semibold text-danger text-sm">
-              Payment failed — update your payment method now
-            </p>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Your payment could not be processed. We&apos;re retrying automatically, but please update your payment method to avoid losing access.
-            </p>
-            <Link href="/dashboard/settings/billing" className="inline-block mt-2">
-              <Button size="sm" variant="primary">
-                <CreditCard className="h-4 w-4 mr-1" />
-                Update Payment Method
-              </Button>
-            </Link>
+      <div className="rounded-xl border border-danger/30 bg-gradient-to-r from-danger/5 to-transparent px-4 py-3 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="p-1.5 rounded-lg bg-danger/10 shrink-0">
+              <AlertTriangle className="h-4 w-4 text-danger" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-danger">Payment failed</p>
+              <p className="text-xs text-text-muted mt-0.5 hidden sm:block">Update your payment method to avoid losing access.</p>
+            </div>
           </div>
-          {/* No dismiss button — past_due banner cannot be dismissed */}
+          <Link href="/dashboard/settings/billing" className="shrink-0">
+            <Button size="sm" variant="danger" className="h-7 text-xs px-3 gap-1">
+              <CreditCard className="h-3 w-3" /> Fix Payment
+            </Button>
+          </Link>
         </div>
       </div>
     );
@@ -60,37 +58,35 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
 
     return (
       <div className={cn(
-        "rounded-lg border p-4 mb-6",
-        urgent ? "bg-warning-light border-warning/20" : "bg-accent-light border-accent/20"
+        "rounded-xl border px-4 py-3 mb-4",
+        urgent
+          ? "bg-gradient-to-r from-warning/5 to-transparent border-warning/20"
+          : "bg-gradient-to-r from-accent/5 to-transparent border-accent/20"
       )}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            {urgent
-              ? <Clock className="h-5 w-5 mt-0.5 shrink-0 text-warning" />
-              : <Sparkles className="h-5 w-5 mt-0.5 shrink-0 text-accent" />
-            }
-            <div>
-              <p className="font-medium text-text-primary text-sm">
-                {days === 0
-                  ? "Your Professional trial ends today"
-                  : `Professional Trial — ${days} day${days !== 1 ? "s" : ""} remaining`}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className={cn("p-1.5 rounded-lg shrink-0", urgent ? "bg-warning/10" : "bg-accent/10")}>
+              {urgent ? <Clock className="h-4 w-4 text-warning" /> : <Sparkles className="h-4 w-4 text-accent" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-text-primary">
+                {days === 0 ? "Trial ends today" : `Professional Trial — ${days} day${days !== 1 ? "s" : ""} left`}
               </p>
-              <p className="text-xs text-text-secondary mt-0.5">
-                {urgent
-                  ? "Upgrade now to keep AI Narrative Drafting, unlimited reports, and the full marketplace layer."
-                  : "You have full Professional access. Upgrade before your trial ends to keep these features."}
+              <p className="text-xs text-text-muted mt-0.5 hidden sm:block">
+                {urgent ? "Upgrade to keep AI drafting, unlimited reports, and marketplace." : "Full Professional access. Upgrade before it ends."}
               </p>
-              <Link href="/dashboard/settings/billing" className="inline-block mt-2">
-                <Button size="sm" variant={urgent ? "primary" : "outline"}>
-                  <Sparkles className="h-4 w-4 mr-1" />
-                  Upgrade to Professional
-                </Button>
-              </Link>
             </div>
           </div>
-          <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/dashboard/settings/billing">
+              <Button size="sm" variant={urgent ? "primary" : "outline"} className="h-7 text-xs px-3 gap-1">
+                <Sparkles className="h-3 w-3" /> Upgrade
+              </Button>
+            </Link>
+            <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary p-1">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -122,39 +118,51 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
 
   return (
     <div className={cn(
-      "rounded-lg border p-4 mb-6",
-      isAtLimit ? "bg-warning-light border-warning/20" : "bg-accent-light border-accent/20"
+      "rounded-xl border px-4 py-3 mb-4",
+      isAtLimit
+        ? "bg-gradient-to-r from-warning/5 to-transparent border-warning/20"
+        : "bg-gradient-to-r from-accent/5 to-transparent border-accent/20"
     )}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className={cn("h-5 w-5 mt-0.5 shrink-0", isAtLimit ? "text-warning" : "text-accent")} />
-          <div>
-            <p className="font-medium text-text-primary text-sm">
-              {isAtLimit ? "You've reached your plan limit" : "Approaching plan limits"}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={cn("p-1.5 rounded-lg shrink-0", isAtLimit ? "bg-warning/10" : "bg-accent/10")}>
+            <AlertTriangle className={cn("h-4 w-4", isAtLimit ? "text-warning" : "text-accent")} />
+          </div>
+          <div className="flex items-center gap-4 flex-1 min-w-0 flex-wrap">
+            <p className="text-sm font-medium text-text-primary whitespace-nowrap">
+              {isAtLimit ? "Plan limit reached" : "Approaching limits"}
             </p>
-            <div className="mt-2 space-y-2">
-              {warnings.map((w) => (
-                <div key={w.label} className="text-sm">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-text-secondary">{w.label}</span>
-                    <span className="text-text-primary font-medium">{w.used} / {w.limit}</span>
+            <div className="flex items-center gap-4">
+              {warnings.map((w) => {
+                const pct = Math.min((w.used / w.limit) * 100, 100);
+                return (
+                  <div key={w.label} className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted whitespace-nowrap">{w.label}</span>
+                    <div className="w-20 h-1.5 bg-border-light rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all", w.used >= w.limit ? "bg-warning" : "bg-accent")}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className={cn("text-xs font-medium whitespace-nowrap", w.used >= w.limit ? "text-warning" : "text-text-secondary")}>
+                      {w.used}/{w.limit}
+                    </span>
                   </div>
-                  <Progress value={Math.min((w.used / w.limit) * 100, 100)}
-                    indicatorClassName={w.used >= w.limit ? "bg-warning" : "bg-accent"} />
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <Link href="/dashboard/settings/billing" className="inline-block mt-3">
-              <Button size="sm" variant={isAtLimit ? "primary" : "outline"}>
-                <Sparkles className="h-4 w-4 mr-1" />
-                Upgrade Plan
-              </Button>
-            </Link>
           </div>
         </div>
-        <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary">
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/dashboard/settings/billing">
+            <Button size="sm" variant={isAtLimit ? "primary" : "outline"} className="h-7 text-xs px-3 gap-1">
+              <Sparkles className="h-3 w-3" /> Upgrade
+            </Button>
+          </Link>
+          <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary p-1">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
