@@ -5389,6 +5389,72 @@ export async function fetchFilingCompliance(fiscalYear: number, reportType: stri
   };
 }
 
+export async function fetchEntityFilingProfile(entityId: string) {
+  await getSecretariatContext();
+
+  const [entity] = await db.select().from(entities).where(eq(entities.id, entityId)).limit(1);
+  if (!entity) throw new Error("Entity not found");
+
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, entity.tenantId)).limit(1);
+
+  // Get all reporting periods for this entity
+  const allPeriods = await db.select({
+    id: reportingPeriods.id,
+    reportType: reportingPeriods.reportType,
+    fiscalYear: reportingPeriods.fiscalYear,
+    status: reportingPeriods.status,
+    submittedAt: reportingPeriods.submittedAt,
+    periodStart: reportingPeriods.periodStart,
+    periodEnd: reportingPeriods.periodEnd,
+    dueDate: reportingPeriods.dueDate,
+  }).from(reportingPeriods)
+    .where(eq(reportingPeriods.entityId, entityId))
+    .orderBy(desc(reportingPeriods.fiscalYear), desc(reportingPeriods.periodEnd))
+    .limit(20);
+
+  // Quick LC rate from most recent submitted period
+  let latestLcRate: number | null = null;
+  const submitted = allPeriods.find(p => p.status === "submitted" || p.status === "acknowledged");
+  if (submitted) {
+    const exps = await db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, submitted.id));
+    const total = exps.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    const guy = exps.filter(e => !!e.supplierCertificateId).reduce((s, e) => s + Number(e.actualPayment || 0), 0);
+    latestLcRate = total > 0 ? Math.round((guy / total) * 1000) / 10 : 0;
+  }
+
+  return {
+    entity: {
+      id: entity.id,
+      legalName: entity.legalName,
+      tradingName: entity.tradingName,
+      companyType: entity.companyType,
+      lcsCertificateId: entity.lcsCertificateId,
+      lcsCertificateExpiry: entity.lcsCertificateExpiry,
+      guyanaeseOwnershipPct: entity.guyanaeseOwnershipPct,
+      registrationNumber: entity.registrationNumber,
+      contactName: entity.contactName,
+      contactEmail: entity.contactEmail,
+      contactPhone: entity.contactPhone,
+      website: entity.website,
+      numberOfEmployees: entity.numberOfEmployees,
+    },
+    tenant: { name: tenant?.name || "Unknown" },
+    filingHistory: allPeriods.map(p => ({
+      id: p.id,
+      reportType: p.reportType,
+      fiscalYear: p.fiscalYear,
+      status: p.status,
+      submittedAt: p.submittedAt,
+      periodStart: p.periodStart,
+      periodEnd: p.periodEnd,
+      dueDate: p.dueDate,
+    })),
+    latestLcRate,
+    totalFilings: allPeriods.length,
+    submittedFilings: allPeriods.filter(p => p.status === "submitted" || p.status === "acknowledged").length,
+  };
+}
+
 // ─── SECRETARIAT: PERIOD COMPARISON ──────────────────────────────
 
 export async function fetchPeriodComparison(entityId: string) {
