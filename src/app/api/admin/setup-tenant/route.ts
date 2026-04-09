@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       tenantId: tenant.id, userId: user.id, role: "owner",
     });
 
-    return NextResponse.json({ success: true, tenantId: tenant.id, tenantName: tenant.name });
+    return NextResponse.json({ success: true, tenantId: tenant.id, tenantName: companyName || "LCA Desk Admin" });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Internal error" }, { status: 500 });
   }
