@@ -15,6 +15,7 @@ import {
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
+import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -148,6 +149,7 @@ export default function SecretariatDashboardPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl">
+      <AnnouncementBanner userRole="secretariat" />
       <DashboardHero
         badge="Local Content Secretariat"
         title="Regulatory Dashboard"

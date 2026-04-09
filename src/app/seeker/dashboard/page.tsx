@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
+import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Briefcase, FileText, Bookmark, TrendingUp, CheckCircle, XCircle,
@@ -73,6 +74,7 @@ export default function SeekerDashboard() {
       <SeekerTopBar title="Dashboard" description="Your job search at a glance" />
 
       <div className="p-4 sm:p-8 space-y-6 max-w-6xl">
+        <AnnouncementBanner userRole="seeker" />
         {/* Profile completion banner */}
         {!stats?.profileComplete && (
           <Card className="border-accent/20 bg-accent-light">

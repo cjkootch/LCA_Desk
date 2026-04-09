@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings } from "lucide-react";
+import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { Shield as ShieldIcon } from "lucide-react";
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: "Market Intel", href: "/secretariat/market", icon: BarChart3 },
   { label: "LCS Applications", href: "/secretariat/applications", icon: UserPlus },
   { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
+  { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
   { label: "Team", href: "/secretariat/team", icon: Users },
   { label: "Settings", href: "/secretariat/settings", icon: Settings },
 ];

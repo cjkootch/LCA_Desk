@@ -1398,6 +1398,23 @@ export const narrativeDraftsRelations = relations(
   })
 );
 
+// ─── ANNOUNCEMENTS ─────────────────────────────────────────────
+export const announcements = pgTable("announcements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  priority: text("priority").notNull().default("normal"), // normal | important | urgent
+  targetRoles: text("target_roles").notNull().default("all"), // JSON array: ["filer","supplier","seeker","secretariat"] or "all"
+  authorId: uuid("author_id").notNull().references(() => users.id),
+  authorName: text("author_name"),
+  status: text("status").notNull().default("draft"), // draft | scheduled | published | expired
+  publishAt: timestamp("publish_at"),
+  expiresAt: timestamp("expires_at"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // ─── CANCELLATION FEEDBACK ─────────────────────────────────────
 export const cancellationFeedback = pgTable("cancellation_feedback", {
   id: uuid("id").primaryKey().defaultRandom(),

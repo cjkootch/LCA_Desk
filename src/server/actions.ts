@@ -45,8 +45,9 @@ import {
   savedJobs,
   industryNews,
   cancellationFeedback,
+  announcements,
 } from "@/server/db/schema";
-import { eq, and, gte, sql, desc } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
@@ -6204,4 +6205,127 @@ export async function deleteAccount() {
 
   // Delete user (cascades to tenant_members, etc.)
   await db.delete(users).where(eq(users.id, userId));
+}
+
+// ─── ANNOUNCEMENTS ────────────────────────────────────────────
+
+export async function fetchAnnouncements() {
+  // Secretariat: fetch all announcements for management
+  return db
+    .select()
+    .from(announcements)
+    .orderBy(desc(announcements.createdAt));
+}
+
+export async function createAnnouncement(data: {
+  title: string;
+  body: string;
+  priority: string;
+  targetRoles: string;
+  publishAt: string | null;
+  expiresAt: string | null;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const publishAt = data.publishAt ? new Date(data.publishAt) : null;
+  const isImmediate = !publishAt || publishAt <= new Date();
+
+  const [row] = await db
+    .insert(announcements)
+    .values({
+      title: data.title,
+      body: data.body,
+      priority: data.priority || "normal",
+      targetRoles: data.targetRoles || "all",
+      authorId: session.user.id,
+      authorName: session.user.name || null,
+      status: isImmediate ? "published" : "scheduled",
+      publishAt,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      publishedAt: isImmediate ? new Date() : null,
+    })
+    .returning();
+
+  return row;
+}
+
+export async function updateAnnouncement(
+  id: string,
+  data: {
+    title?: string;
+    body?: string;
+    priority?: string;
+    targetRoles?: string;
+    publishAt?: string | null;
+    expiresAt?: string | null;
+    status?: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: Record<string, any> = { updatedAt: new Date() };
+  if (data.title !== undefined) updates.title = data.title;
+  if (data.body !== undefined) updates.body = data.body;
+  if (data.priority !== undefined) updates.priority = data.priority;
+  if (data.targetRoles !== undefined) updates.targetRoles = data.targetRoles;
+  if (data.publishAt !== undefined) updates.publishAt = data.publishAt ? new Date(data.publishAt) : null;
+  if (data.expiresAt !== undefined) updates.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+
+  if (data.status === "published") {
+    updates.status = "published";
+    updates.publishedAt = new Date();
+  } else if (data.status !== undefined) {
+    updates.status = data.status;
+  }
+
+  await db.update(announcements).set(updates).where(eq(announcements.id, id));
+}
+
+export async function deleteAnnouncement(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  await db.delete(announcements).where(eq(announcements.id, id));
+}
+
+export async function fetchActiveAnnouncements(userRole: string) {
+  const now = new Date();
+
+  // Fetch published + scheduled-that-are-due, not expired
+  const rows = await db
+    .select()
+    .from(announcements)
+    .where(
+      and(
+        or(
+          eq(announcements.status, "published"),
+          and(eq(announcements.status, "scheduled"), lte(announcements.publishAt, now))
+        ),
+        or(isNull(announcements.expiresAt), gte(announcements.expiresAt, now))
+      )
+    )
+    .orderBy(desc(announcements.publishedAt), desc(announcements.createdAt));
+
+  // Auto-publish scheduled announcements that are now due
+  for (const row of rows) {
+    if (row.status === "scheduled") {
+      await db.update(announcements).set({
+        status: "published",
+        publishedAt: row.publishAt || now,
+      }).where(eq(announcements.id, row.id));
+    }
+  }
+
+  // Filter by target role
+  return rows.filter(a => {
+    if (a.targetRoles === "all") return true;
+    try {
+      const roles = JSON.parse(a.targetRoles) as string[];
+      return roles.includes(userRole);
+    } catch {
+      return a.targetRoles === userRole;
+    }
+  });
 }

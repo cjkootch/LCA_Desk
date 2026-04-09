@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
+import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import Link from "next/link";
 import {
   Shield, Briefcase, FileText, TrendingUp, ArrowRight,
@@ -38,6 +39,7 @@ export default function SupplierDashboard() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
+      <AnnouncementBanner userRole="supplier" />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-heading font-bold text-text-primary">{profile.legalName || "Supplier Dashboard"}</h1>

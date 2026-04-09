@@ -7,6 +7,7 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
+import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { SectionHeader } from "@/components/dashboard/shared/SectionHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -73,6 +74,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-8">
+      <AnnouncementBanner userRole="filer" />
       {/* Hero */}
       <DashboardHero
         title={`${greeting}`}
