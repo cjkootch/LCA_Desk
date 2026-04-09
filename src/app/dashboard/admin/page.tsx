@@ -74,7 +74,7 @@ export default function AdminPage() {
             {hideDemo ? "Real Only" : "All (incl. Demo)"}
           </button>
           <div className="h-4 w-px bg-border" />
-          {["all", ...new Set(data.tenants.list.map((t: { jurisdictionCode: string | null }) => t.jurisdictionCode).filter(Boolean))].map((j: string) => (
+          {["all", ...Array.from(new Set(data.tenants.list.map((t: { jurisdictionCode: string | null }) => t.jurisdictionCode).filter(Boolean) as string[]))].map((j) => (
             <button key={j}
               onClick={() => setJurisdictionFilter(j)}
               className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
