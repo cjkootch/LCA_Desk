@@ -12,7 +12,7 @@ import {
   FileText, CheckCircle, Search, Shield, Eye,
   AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
 } from "lucide-react";
-import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
+import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests, fetchSecretariatOfficeSettings } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardIdentity, DashboardStats, StatusCard } from "@/components/dashboard/shared/DashboardTemplate";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
@@ -38,6 +38,8 @@ export default function SecretariatDashboardPage() {
   const [data, setData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [analytics, setAnalytics] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [office, setOffice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -64,8 +66,8 @@ export default function SecretariatDashboardPage() {
   const [detailTab, setDetailTab] = useState<"review" | "trend" | "amendments">("review");
 
   useEffect(() => {
-    Promise.all([fetchSecretariatDashboard(), fetchSecretariatAnalytics()])
-      .then(([d, a]) => { setData(d); setAnalytics(a); })
+    Promise.all([fetchSecretariatDashboard(), fetchSecretariatAnalytics(), fetchSecretariatOfficeSettings().catch(() => null)])
+      .then(([d, a, o]) => { setData(d); setAnalytics(a); if (o) setOffice(o); })
       .catch(err => toast.error(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
   }, []);
@@ -153,8 +155,9 @@ export default function SecretariatDashboardPage() {
 
       {/* Identity */}
       <DashboardIdentity
-        name="Local Content Secretariat"
+        name={office?.name || "Local Content Secretariat"}
         subtitle={`Regulatory Dashboard · ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}`}
+        avatarUrl={office?.logoUrl || undefined}
         status={{ label: "Monitoring", variant: "success" }}
         badge="Secretariat"
       />

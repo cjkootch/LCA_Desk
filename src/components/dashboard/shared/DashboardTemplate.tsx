@@ -19,7 +19,7 @@ export function DashboardIdentity({ name, subtitle, avatarUrl, status, badge }: 
     <div className="flex items-center gap-4 mb-4">
       <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/10 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="h-full w-full object-cover rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <img src={avatarUrl} alt="" className="h-full w-full object-contain rounded-xl p-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
         ) : (
           <span className="text-2xl font-bold text-accent">{initial}</span>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -10,7 +10,10 @@ import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { Shield as ShieldIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchSecretariatOfficeSettings } from "@/server/actions";
 import { SessionProvider } from "next-auth/react";
+
+/* eslint-disable @next/next/no-img-element */
 
 interface NavSection { label?: string; items: { label: string; href: string; icon: React.ElementType }[] }
 
@@ -61,6 +64,12 @@ function Shell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [office, setOffice] = useState<any>(null);
+
+  useEffect(() => {
+    fetchSecretariatOfficeSettings().then(setOffice).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-primary" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
@@ -83,8 +92,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 
         <div className="px-5 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Shield className="h-3.5 w-3.5 text-gold" />
-            <span className="text-sm font-medium uppercase tracking-wider text-white/50">Secretariat Portal</span>
+            {office?.logoUrl ? (
+              <img src={office.logoUrl} alt="" className="h-6 w-6 rounded object-contain bg-white/10 p-0.5" />
+            ) : (
+              <Shield className="h-3.5 w-3.5 text-gold" />
+            )}
+            <span className="text-sm font-medium uppercase tracking-wider text-white/50">{office?.name || "Secretariat Portal"}</span>
           </div>
         </div>
 
