@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDownloadUrl } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -34,25 +35,29 @@ export async function GET(request: Request) {
 
     if (!rawUrl) return new NextResponse(null, { status: 404 });
 
-    // Get the actual image bytes and serve them directly
+    // Get signed URL for private blob
     let imageUrl = rawUrl;
     if (rawUrl.includes("blob.vercel-storage.com")) {
       imageUrl = await getDownloadUrl(rawUrl);
     }
 
-    const res = await fetch(imageUrl);
-    if (!res.ok) return new NextResponse(null, { status: 502 });
+    // Stream the image through — don't buffer the whole thing
+    const upstream = await fetch(imageUrl);
+    if (!upstream.ok) {
+      console.error("[avatar] upstream fetch failed:", upstream.status, upstream.statusText);
+      return new NextResponse(null, { status: 502 });
+    }
 
-    const blob = await res.arrayBuffer();
-
-    return new NextResponse(blob, {
+    return new NextResponse(upstream.body, {
+      status: 200,
       headers: {
-        "Content-Type": res.headers.get("content-type") || "image/jpeg",
+        "Content-Type": upstream.headers.get("content-type") || "image/jpeg",
+        "Content-Length": upstream.headers.get("content-length") || "",
         "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
       },
     });
   } catch (err) {
-    console.error("[avatar] error for userId", userId, ":", err instanceof Error ? err.message : err);
+    console.error("[avatar] error:", err instanceof Error ? err.message : err);
     return new NextResponse(null, { status: 500 });
   }
 }
