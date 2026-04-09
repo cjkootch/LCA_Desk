@@ -11,6 +11,7 @@ import { Shield as ShieldIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchSecretariatOfficeSettings } from "@/server/actions";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SessionProvider } from "next-auth/react";
 
 /* eslint-disable @next/next/no-img-element */
@@ -144,16 +145,24 @@ function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="lg:hidden sticky top-0 z-30 flex items-center h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
-          <Menu className="h-5 w-5" />
-        </button>
-        <span className="ml-2 text-sm font-heading font-semibold text-text-primary">Secretariat</span>
+      <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+        <div className="flex items-center">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
+            <Menu className="h-5 w-5" />
+          </button>
+          <span className="ml-2 text-sm font-heading font-semibold text-text-primary">Secretariat</span>
+        </div>
+        <NotificationBell />
       </div>
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <main className="lg:ml-60 min-h-screen">{children}</main>
+      <main className="lg:ml-60 min-h-screen relative">
+        <div className="hidden lg:flex fixed top-3 right-4 z-20">
+          <NotificationBell />
+        </div>
+        {children}
+      </main>
       <SecretariatTour />
       <FloatingChatWidget
         endpoint="/api/ai/secretariat-chat"

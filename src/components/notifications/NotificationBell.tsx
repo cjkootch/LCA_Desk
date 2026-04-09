@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { Bell, AlertTriangle, Clock, Shield, FileText, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,11 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const settingsHref = pathname?.startsWith("/secretariat") ? "/secretariat/settings"
+    : pathname?.startsWith("/seeker") ? "/seeker/settings"
+    : pathname?.startsWith("/supplier-portal") ? "/supplier-portal/settings"
+    : "/dashboard/settings";
 
   // Generate notifications and fetch count on mount
   useEffect(() => {
@@ -181,7 +187,7 @@ export function NotificationBell() {
           {/* Footer */}
           <div className="px-4 py-2 border-t border-border">
             <Link
-              href="/dashboard/settings"
+              href={settingsHref}
               onClick={() => setOpen(false)}
               className="text-xs text-text-muted hover:text-text-secondary"
             >

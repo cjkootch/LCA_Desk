@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupplierTour } from "@/components/onboarding/SupplierTour";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -114,15 +115,23 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="lg:hidden sticky top-0 z-30 flex items-center h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
-          <Menu className="h-5 w-5" />
-        </button>
-        <span className="ml-2 text-sm font-heading font-semibold text-text-primary">Supplier Portal</span>
+      <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+        <div className="flex items-center">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
+            <Menu className="h-5 w-5" />
+          </button>
+          <span className="ml-2 text-sm font-heading font-semibold text-text-primary">Supplier Portal</span>
+        </div>
+        <NotificationBell />
       </div>
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-      <main className="lg:ml-60 min-h-screen">{children}</main>
+      <main className="lg:ml-60 min-h-screen relative">
+        <div className="hidden lg:flex fixed top-3 right-4 z-20">
+          <NotificationBell />
+        </div>
+        {children}
+      </main>
       <SupplierTour />
     </div>
   );

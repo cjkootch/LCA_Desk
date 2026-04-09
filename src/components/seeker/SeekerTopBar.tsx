@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+
 interface SeekerTopBarProps {
   title: string;
   description?: string;
@@ -15,7 +17,10 @@ export function SeekerTopBar({ title, description, action }: SeekerTopBarProps) 
           <p className="text-sm text-text-secondary hidden sm:block">{description}</p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      <div className="flex items-center gap-2 shrink-0">
+        {action}
+        <NotificationBell />
+      </div>
     </header>
   );
 }

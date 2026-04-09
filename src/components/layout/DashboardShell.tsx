@@ -7,6 +7,7 @@ import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { BillingAccess } from "@/lib/plans";
 
 interface DashboardShellProps {
@@ -49,11 +50,19 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
       )}
       <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
       <main className="flex-1 lg:ml-60 min-w-0">
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-border bg-bg-surface">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-text-secondary hover:text-text-primary">
-            <Menu className="h-5 w-5" />
-          </button>
-          <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-bg-surface">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="p-2 text-text-secondary hover:text-text-primary">
+              <Menu className="h-5 w-5" />
+            </button>
+            <img src="/logo-full.png" alt="LCA Desk" className="h-7" />
+          </div>
+          <NotificationBell />
+        </div>
+        {/* Desktop persistent bell */}
+        <div className="hidden lg:flex fixed top-3 right-4 z-20">
+          <NotificationBell />
         </div>
         <div className="px-4 sm:px-8 pt-4">
           <UsageBanner billingAccess={billingAccess} />
