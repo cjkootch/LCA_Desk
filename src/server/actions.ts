@@ -933,12 +933,15 @@ export async function fetchUserContext() {
 
   const membership = await db.query.tenantMembers.findFirst({
     where: eq(tenantMembers.userId, session.user.id),
-    with: { tenant: true },
+    with: { tenant: { with: { jurisdiction: true } } },
   });
 
   return {
     user: session.user,
-    tenant: membership?.tenant || null,
+    tenant: membership?.tenant ? {
+      ...membership.tenant,
+      jurisdiction: membership.tenant.jurisdiction?.name || null,
+    } : null,
     role: membership?.role || null,
     isSuperAdmin: user?.isSuperAdmin ?? false,
   };
