@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Building2, Briefcase, Truck, Shield, Crown, Lock,
-  User, Search, FileText, BarChart3,
+  User, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +23,7 @@ const DEMO_USERS = [
     role: "filer",
     email: "demo-filer-lite@lcadesk.com",
     color: "text-accent",
-    bgColor: "bg-accent-light",
+    bgColor: "bg-accent/10",
   },
   {
     id: "filer-pro",
@@ -35,7 +34,7 @@ const DEMO_USERS = [
     role: "filer",
     email: "demo-filer-pro@lcadesk.com",
     color: "text-gold",
-    bgColor: "bg-gold-light",
+    bgColor: "bg-gold/10",
   },
   {
     id: "filer-trial",
@@ -46,7 +45,7 @@ const DEMO_USERS = [
     role: "filer",
     email: "demo-filer-trial@lcadesk.com",
     color: "text-accent",
-    bgColor: "bg-accent-light",
+    bgColor: "bg-accent/10",
   },
   {
     id: "filer-expired",
@@ -57,7 +56,7 @@ const DEMO_USERS = [
     role: "filer",
     email: "demo-filer-expired@lcadesk.com",
     color: "text-danger",
-    bgColor: "bg-danger-light",
+    bgColor: "bg-danger/10",
   },
   {
     id: "seeker",
@@ -67,8 +66,8 @@ const DEMO_USERS = [
     plan: null,
     role: "job_seeker",
     email: "demo-seeker@lcadesk.com",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-[var(--sky)]",
+    bgColor: "bg-[var(--sky-light)]",
   },
   {
     id: "supplier",
@@ -79,7 +78,7 @@ const DEMO_USERS = [
     role: "supplier",
     email: "demo-supplier@lcadesk.com",
     color: "text-success",
-    bgColor: "bg-success-light",
+    bgColor: "bg-success/10",
   },
   {
     id: "secretariat",
@@ -90,7 +89,7 @@ const DEMO_USERS = [
     role: "secretariat",
     email: "demo-secretariat@lcadesk.com",
     color: "text-gold",
-    bgColor: "bg-gold-light",
+    bgColor: "bg-gold/10",
   },
   {
     id: "admin",
@@ -101,7 +100,7 @@ const DEMO_USERS = [
     role: "filer",
     email: "demo-admin@lcadesk.com",
     color: "text-danger",
-    bgColor: "bg-danger-light",
+    bgColor: "bg-danger/10",
   },
 ];
 
@@ -110,7 +109,6 @@ function DemoContent() {
   const [masterPassword, setMasterPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [signingIn, setSigningIn] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleMasterLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,85 +129,99 @@ function DemoContent() {
       });
 
       if (result?.error) {
-        toast.error(`Demo user "${user.label}" not set up yet. Create it in the admin panel.`);
+        toast.error(`Demo user "${user.label}" not set up yet.`);
         setSigningIn(null);
         return;
       }
 
-      // Redirect based on role — use window.location for full page load so session is fresh
-      if (user.role === "job_seeker") {
-        window.location.href = "/seeker/dashboard";
-      } else if (user.role === "supplier") {
-        window.location.href = "/supplier-portal/dashboard";
-      } else if (user.role === "secretariat") {
-        window.location.href = "/secretariat/dashboard";
-      } else {
-        window.location.href = "/dashboard";
-      }
+      if (user.role === "job_seeker") window.location.href = "/seeker/dashboard";
+      else if (user.role === "supplier") window.location.href = "/supplier-portal/dashboard";
+      else if (user.role === "secretariat") window.location.href = "/secretariat/dashboard";
+      else window.location.href = "/dashboard";
     } catch {
       toast.error("Login failed");
       setSigningIn(null);
     }
   };
 
+  // ── Gate screen ────────────────────────────────────────────────
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-        <div className="w-full max-w-sm p-8">
-          <div className="flex justify-center mb-6">
-            <Image src="/logo-full.png" alt="LCA Desk" width={160} height={48} priority />
+      <div className="min-h-screen flex">
+        {/* Left — Password form */}
+        <div className="flex-1 flex flex-col bg-[#FAF8F5] min-h-screen">
+          <div className="p-6">
+            <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} priority />
           </div>
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-heading font-bold text-text-primary text-center mb-1">Demo Access</h2>
-              <p className="text-xs text-text-muted text-center mb-6">Internal use only</p>
-              <form onSubmit={handleMasterLogin} className="space-y-4">
-                <Input
-                  type="password"
-                  placeholder="Demo password"
-                  value={masterPassword}
-                  onChange={(e) => setMasterPassword(e.target.value)}
-                  autoFocus
-                />
-                <Button type="submit" className="w-full">Access Demo Panel</Button>
+          <div className="flex-1 flex items-center justify-center px-6 pb-12">
+            <div className="w-full max-w-sm">
+              <h1 className="text-3xl font-heading font-bold text-text-primary mb-2">Demo Access</h1>
+              <p className="text-sm text-text-muted mb-8">Internal use only — enter demo password to continue</p>
+              <form onSubmit={handleMasterLogin} className="space-y-5">
+                <div>
+                  <label className="text-sm text-text-secondary font-medium mb-1.5 block">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Demo password"
+                    value={masterPassword}
+                    onChange={(e) => setMasterPassword(e.target.value)}
+                    className="h-12 bg-white border-border"
+                    autoFocus
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 text-base font-semibold">Access Demo Panel</Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </div>
+        {/* Right — Brand panel */}
+        <div className="hidden lg:flex flex-1 bg-[var(--slate-dark)] items-center justify-center relative overflow-hidden">
+          <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-accent/5" />
+          <div className="absolute bottom-32 left-16 w-40 h-40 rounded-full bg-gold/5" />
+          <div className="text-center z-10 px-12">
+            <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
+            <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
+              AI-powered local content compliance for Guyana&apos;s petroleum sector
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ── User selection ─────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <div className="max-w-3xl mx-auto p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-[#FAF8F5]">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
           <div>
-            <Image src="/logo-full.png" alt="LCA Desk" width={140} height={40} />
+            <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} />
             <p className="text-xs text-text-muted mt-1">Demo Panel</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setAuthenticated(false)}>
-            <Lock className="h-4 w-4 mr-1" /> Lock
+          <Button variant="outline" size="sm" onClick={() => setAuthenticated(false)} className="gap-1.5">
+            <Lock className="h-3.5 w-3.5" /> Lock
           </Button>
         </div>
 
-        <h1 className="text-xl font-heading font-bold text-text-primary mb-2">Select Demo User</h1>
-        <p className="text-sm text-text-secondary mb-6">Click a user type to sign in as that persona. Each has pre-configured data.</p>
+        <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Select Demo User</h1>
+        <p className="text-sm text-text-muted mb-8">Click a user type to sign in as that persona. Each has pre-configured data.</p>
 
+        {/* User grid */}
         <div className="grid sm:grid-cols-2 gap-4">
           {DEMO_USERS.map((user) => (
             <Card
               key={user.id}
-              className="hover:border-accent/30 transition-colors cursor-pointer"
+              className="hover:shadow-md hover:border-accent/20 transition-all cursor-pointer bg-white"
               onClick={() => handleDemoLogin(user)}
             >
               <CardContent className="p-5">
-                <div className="flex items-start gap-3">
-                  <div className={`p-2.5 rounded-lg ${user.bgColor} shrink-0`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-2.5 rounded-xl ${user.bgColor} shrink-0`}>
                     <user.icon className={`h-5 w-5 ${user.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-sm font-semibold text-text-primary">{user.label}</h3>
                       {user.plan && (
                         <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-xs">
@@ -217,11 +229,11 @@ function DemoContent() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-text-secondary mt-0.5">{user.description}</p>
-                    <p className="text-xs text-text-muted mt-1 font-mono">{user.email}</p>
+                    <p className="text-xs text-text-secondary leading-relaxed">{user.description}</p>
+                    <p className="text-xs text-text-muted mt-1.5 font-mono">{user.email}</p>
                   </div>
                   {signingIn === user.id && (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0 mt-1" />
                   )}
                 </div>
               </CardContent>
@@ -229,40 +241,40 @@ function DemoContent() {
           ))}
         </div>
 
-        <Card className="mt-8 border-accent/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">Setup Demo Users</h3>
-                <p className="text-xs text-text-secondary mt-0.5">
-                  Creates all 6 demo accounts with sample filing data. Safe to run multiple times.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                loading={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    const res = await fetch("/api/demo/seed", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ secret: masterPassword }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      toast.success(`Demo users created! Password: ${data.password}`);
-                    } else {
-                      toast.error(data.error || "Setup failed");
-                    }
-                  } catch { toast.error("Setup failed"); }
-                  setLoading(false);
-                }}
-              >
-                <User className="h-4 w-4 mr-1" /> Create Demo Users
-              </Button>
+        {/* Seed button */}
+        <Card className="mt-8 bg-white">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Setup Demo Users</h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Creates all demo accounts with sample data. Safe to run multiple times.
+              </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={loading}
+              className="gap-1.5 shrink-0"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch("/api/demo/seed", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ secret: masterPassword }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast.success("Demo users created!");
+                  } else {
+                    toast.error(data.error || "Setup failed");
+                  }
+                } catch { toast.error("Setup failed"); }
+                setLoading(false);
+              }}
+            >
+              <User className="h-3.5 w-3.5" /> Create Demo Users
+            </Button>
           </CardContent>
         </Card>
       </div>
