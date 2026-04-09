@@ -37,7 +37,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const db = getDb();
         const [user] = await db
-          .select()
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            passwordHash: users.passwordHash,
+            isSuperAdmin: users.isSuperAdmin,
+            userRole: users.userRole,
+          })
           .from(users)
           .where(eq(users.email, parsed.data.email))
           .limit(1);
@@ -50,10 +57,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
         if (!valid) return null;
 
-        // Track last login
-        db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).catch((err) => {
-          console.error(`[auth] Failed to update lastLoginAt for user ${user.id}:`, err instanceof Error ? err.message : err);
-        });
+        // Track last login (fire and forget — don't block auth)
+        try {
+          db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).catch(() => {});
+        } catch {}
 
         return {
           id: user.id,
