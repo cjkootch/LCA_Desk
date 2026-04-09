@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Toaster } from "sonner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { DemoBanner } from "@/components/demo/DemoBanner";
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ gtag('config', 'G-J4T660ZKK3');`}
       </head>
       <body className="min-h-full flex flex-col antialiased bg-bg-primary text-text-primary font-body">
         <SessionProvider>
+          <ImpersonationBanner />
           <DemoBanner />
           {children}
           <Toaster

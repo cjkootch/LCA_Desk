@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, Building2, FileText, Briefcase, Shield, TrendingUp,
   CreditCard, Clock, AlertTriangle, BarChart3, MessageSquare,
-  Database, Globe, Activity,
+  Database, Globe, Activity, LogIn,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { checkSuperAdmin, fetchAdminStats } from "@/server/actions";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -32,6 +34,22 @@ export default function AdminPage() {
   if (loading || !authorized) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>;
   }
+
+  const impersonate = async (userId: string) => {
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        window.location.href = result.redirectTo;
+      } else {
+        toast.error(result.error || "Failed to impersonate");
+      }
+    } catch { toast.error("Failed to impersonate"); }
+  };
 
   if (!data) return null;
 
@@ -174,18 +192,18 @@ export default function AdminPage() {
             <CardContent>
               <div className="space-y-2">
                 {data.users.latest.map((u: { id: string; name: string | null; email: string; userRole: string | null; createdAt: Date | null }) => (
-                  <div key={u.id} className="flex items-center justify-between text-xs">
+                  <div key={u.id} className="flex items-center justify-between text-xs py-1">
                     <div className="min-w-0">
                       <p className="text-text-primary font-medium truncate">{u.name || u.email}</p>
                       <p className="text-text-muted">{u.email}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant={u.userRole?.includes("filer") ? "accent" : u.userRole?.includes("job_seeker") ? "default" : "success"} className="text-xs">
-                        {u.userRole?.includes("filer") ? "Filer" : u.userRole?.includes("job_seeker") ? "Seeker" : "Supplier"}
+                      <Badge variant={u.userRole?.includes("filer") ? "accent" : u.userRole?.includes("job_seeker") ? "default" : u.userRole?.includes("supplier") ? "success" : u.userRole?.includes("secretariat") ? "gold" : "default"} className="text-xs">
+                        {u.userRole?.includes("secretariat") ? "Secretariat" : u.userRole?.includes("filer") ? "Filer" : u.userRole?.includes("job_seeker") ? "Seeker" : u.userRole?.includes("supplier") ? "Supplier" : u.userRole || "Unknown"}
                       </Badge>
-                      <span className="text-text-muted text-xs">
-                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
-                      </span>
+                      <button onClick={() => impersonate(u.id)} className="flex items-center gap-1 text-accent hover:text-accent-hover font-medium" title="Sign in as this user">
+                        <LogIn className="h-3 w-3" /> View
+                      </button>
                     </div>
                   </div>
                 ))}

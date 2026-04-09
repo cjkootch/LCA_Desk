@@ -108,6 +108,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       (session.user as any).isSuperAdmin = (token as any).isSuperAdmin ?? false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session.user as any).userRole = (token as any).userRole ?? "filer";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session.user as any).impersonatedBy = (token as any).impersonatedBy ?? null;
       return session;
     },
   },
