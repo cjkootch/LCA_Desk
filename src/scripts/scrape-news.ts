@@ -44,37 +44,36 @@ interface ScrapedArticle {
 
 async function scrapeKaieteurNews(): Promise<ScrapedArticle[]> {
   const articles: ScrapedArticle[] = [];
+  const seen = new Set<string>();
 
   for (let page = 1; page <= 3; page++) {
     const url = page === 1
-      ? "https://www.kaieteurnewsonline.com/category/news/oil-gas/"
-      : `https://www.kaieteurnewsonline.com/category/news/oil-gas/page/${page}/`;
+      ? "https://kaieteurnewsonline.com/category/oil-gas/"
+      : `https://kaieteurnewsonline.com/category/oil-gas/page/${page}/`;
 
     try {
       const res = await fetch(url, {
-        headers: { "User-Agent": "LCA Desk News Scraper (compliance platform)" },
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; LCA Desk News)" },
       });
       if (!res.ok) continue;
       const html = await res.text();
 
-      // Extract article links and titles from listing page
-      const articleMatches = html.matchAll(/<h2[^>]*class="[^"]*entry-title[^"]*"[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/gi);
-      for (const match of articleMatches) {
-        const sourceUrl = match[1];
-        const title = match[2].replace(/&#8217;/g, "'").replace(/&#8211;/g, "–").replace(/&#038;/g, "&").replace(/&amp;/g, "&").trim();
+      // Extract article links — match <a> tags with date-pattern URLs
+      const linkMatches = html.matchAll(/<a[^>]*href="(https:\/\/kaieteurnewsonline\.com\/\d{4}\/\d{2}\/\d{2}\/[^"#]+)"[^>]*>([^<]{15,})<\/a>/gi);
+      for (const match of linkMatches) {
+        const sourceUrl = match[1].replace(/#.*$/, ""); // strip anchors
+        if (seen.has(sourceUrl)) continue;
+        if (match[2].includes("Read More")) continue;
 
-        // Extract date from URL pattern: /YYYY/MM/DD/
+        const title = match[2]
+          .replace(/&#8217;/g, "\u2019").replace(/&#8211;/g, "\u2013")
+          .replace(/&#038;/g, "&").replace(/&amp;/g, "&").trim();
+
         const dateMatch = sourceUrl.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
         const publishedAt = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : null;
 
-        articles.push({
-          title,
-          summary: "",
-          sourceUrl,
-          sourceName: "Kaieteur News",
-          publishedAt,
-          imageUrl: null,
-        });
+        seen.add(sourceUrl);
+        articles.push({ title, summary: "", sourceUrl, sourceName: "Kaieteur News", publishedAt, imageUrl: null });
       }
     } catch (err) {
       console.log(`  ⚠ Kaieteur page ${page} failed: ${err instanceof Error ? err.message : "unknown"}`);
