@@ -46,9 +46,9 @@ export function ProfileSettings() {
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const url = `/api/submission/download?key=${encodeURIComponent(data.fileKey)}&name=${encodeURIComponent(data.fileName)}`;
-      setAvatarUrl(url);
-      await updateUserSettings({ avatarUrl: url });
+      // fileKey is now a direct Vercel Blob URL
+      setAvatarUrl(data.fileKey);
+      await updateUserSettings({ avatarUrl: data.fileKey });
       toast.success("Profile picture updated");
     } catch { toast.error("Failed to upload image"); }
     setUploading(false);

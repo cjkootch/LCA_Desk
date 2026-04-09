@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 
-const UPLOAD_DIR = join(process.cwd(), "uploads", "submissions");
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
   "application/vnd.ms-excel", // .xls
   "application/pdf",
-  "image/jpeg",  // .jpg, .jpeg
-  "image/png",   // .png
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
 ];
 
 export async function POST(request: Request) {
@@ -31,18 +31,19 @@ export async function POST(request: Request) {
   }
 
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Accepted file types: PDF, Excel (.xlsx, .xls), JPG, PNG." }, { status: 400 });
+    return NextResponse.json({ error: "Accepted file types: PDF, Excel (.xlsx, .xls), JPG, PNG, WebP, GIF." }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() || "xlsx";
-  const fileKey = `${randomUUID()}.${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = file.name.split(".").pop() || "bin";
+  const fileKey = `${session.user.id}/${randomUUID()}.${ext}`;
 
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(join(UPLOAD_DIR, fileKey), buffer);
+  const blob = await put(fileKey, file, {
+    access: "public",
+    addRandomSuffix: false,
+  });
 
   return NextResponse.json({
-    fileKey,
+    fileKey: blob.url,
     fileName: file.name,
     fileSize: file.size,
   });

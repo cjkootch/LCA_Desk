@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { readFile } from "fs/promises";
-import { join } from "path";
-
-const UPLOAD_DIR = join(process.cwd(), "uploads", "submissions");
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -13,26 +9,17 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const fileKey = url.searchParams.get("key");
-  const fileName = url.searchParams.get("name") || "report";
+  const fileName = url.searchParams.get("name") || "file";
 
-  if (!fileKey || fileKey.includes("..") || fileKey.includes("/")) {
+  if (!fileKey) {
     return NextResponse.json({ error: "Invalid file key" }, { status: 400 });
   }
 
-  try {
-    const buffer = await readFile(join(UPLOAD_DIR, fileKey));
-    const ext = fileKey.split(".").pop()?.toLowerCase();
-    const contentType = ext === "pdf" ? "application/pdf" :
-      ext === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :
-      "application/octet-stream";
-
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${fileName}"`,
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: "File not found" }, { status: 404 });
+  // Vercel Blob URLs are direct public URLs — redirect to them
+  if (fileKey.startsWith("http")) {
+    return NextResponse.redirect(fileKey);
   }
+
+  // Legacy local file fallback — return 404 since local storage doesn't persist on Vercel
+  return NextResponse.json({ error: "File not found. It may have been uploaded before cloud storage was enabled." }, { status: 404 });
 }
