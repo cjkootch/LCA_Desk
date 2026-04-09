@@ -212,7 +212,105 @@ export async function POST(req: NextRequest) {
         locationPreference: "Georgetown", contractTypePreference: "Full-time",
         headline: "Mechanical Engineer with 5 years offshore O&G experience",
         profileVisible: true, alertsEnabled: true,
+        resumeContent: `DEVON CAMPBELL
+Mechanical Engineer | Offshore O&G Specialist
+
+Georgetown, Guyana · devon.campbell@email.com · +592-600-1234
+
+PROFESSIONAL SUMMARY
+Results-driven Mechanical Engineer with 5 years of experience in offshore oil and gas operations, specializing in FPSO maintenance, rotating equipment, and hydraulic systems. Proven track record of reducing equipment downtime through proactive maintenance planning and root cause analysis. Committed to advancing Guyana's petroleum sector through technical excellence and local content development.
+
+EXPERIENCE
+
+Mechanical Engineer — SBM Offshore Guyana (2022–Present)
+• Lead maintenance planning for rotating equipment on the Liza Unity FPSO, achieving 97% uptime
+• Manage a team of 8 local technicians, providing mentorship and skills transfer
+• Developed predictive maintenance program using vibration analysis, reducing unplanned shutdowns by 35%
+• Coordinate with OEM vendors for critical spare parts and overhaul scheduling
+• Ensure compliance with ASME, API, and DNV standards for pressure vessels and piping
+
+Junior Mechanical Engineer — Halliburton Guyana (2020–2022)
+• Supported wellhead and Christmas tree maintenance operations offshore
+• Performed hydraulic system troubleshooting and BOP stack testing
+• Created detailed technical reports for equipment failure analysis
+• Assisted in implementation of local content employment tracking systems
+
+Engineering Intern — Guyana Water Inc. (2019–2020)
+• Designed pump station upgrades for rural water distribution networks
+• Conducted flow analysis and pipe sizing calculations using AutoCAD
+• Assisted with procurement specifications for centrifugal pumps
+
+EDUCATION
+
+BSc Mechanical Engineering — University of Guyana (2015–2019)
+• First Class Honours
+• Final Year Project: "Optimization of Heat Exchanger Design for Tropical Climates"
+
+CERTIFICATIONS
+• BOSIET (Basic Offshore Safety Induction and Emergency Training) — OPITO Certified, 2022
+• HUET (Helicopter Underwater Escape Training) — Current
+• H2S Alive — ENFORM Certified, 2022
+• AutoCAD Professional Certification — Autodesk, 2020
+
+SKILLS
+Technical: FPSO systems, rotating equipment, hydraulics, pneumatics, PFDs, P&IDs, vibration analysis, thermodynamics, AutoCAD, SolidWorks, SAP PM
+Safety: PTW systems, JSA/risk assessment, SIMOPS, confined space entry
+Soft Skills: Team leadership, cross-cultural communication, technical writing, vendor management
+
+REFERENCES
+Available upon request.`,
       });
+    } else if (!existingSeeker.resumeContent) {
+      // Backfill resume for existing profile
+      await db.update(jobSeekerProfiles).set({
+        resumeContent: `DEVON CAMPBELL
+Mechanical Engineer | Offshore O&G Specialist
+
+Georgetown, Guyana · devon.campbell@email.com · +592-600-1234
+
+PROFESSIONAL SUMMARY
+Results-driven Mechanical Engineer with 5 years of experience in offshore oil and gas operations, specializing in FPSO maintenance, rotating equipment, and hydraulic systems. Proven track record of reducing equipment downtime through proactive maintenance planning and root cause analysis. Committed to advancing Guyana's petroleum sector through technical excellence and local content development.
+
+EXPERIENCE
+
+Mechanical Engineer — SBM Offshore Guyana (2022–Present)
+• Lead maintenance planning for rotating equipment on the Liza Unity FPSO, achieving 97% uptime
+• Manage a team of 8 local technicians, providing mentorship and skills transfer
+• Developed predictive maintenance program using vibration analysis, reducing unplanned shutdowns by 35%
+• Coordinate with OEM vendors for critical spare parts and overhaul scheduling
+• Ensure compliance with ASME, API, and DNV standards for pressure vessels and piping
+
+Junior Mechanical Engineer — Halliburton Guyana (2020–2022)
+• Supported wellhead and Christmas tree maintenance operations offshore
+• Performed hydraulic system troubleshooting and BOP stack testing
+• Created detailed technical reports for equipment failure analysis
+• Assisted in implementation of local content employment tracking systems
+
+Engineering Intern — Guyana Water Inc. (2019–2020)
+• Designed pump station upgrades for rural water distribution networks
+• Conducted flow analysis and pipe sizing calculations using AutoCAD
+• Assisted with procurement specifications for centrifugal pumps
+
+EDUCATION
+
+BSc Mechanical Engineering — University of Guyana (2015–2019)
+• First Class Honours
+• Final Year Project: "Optimization of Heat Exchanger Design for Tropical Climates"
+
+CERTIFICATIONS
+• BOSIET (Basic Offshore Safety Induction and Emergency Training) — OPITO Certified, 2022
+• HUET (Helicopter Underwater Escape Training) — Current
+• H2S Alive — ENFORM Certified, 2022
+• AutoCAD Professional Certification — Autodesk, 2020
+
+SKILLS
+Technical: FPSO systems, rotating equipment, hydraulics, pneumatics, PFDs, P&IDs, vibration analysis, thermodynamics, AutoCAD, SolidWorks, SAP PM
+Safety: PTW systems, JSA/risk assessment, SIMOPS, confined space entry
+Soft Skills: Team leadership, cross-cultural communication, technical writing, vendor management
+
+REFERENCES
+Available upon request.`,
+      }).where(eq(jobSeekerProfiles.userId, seeker.id));
     }
     results.push(`✓ Job Seeker: ${seeker.email}`);
 
