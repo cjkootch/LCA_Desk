@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell } from "lucide-react";
 import { SupplierTour } from "@/components/onboarding/SupplierTour";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: "My Responses", href: "/supplier-portal/responses", icon: FileText },
   { label: "Analytics", href: "/supplier-portal/analytics", icon: BarChart3 },
   { label: "Training", href: "/supplier-portal/training", icon: GraduationCap },
+  { label: "Notifications", href: "/supplier-portal/notifications", icon: Bell },
   { label: "Profile", href: "/supplier-portal/profile", icon: UserCog },
   { label: "Settings", href: "/supplier-portal/settings", icon: Settings },
 ];

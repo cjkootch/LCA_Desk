@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen } from "lucide-react";
+import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen, GraduationCap } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { Shield as ShieldIcon } from "lucide-react";
@@ -13,19 +13,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
 
 const NAV_ITEMS = [
+  // Core workflow
   { label: "Submissions", href: "/secretariat/dashboard", icon: FileText },
   { label: "Filing Compliance", href: "/secretariat/compliance", icon: ClipboardCheck },
   { label: "Deadline Calendar", href: "/secretariat/calendar", icon: Calendar },
   { label: "Reports", href: "/secretariat/reports", icon: PieChart },
+  // Data & Directory
   { label: "Market Intel", href: "/secretariat/market", icon: BarChart3 },
   { label: "Talent Pool", href: "/secretariat/talent", icon: Users },
   { label: "Supplier Directory", href: "/secretariat/suppliers", icon: Building2 },
   { label: "LCS Applications", href: "/secretariat/applications", icon: UserPlus },
   { label: "Documents", href: "/secretariat/documents", icon: FolderOpen },
+  // Tools
+  { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
+  { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
+  { label: "Training", href: "/secretariat/training", icon: GraduationCap },
+  // Admin
   { label: "Audit Trail", href: "/secretariat/audit", icon: History },
   { label: "Notifications", href: "/secretariat/notifications", icon: Bell },
-  { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
-  { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
   { label: "Team", href: "/secretariat/team", icon: Users },
   { label: "Settings", href: "/secretariat/settings", icon: Settings },
 ];

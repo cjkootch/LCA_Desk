@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2, X, Briefcase, Megaphone, LifeBuoy, Factory, BarChart3, Receipt, UserSearch, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Building2, Calendar, Settings, Shield, LogOut, Sparkles, Crown, Truck, Users2, X, Briefcase, Megaphone, LifeBuoy, Factory, BarChart3, Receipt, UserSearch, GraduationCap, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserContext } from "@/server/actions";
@@ -50,7 +50,8 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Resources",
     items: [
       { label: "Training", href: "/dashboard/training", icon: GraduationCap },
-      { label: "Chat History", href: "/dashboard/expert", icon: Sparkles },
+      { label: "AI Expert", href: "/dashboard/expert", icon: Sparkles },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
       { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
       { label: "Settings", href: "/dashboard/settings", icon: Settings },
     ],
