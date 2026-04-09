@@ -86,13 +86,14 @@ function SignupContent() {
     setLoading(false);
   };
 
-  const roleConfig = {
+  const roleConfig: Record<string, { redirect: string; companyLabel: string | null; companyPlaceholder: string | null }> = {
     filer: { redirect: "/dashboard", companyLabel: accountType === "others" ? "Firm Name" : "Company Name", companyPlaceholder: accountType === "others" ? "Your consulting firm" : "Your company's legal name" },
     supplier: { redirect: "/supplier-portal/dashboard", companyLabel: "Company Name", companyPlaceholder: "Your company's legal name" },
     job_seeker: { redirect: "/seeker/dashboard", companyLabel: null, companyPlaceholder: null },
+    secretariat: { redirect: "/secretariat/dashboard", companyLabel: null, companyPlaceholder: null },
   };
 
-  const config = role ? roleConfig[role] : null;
+  const config = role ? roleConfig[role] ?? null : null;
 
   return (
     <div className="min-h-screen flex">
