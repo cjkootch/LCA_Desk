@@ -6,7 +6,7 @@ import {
   expenditureRecords, employmentRecords, capacityDevelopmentRecords,
   secretariatOffices, secretariatMembers, courses, userCourseProgress,
 } from "@/server/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const DEMO_PASSWORD = "demo-password-2026";
@@ -424,7 +424,7 @@ CERTIFICATIONS
     }
     // Seed 2 badges for Ryan (LCA Fundamentals + Platform Mastery)
     const twoBadgeCourses = await db.select({ id: courses.id }).from(courses)
-      .where(sql`${courses.slug} IN ('lca-fundamentals', 'mastering-lca-desk')`).limit(2);
+      .where(inArray(courses.slug, ["lca-fundamentals", "mastering-lca-desk"])).limit(2);
     for (const course of twoBadgeCourses) {
       const [existing] = await db.select({ id: userCourseProgress.id }).from(userCourseProgress)
         .where(and(eq(userCourseProgress.userId, seeker3.id), eq(userCourseProgress.courseId, course.id))).limit(1);
