@@ -93,7 +93,7 @@ function SignupContent() {
     secretariat: { redirect: "/secretariat/dashboard", companyLabel: null, companyPlaceholder: null },
   };
 
-  const config = role ? roleConfig[role] ?? null : null;
+  const config = role ? (roleConfig[role as string] ?? null) : null;
 
   return (
     <div className="min-h-screen flex">
