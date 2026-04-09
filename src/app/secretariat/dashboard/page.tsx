@@ -148,7 +148,7 @@ export default function SecretariatDashboardPage() {
   });
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 max-w-6xl space-y-8">
       <AnnouncementBanner userRole="secretariat" />
       <DashboardHero
         badge="Local Content Secretariat"
@@ -165,7 +165,7 @@ export default function SecretariatDashboardPage() {
 
       {/* Secondary metrics row */}
       {analytics && (
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
           <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalSubmissions}</p><p className="text-[9px] text-text-muted font-medium">Submissions</p></Card>
           <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.uniqueFilers}</p><p className="text-[9px] text-text-muted font-medium">Companies</p></Card>
           <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-[9px] text-text-muted font-medium">Trained</p></Card>
@@ -175,7 +175,8 @@ export default function SecretariatDashboardPage() {
         </div>
       )}
 
-      {/* Submission queue header */}
+      {/* ── Submission Queue ─────────────────────────────────── */}
+      <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-heading font-semibold text-text-primary">Submission Queue</h2>
         <div className="flex items-center gap-3">
@@ -237,6 +238,8 @@ export default function SecretariatDashboardPage() {
           })}
         </div>
       )}
+
+      </section>
 
       {/* Industry News */}
       <IndustryNewsFeed userType="secretariat" />
