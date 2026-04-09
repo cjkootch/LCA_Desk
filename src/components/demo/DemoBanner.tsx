@@ -19,8 +19,7 @@ export function DemoBanner() {
     }
   }, [email]);
 
-  const isDemo = email?.endsWith("@lcadesk.com") && email?.startsWith("demo-");
-  if (!isDemo) return null;
+  if (!email?.endsWith("@lcadesk.com") || !email?.startsWith("demo-")) return null;
 
   const label = email.includes("filer-lite") ? "Filer (Lite)" :
     email.includes("filer-pro") ? "Filer (Pro)" :
