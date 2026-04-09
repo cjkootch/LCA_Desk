@@ -183,7 +183,7 @@ export default function DashboardPage() {
               </div>
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
-              <IndustryNewsFeed />
+              <IndustryNewsFeed userType="filer" />
             </div>
           </div>
         </>

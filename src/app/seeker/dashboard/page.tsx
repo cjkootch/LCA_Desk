@@ -287,7 +287,7 @@ export default function SeekerDashboard() {
         )}
 
         {/* Industry News */}
-        <IndustryNewsFeed />
+        <IndustryNewsFeed userType="seeker" />
       </div>
     </>
   );

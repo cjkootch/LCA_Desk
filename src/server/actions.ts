@@ -5965,8 +5965,32 @@ export async function reviewCertApplication(id: string, data: {
 
 // ─── INDUSTRY NEWS ──────────────────────────────────────────────
 
-export async function fetchIndustryNews(limit = 20) {
-  return db.select().from(industryNews)
+export async function fetchIndustryNews(limit = 20, userType?: "filer" | "supplier" | "seeker" | "secretariat") {
+  const all = await db.select().from(industryNews)
     .orderBy(desc(industryNews.publishedAt))
-    .limit(limit);
+    .limit(100);
+
+  if (!userType) return all.slice(0, limit);
+
+  // Score articles differently per user type
+  const categoryWeights: Record<string, Record<string, number>> = {
+    filer: { local_content: 10, policy: 8, contracts: 6, production: 4, employment: 5, general: 2 },
+    supplier: { contracts: 10, local_content: 7, production: 6, employment: 4, policy: 3, general: 2 },
+    seeker: { employment: 10, local_content: 6, contracts: 5, production: 3, policy: 2, general: 2 },
+    secretariat: { policy: 10, local_content: 9, employment: 7, contracts: 5, production: 4, general: 3 },
+  };
+
+  const weights = categoryWeights[userType];
+
+  const scored = all.map(article => {
+    const catWeight = weights[article.category || "general"] || 2;
+    const relevance = article.relevanceScore || 5;
+    const recencyBonus = article.publishedAt
+      ? Math.max(0, 10 - Math.floor((Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)))
+      : 0;
+    return { ...article, score: catWeight + relevance + recencyBonus };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
 }

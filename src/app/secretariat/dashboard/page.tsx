@@ -237,7 +237,7 @@ export default function SecretariatDashboardPage() {
       )}
 
       {/* Industry News */}
-      <IndustryNewsFeed />
+      <IndustryNewsFeed userType="secretariat" />
 
       {/* Submission detail dialog */}
       <Dialog open={!!detailData} onOpenChange={open => { if (!open) setDetailData(null); }}>

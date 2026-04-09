@@ -176,7 +176,7 @@ export default function SupplierDashboard() {
       )}
 
       {/* Industry News */}
-      <IndustryNewsFeed />
+      <IndustryNewsFeed userType="supplier" />
     </div>
   );
 }
