@@ -115,37 +115,127 @@ export default function SupplierDirectoryPage() {
 
       {/* Detail dialog */}
       <Dialog open={!!selected} onOpenChange={open => { if (!open) setSelected(null); }}>
-        <DialogContent className="max-w-lg">
-          {selected && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-gold" /> {selected.legalName}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-3">
-                <div className="bg-bg-primary rounded-lg p-4 space-y-2 text-sm">
-                  {selected.certId && <div className="flex justify-between"><span className="text-text-muted">Certificate ID</span><span className="font-mono font-medium">{selected.certId}</span></div>}
-                  {selected.tradingName && <div className="flex justify-between"><span className="text-text-muted">Trading Name</span><span>{selected.tradingName}</span></div>}
-                  <div className="flex justify-between"><span className="text-text-muted">Status</span>{isExpired(selected.expirationDate) ? <Badge variant="danger">Expired</Badge> : <Badge variant="success">{selected.status || "Active"}</Badge>}</div>
-                  {selected.expirationDate && <div className="flex justify-between"><span className="text-text-muted">Expiration</span><span className={cn(isExpired(selected.expirationDate) && "text-danger font-medium")}>{new Date(selected.expirationDate).toLocaleDateString()}</span></div>}
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          {selected && (() => {
+            const expired = isExpired(selected.expirationDate);
+            const initial = (selected.legalName || "?").charAt(0).toUpperCase();
+
+            // Parse AI summary — could be JSON or plain text
+            let summaryText = "";
+            if (selected.aiSummary) {
+              try {
+                const parsed = JSON.parse(selected.aiSummary);
+                summaryText = parsed.company_description || parsed.guyana_presence || "";
+              } catch {
+                summaryText = selected.aiSummary;
+              }
+            }
+
+            return (
+              <>
+                {/* Header with banner */}
+                <div className={cn("h-20 -mx-6 -mt-6 rounded-t-xl relative",
+                  expired ? "bg-gradient-to-r from-danger/15 via-danger/5 to-bg-primary"
+                  : "bg-gradient-to-r from-gold/20 via-gold/10 to-accent/10"
+                )} />
+                <div className="-mt-10 mb-2 flex items-end gap-4 px-2">
+                  <div className={cn("h-16 w-16 rounded-xl flex items-center justify-center border-4 border-white shadow-md shrink-0",
+                    expired ? "bg-bg-primary" : "bg-gold/10"
+                  )}>
+                    <span className={cn("text-2xl font-bold", expired ? "text-text-muted" : "text-gold")}>{initial}</span>
+                  </div>
+                  <div className="pb-1">
+                    <h2 className="text-lg font-bold text-text-primary">{selected.legalName}</h2>
+                    {selected.tradingName && <p className="text-sm text-text-muted">t/a {selected.tradingName}</p>}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  {selected.address && <div className="flex items-start gap-2"><MapPin className="h-4 w-4 text-text-muted mt-0.5 shrink-0" /><span className="text-text-secondary">{selected.address}</span></div>}
-                  {selected.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-text-muted" /><a href={`mailto:${selected.email}`} className="text-accent hover:underline">{selected.email}</a></div>}
-                  {selected.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-text-muted" /><span className="text-text-secondary">{selected.phone}</span></div>}
-                  {selected.website && <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-text-muted" /><a href={selected.website} target="_blank" className="text-accent hover:underline truncate">{selected.website}</a></div>}
-                  {selected.profileUrl && <div className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-text-muted" /><a href={selected.profileUrl} target="_blank" className="text-accent hover:underline text-xs">View on LCS Register</a></div>}
+
+                <div className="space-y-5 mt-4">
+                  {/* Status card */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <Card className="p-3 text-center">
+                      <p className="text-xs text-text-muted mb-1">Status</p>
+                      {expired ? <Badge variant="danger">Expired</Badge> : <Badge variant="success">{selected.status || "Active"}</Badge>}
+                    </Card>
+                    <Card className="p-3 text-center">
+                      <p className="text-xs text-text-muted mb-1">Certificate</p>
+                      <p className="text-sm font-mono font-semibold text-text-primary">{selected.certId || "—"}</p>
+                    </Card>
+                    <Card className="p-3 text-center">
+                      <p className="text-xs text-text-muted mb-1">Expires</p>
+                      <p className={cn("text-sm font-medium", expired ? "text-danger" : "text-text-primary")}>
+                        {selected.expirationDate ? new Date(selected.expirationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                      </p>
+                    </Card>
+                  </div>
+
+                  {/* Contact info */}
+                  {(selected.address || selected.email || selected.phone || selected.website) && (
+                    <Card>
+                      <CardContent className="p-4 space-y-3">
+                        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Contact</p>
+                        {selected.address && (
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-4 w-4 text-text-muted mt-0.5 shrink-0" />
+                            <span className="text-sm text-text-secondary">{selected.address}</span>
+                          </div>
+                        )}
+                        {selected.email && (
+                          <div className="flex items-center gap-3">
+                            <Mail className="h-4 w-4 text-text-muted shrink-0" />
+                            <a href={`mailto:${selected.email}`} className="text-sm text-accent hover:underline">{selected.email}</a>
+                          </div>
+                        )}
+                        {selected.phone && (
+                          <div className="flex items-center gap-3">
+                            <Phone className="h-4 w-4 text-text-muted shrink-0" />
+                            <span className="text-sm text-text-secondary">{selected.phone}</span>
+                          </div>
+                        )}
+                        {selected.website && (
+                          <div className="flex items-center gap-3">
+                            <Globe className="h-4 w-4 text-text-muted shrink-0" />
+                            <a href={selected.website} target="_blank" className="text-sm text-accent hover:underline truncate">{selected.website}</a>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Service categories */}
+                  {selected.serviceCategories?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Service Categories</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selected.serviceCategories.map((c: string) => (
+                          <Badge key={c} variant="accent" className="text-xs">{c}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Summary */}
+                  {summaryText && (
+                    <Card className="border-gold/20 bg-gold/[0.02]">
+                      <CardContent className="p-4">
+                        <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-2">Company Profile</p>
+                        <p className="text-sm text-text-secondary leading-relaxed">{summaryText}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* External link */}
+                  {selected.profileUrl && (
+                    <a href={selected.profileUrl} target="_blank" className="block">
+                      <Button variant="outline" className="w-full gap-2 text-sm">
+                        <ExternalLink className="h-4 w-4" /> View on LCS Register
+                      </Button>
+                    </a>
+                  )}
                 </div>
-                {selected.serviceCategories?.length > 0 && (
-                  <div><p className="text-xs font-semibold text-text-muted mb-1.5">Service Categories</p><div className="flex flex-wrap gap-1">{selected.serviceCategories.map((c: string) => <Badge key={c} variant="accent" className="text-xs">{c}</Badge>)}</div></div>
-                )}
-                {selected.aiSummary && (
-                  <div><p className="text-xs font-semibold text-text-muted mb-1.5">AI Summary</p><p className="text-sm text-text-secondary">{selected.aiSummary}</p></div>
-                )}
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
