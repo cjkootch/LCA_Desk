@@ -12,6 +12,7 @@ import {
   Clock, ArrowRight, AlertCircle, Search, Trophy,
 } from "lucide-react";
 import { fetchSeekerDashboardStats, fetchMyApplications } from "@/server/actions";
+import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import Link from "next/link";
 
 const STATUS_VARIANT: Record<string, "default" | "accent" | "warning" | "success" | "danger"> = {
@@ -284,6 +285,9 @@ export default function SeekerDashboard() {
             </div>
           </div>
         )}
+
+        {/* Industry News */}
+        <IndustryNewsFeed />
       </div>
     </>
   );

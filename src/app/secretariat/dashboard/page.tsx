@@ -13,6 +13,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
 } from "lucide-react";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests } from "@/server/actions";
+import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardHero } from "@/components/dashboard/shared/DashboardHero";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -234,6 +235,9 @@ export default function SecretariatDashboardPage() {
           })}
         </div>
       )}
+
+      {/* Industry News */}
+      <IndustryNewsFeed />
 
       {/* Submission detail dialog */}
       <Dialog open={!!detailData} onOpenChange={open => { if (!open) setDetailData(null); }}>

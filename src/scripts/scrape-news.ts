@@ -19,6 +19,10 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "../server/db/schema";
 import Anthropic from "@anthropic-ai/sdk";
+import * as dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 function getDb() {
   const sql = neon(process.env.DATABASE_URL!);

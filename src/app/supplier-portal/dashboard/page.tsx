@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import Link from "next/link";
 import {
   Shield, Briefcase, FileText, TrendingUp, ArrowRight,
@@ -173,6 +174,9 @@ export default function SupplierDashboard() {
           {profile.responsesThisMonth}/3 responses used this month · <Link href="/supplier-portal/settings" className="text-accent hover:text-accent-hover">Upgrade for unlimited</Link>
         </div>
       )}
+
+      {/* Industry News */}
+      <IndustryNewsFeed />
     </div>
   );
 }
