@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SeekerTopBar } from "@/components/seeker/SeekerTopBar";
 import { Bell, Lock, Shield } from "lucide-react";
 import { fetchMyProfile, updateMyProfile, updatePassword } from "@/server/actions";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { toast } from "sonner";
 
 export default function SeekerSettingsPage() {
@@ -78,6 +79,9 @@ export default function SeekerSettingsPage() {
       <SeekerTopBar title="Settings" description="Manage your account and preferences" />
 
       <div className="p-4 sm:p-8 max-w-3xl space-y-6">
+        {/* Profile Picture & Socials */}
+        <ProfileSettings />
+
         {/* Alert Preferences */}
         <Card>
           <CardHeader>

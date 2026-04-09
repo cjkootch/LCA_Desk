@@ -2675,6 +2675,41 @@ export async function fetchSeekerDashboardStats() {
   };
 }
 
+// ─── USER PROFILE & AVATAR ──────────────────────────────────────
+
+export async function fetchUserSettings() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({
+    name: users.name,
+    email: users.email,
+    avatarUrl: users.avatarUrl,
+    linkedinUrl: users.linkedinUrl,
+    twitterUrl: users.twitterUrl,
+    websiteUrl: users.websiteUrl,
+  }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  return user;
+}
+
+export async function updateUserSettings(data: {
+  name?: string;
+  avatarUrl?: string;
+  linkedinUrl?: string;
+  twitterUrl?: string;
+  websiteUrl?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  await db.update(users).set({
+    ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+    ...(data.linkedinUrl !== undefined ? { linkedinUrl: data.linkedinUrl } : {}),
+    ...(data.twitterUrl !== undefined ? { twitterUrl: data.twitterUrl } : {}),
+    ...(data.websiteUrl !== undefined ? { websiteUrl: data.websiteUrl } : {}),
+    updatedAt: new Date(),
+  }).where(eq(users.id, session.user.id));
+}
+
 // ─── NOTIFICATION PREFERENCES ────────────────────────────────────
 
 export async function fetchUserNotificationPreferences() {

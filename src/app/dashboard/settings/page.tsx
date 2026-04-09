@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,6 +184,7 @@ function ProfileTab({ ctx }: { ctx: UserContext | null }) {
 
   return (
     <div className="space-y-6">
+      <ProfileSettings />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Personal Information</CardTitle>

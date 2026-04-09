@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,8 @@ export default function SecretariatSettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Profile Picture & Socials */}
+        <ProfileSettings />
         {/* Profile */}
         <Card>
           <CardHeader>

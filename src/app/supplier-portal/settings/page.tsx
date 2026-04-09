@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles, Crown } from "lucide-react";
 import { fetchMySupplierProfile } from "@/server/actions";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,9 @@ export default function SupplierSettingsPage() {
     <div className="p-4 sm:p-8 max-w-3xl">
       <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Settings</h1>
       <p className="text-sm text-text-secondary mb-6">Manage your subscription and preferences</p>
+
+      {/* Profile Picture & Socials */}
+      <ProfileSettings />
 
       {/* Current plan */}
       <Card className="mb-8">

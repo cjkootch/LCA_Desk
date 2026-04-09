@@ -54,10 +54,14 @@ export const users = pgTable("users", {
   email: text("email").unique().notNull(),
   emailVerified: timestamp("email_verified"),
   image: text("image"),
+  avatarUrl: text("avatar_url"),
+  linkedinUrl: text("linkedin_url"),
+  twitterUrl: text("twitter_url"),
+  websiteUrl: text("website_url"),
   passwordHash: text("password_hash"),
   isSuperAdmin: boolean("is_super_admin").default(false),
-  userRole: text("user_role").default("filer"), // filer | job_seeker | supplier | comma-separated for multi-role
-  notificationPreferences: text("notification_preferences"), // JSON: { deadline_reminders, filing_completion, application_updates, opportunity_alerts, weekly_digest }
+  userRole: text("user_role").default("filer"),
+  notificationPreferences: text("notification_preferences"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
