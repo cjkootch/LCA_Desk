@@ -3,11 +3,11 @@
 
 :root {
   /* LCA Desk light theme */
-  --bg-primary: #FAFBFC;
+  --bg-primary: #F5F3EF;
   --bg-surface: #FFFFFF;
   --bg-card: #FFFFFF;
-  --border: #E2E8F0;
-  --border-light: #F1F5F9;
+  --border: #E2E0DB;
+  --border-light: #EDEAE5;
   --accent: #047857;
   --accent-hover: #065F46;
   --accent-light: #ECFDF5;
