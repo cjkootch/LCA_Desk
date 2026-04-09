@@ -99,9 +99,10 @@ const DEMO_USERS = [
     icon: Crown,
     plan: "enterprise",
     role: "filer",
-    email: "demo-admin@lcadesk.com",
+    email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || "demo-admin@lcadesk.com",
     color: "text-danger",
     bgColor: "bg-danger/10",
+    isRealAdmin: true,
   },
 ];
 
@@ -123,14 +124,18 @@ function DemoContent() {
   const handleDemoLogin = async (user: typeof DEMO_USERS[0]) => {
     setSigningIn(user.id);
     try {
+      // Super Admin uses the master password (real account), others use demo password
+      const password = (user as { isRealAdmin?: boolean }).isRealAdmin ? masterPassword : "demo-password-2026";
       const result = await signIn("credentials", {
         email: user.email,
-        password: "demo-password-2026",
+        password,
         redirect: false,
       });
 
       if (result?.error) {
-        toast.error(`Demo user "${user.label}" not set up yet.`);
+        toast.error((user as { isRealAdmin?: boolean }).isRealAdmin
+          ? "Admin login failed — check NEXT_PUBLIC_ADMIN_EMAIL env var"
+          : `Demo user "${user.label}" not set up yet. Run Seed All first.`);
         setSigningIn(null);
         return;
       }
@@ -138,6 +143,7 @@ function DemoContent() {
       if (user.role === "job_seeker") window.location.href = "/seeker/dashboard";
       else if (user.role === "supplier") window.location.href = "/supplier-portal/dashboard";
       else if (user.role === "secretariat") window.location.href = "/secretariat/dashboard";
+      else if ((user as { isRealAdmin?: boolean }).isRealAdmin) window.location.href = "/dashboard/admin";
       else window.location.href = "/dashboard";
     } catch {
       toast.error("Login failed");
