@@ -74,7 +74,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
 
   return (
     <aside
-      className="fixed z-40 w-60 bg-sidebar-bg flex flex-col transition-all duration-200 lg:left-0"
+      className={cn("fixed z-40 w-60 flex flex-col transition-all duration-200 lg:left-0", isSuperAdmin ? "bg-[#1a1a2e]" : "bg-sidebar-bg")}
       style={{ top: "var(--demo-banner-h, 0px)", height: "calc(100vh - var(--demo-banner-h, 0px))", left: isOpen ? 0 : undefined }}
       data-open={isOpen}
     >
@@ -93,6 +93,16 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
           </button>
         )}
       </div>
+
+      {/* Super Admin indicator */}
+      {isSuperAdmin && (
+        <div className="px-5 py-2 border-b border-white/10">
+          <div className="flex items-center gap-1.5">
+            <Crown className="h-3 w-3 text-gold" />
+            <span className="text-xs font-semibold text-gold uppercase tracking-wider">Super Admin</span>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -117,7 +127,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-sidebar-active text-sidebar-text"
+                      ? isSuperAdmin ? "bg-gold/20 text-gold" : "bg-sidebar-active text-sidebar-text"
                       : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
                   )}
                 >
