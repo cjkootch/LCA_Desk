@@ -11,7 +11,11 @@ import bcrypt from "bcryptjs";
 
 const DEMO_PASSWORD = "demo-password-2026";
 
-export async function POST(req: NextRequest) {
+// Allow both GET and POST for easy browser access
+export async function GET(req: NextRequest) { return seed(req); }
+export async function POST(req: NextRequest) { return seed(req); }
+
+async function seed(req: NextRequest) {
   const demoSecret = process.env.DEMO_SEED_SECRET;
   if (!demoSecret) {
     return NextResponse.json({ error: "Demo seeding is disabled" }, { status: 403 });
