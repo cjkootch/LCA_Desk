@@ -191,20 +191,20 @@ export function ReferralsPageContent() {
             <CardTitle className="text-sm">How It Works</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-3 gap-4 relative">
+              {/* Connecting line (desktop only) */}
+              <div className="hidden sm:block absolute top-6 left-[16%] right-[16%] h-px bg-border-light" />
               {[
-                { icon: Share2, label: "Share", desc: "Send your referral link to colleagues or companies needing compliance tools" },
-                { icon: Users, label: "They Sign Up", desc: "When they create an account using your link, you'll see them here" },
-                { icon: Sparkles, label: "Both Earn", desc: "When they file their first report, you both get 14 extra trial days" },
+                { icon: Share2, label: "1. Share Your Link", desc: "Send your referral link to colleagues, companies, or post it on social media", color: "bg-accent-light text-accent" },
+                { icon: Users, label: "2. They Sign Up", desc: "When they create an account using your link, they appear in your referral history", color: "bg-success/10 text-success" },
+                { icon: Sparkles, label: "3. Both Earn", desc: "When they file their first report, you both get 14 extra trial days — automatically", color: "bg-gold/10 text-gold" },
               ].map((step, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-accent-light shrink-0">
-                    <step.icon className="h-4 w-4 text-accent" />
+                <div key={i} className="flex flex-col items-center text-center relative z-10">
+                  <div className={cn("p-3 rounded-xl mb-2", step.color)}>
+                    <step.icon className="h-5 w-5" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">{step.label}</p>
-                    <p className="text-xs text-text-muted mt-0.5">{step.desc}</p>
-                  </div>
+                  <p className="text-sm font-semibold text-text-primary">{step.label}</p>
+                  <p className="text-xs text-text-muted mt-0.5 max-w-[200px]">{step.desc}</p>
                 </div>
               ))}
             </div>

@@ -237,6 +237,14 @@ export default function DashboardPage() {
               />
             )}
             <PromoCTA
+              variant="gold"
+              title="Refer & Earn 14 Extra Days"
+              description="Share LCA Desk with colleagues. When they sign up and file, you both earn bonus trial days."
+              tags={["Share Link", "They Sign Up", "+14 Days Each"]}
+              buttonText="Start Referring"
+              buttonHref="/dashboard/referrals"
+            />
+            <PromoCTA
               variant="dark"
               title="Managed Compliance Service"
               description="Let our team handle data collection, report preparation, and Secretariat submission."
