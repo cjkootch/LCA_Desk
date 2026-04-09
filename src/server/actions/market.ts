@@ -1,11 +1,11 @@
 // Market domain: opportunities, companies, industry news, announcements
 export {
   // Opportunities
-  fetchOpportunities, fetchOpportunityAnalytics,
+  fetchOpportunitiesFeed, fetchOpportunityAnalytics,
   // Contractor profiles
-  fetchContractorProfile, fetchContractorDirectory,
+  fetchContractorProfile,
   // Company profiles
-  fetchCompanyProfile, fetchCompanyDirectory, claimCompanyProfile,
+  fetchCompanyProfile, fetchAllCompanyProfiles, aggregateCompanyProfiles, claimCompanyProfile,
   // LCS register
   searchLcsRegister,
   // Industry news

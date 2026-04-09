@@ -22,7 +22,7 @@ export {
   // Compliance health
   fetchComplianceHealth,
   // Compliance analytics
-  fetchComplianceAnalytics, fetchComplianceTimeline,
+  fetchComplianceAnalytics,
   // Step completion
   fetchStepCompletion,
   // Jurisdiction helpers
@@ -31,4 +31,6 @@ export {
   addPaymentLog, fetchPaymentLog, fetchPaymentLogStats,
   // Stakeholders
   fetchStakeholders, updateStakeholders,
+  // First consideration
+  generateFirstConsiderationRecord,
 } from "./_all";

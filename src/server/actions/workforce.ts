@@ -1,22 +1,26 @@
-// Workforce domain: employees, talent pool, job postings, applications, seeker
+// Workforce domain: employees, talent pool, job postings, applications, seeker portal
 export {
   // Employees
   fetchEmployees, addEmployee, updateEmployee, deleteEmployee,
   // Suppliers (filer-side directory)
   fetchSuppliers, addSupplier, updateSupplier, deleteSupplier,
   // Job postings
-  fetchJobPostings, createJobPosting, updateJobPosting, deleteJobPosting,
+  fetchJobPostings, addJobPosting, updateJobPosting, deleteJobPosting,
+  closeJobPosting, reopenJobPosting, fetchJobDetail,
+  fetchApplicationCounts,
   // Applications
-  fetchJobApplications, updateApplicationStatus, hireApplicant,
+  fetchApplicationsForPosting, updateApplicationStatus, hireApplicant, applyToJob,
   // Talent pool
   fetchTalentPool, toggleProfileVisibility,
   // Smart matching
-  fetchSmartMatches,
+  fetchMatchedOpportunities,
   // Seeker portal
-  fetchSeekerDashboardStats, updateMyProfile, fetchMyApplications,
-  fetchSeekerOpportunities, saveOpportunity, unsaveOpportunity, fetchSavedItems,
+  fetchSeekerDashboardStats, updateMyProfile, fetchMyProfile, fetchMyApplications,
+  fetchSeekerOpportunities, saveOpportunity, unsaveOpportunity,
+  fetchSavedOpportunities, fetchMySavedOpportunities,
+  seekerSaveOpportunity, seekerUnsaveOpportunity,
   // Seeker jobs
-  fetchSeekerJobs, saveJob, unsaveJob, fetchSavedJobs,
+  fetchPublicJobs, seekerSaveJob, seekerUnsaveJob, fetchMySavedJobs,
   // LCS jobs
   fetchLcsJobs,
   // Upgrade supplier to filer

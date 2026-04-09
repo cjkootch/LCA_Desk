@@ -1,4 +1,4 @@
-// User domain: profile, context, notifications, chat, preferences
+// User domain: profile, context, notifications, chat, preferences, support
 export {
   // Context
   fetchUserContext, checkSuperAdmin,
@@ -19,6 +19,6 @@ export {
   fetchUserNotificationPreferences, updateUserNotificationPreferences,
   // Feature preferences
   fetchFeaturePreferences, updateFeaturePreferences,
-  // Support
-  createSupportTicket, fetchSupportTickets, addTicketReply,
+  // Support tickets
+  createSupportTicket, fetchMyTickets, fetchTicketWithReplies, addTicketReply,
 } from "./_all";
