@@ -58,11 +58,11 @@ export function ProfileSettings() {
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
     fetchUserSettings().then(u => {
       if (u) {
         setName(u.name || "");
         setPhone(u.phone || "");
-        // Use avatar proxy endpoint if user has an avatar
         setAvatarUrl(u.avatarUrl ? `/api/avatar?id=${userId}&t=${Date.now()}` : "");
         setLinkedinUrl(u.linkedinUrl || "");
         setTwitterUrl(u.twitterUrl || "");
