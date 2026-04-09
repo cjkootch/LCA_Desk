@@ -33,16 +33,12 @@ export async function POST(request: Request) {
     const fileKey = `${session.user.id}/${randomUUID()}.${ext}`;
 
     const blob = await put(fileKey, file, {
-      access: "private",
+      access: "public",
       addRandomSuffix: false,
     });
 
-    // Return a proxy URL through our download endpoint so private blobs are accessible
-    const proxyUrl = `/api/submission/download?key=${encodeURIComponent(blob.url)}&name=${encodeURIComponent(file.name)}`;
-
     return NextResponse.json({
       fileKey: blob.url,
-      proxyUrl,
       fileName: file.name,
       fileSize: file.size,
     });

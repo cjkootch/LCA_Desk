@@ -63,7 +63,7 @@ export function ProfileSettings() {
       if (u) {
         setName(u.name || "");
         setPhone(u.phone || "");
-        setAvatarUrl(u.avatarUrl ? `/api/avatar?id=${userId}&t=${Date.now()}` : "");
+        setAvatarUrl(u.avatarUrl || "");
         setLinkedinUrl(u.linkedinUrl || "");
         setTwitterUrl(u.twitterUrl || "");
         setWebsiteUrl(u.websiteUrl || "");
@@ -94,9 +94,8 @@ export function ProfileSettings() {
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
-      // Store the raw blob URL in DB; display via /api/avatar proxy
       await updateUserSettings({ avatarUrl: data.fileKey });
-      setAvatarUrl(`/api/avatar?id=${userId}&t=${Date.now()}`);
+      setAvatarUrl(data.fileKey);
       toast.success("Profile picture updated");
       setCropSrc(null);
       setCropFile(null);
