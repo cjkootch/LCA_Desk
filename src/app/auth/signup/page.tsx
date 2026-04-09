@@ -19,6 +19,7 @@ function SignupContent() {
   const initialRole = searchParams.get("role") as UserRole;
   const inviteToken = searchParams.get("invite");
   const inviteEmail = searchParams.get("email");
+  const refCode = searchParams.get("ref");
 
   const [step, setStep] = useState<0 | 1 | 2>(initialRole ? (initialRole === "filer" ? 1 : 2) : 0);
   const [role, setRole] = useState<UserRole>(initialRole);
@@ -52,6 +53,7 @@ function SignupContent() {
           companyName: companyName || undefined,
           accountType: role === "filer" ? accountType : undefined,
           role: role || "filer",
+          ref: refCode || undefined,
         }),
       });
 

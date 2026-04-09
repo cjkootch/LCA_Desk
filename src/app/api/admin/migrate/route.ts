@@ -46,6 +46,21 @@ export async function POST(req: NextRequest) {
       created_at TIMESTAMP DEFAULT NOW()
     )`);
 
+    // Referrals
+    await run("users.referral_code", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE`);
+    await run("referrals", sql`CREATE TABLE IF NOT EXISTS referrals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      referrer_user_id UUID NOT NULL REFERENCES users(id),
+      referred_user_id UUID REFERENCES users(id),
+      referred_email TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      qualified_at TIMESTAMP,
+      rewarded_at TIMESTAMP,
+      reward_type TEXT,
+      reward_amount TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+
     return NextResponse.json({ success: true, results });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });

@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites } from "@/server/db/schema";
+import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites, referrals } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,6 +15,7 @@ const registerSchema = z.object({
   accountType: z.enum(["self", "others"]).optional(),
   // Role-based registration
   role: z.enum(["filer", "job_seeker", "supplier", "secretariat"]).default("filer"),
+  ref: z.string().optional(), // referral code
   // Job seeker fields
   currentJobTitle: z.string().optional(),
   employmentCategory: z.string().optional(),
@@ -97,10 +98,32 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Generate unique referral code: first name + random 4 chars
+    const refBase = (name || "user").split(" ")[0].toUpperCase().slice(0, 6);
+    const refSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const referralCode = `${refBase}-${refSuffix}`;
+
     const [user] = await db
       .insert(users)
-      .values({ name, email, passwordHash, userRole: role })
+      .values({ name, email, passwordHash, userRole: role, referralCode })
       .returning();
+
+    // Track referral if ref code was provided
+    const refCode = parsed.data.ref;
+    if (refCode) {
+      try {
+        const [referrer] = await db.select({ id: users.id }).from(users)
+          .where(eq(users.referralCode, refCode)).limit(1);
+        if (referrer) {
+          await db.insert(referrals).values({
+            referrerUserId: referrer.id,
+            referredUserId: user.id,
+            referredEmail: email,
+            status: "signed_up",
+          });
+        }
+      } catch {} // Don't block registration if referral tracking fails
+    }
 
     // Send welcome notification (in-app + email)
     notifyWelcome({ userId: user.id, email, name, role });

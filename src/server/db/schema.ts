@@ -63,6 +63,7 @@ export const users = pgTable("users", {
   isSuperAdmin: boolean("is_super_admin").default(false),
   userRole: text("user_role").default("filer"),
   isDemo: boolean("is_demo").default(false),
+  referralCode: text("referral_code").unique(),
   notificationPreferences: text("notification_preferences"),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -169,6 +170,20 @@ export const teamInvites = pgTable("team_invites", {
   status: text("status").notNull().default("pending"), // pending | accepted | expired
   expiresAt: timestamp("expires_at").notNull(),
   acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ─── REFERRALS ────────────────────────────────────────────────────
+export const referrals = pgTable("referrals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  referrerUserId: uuid("referrer_user_id").notNull().references(() => users.id),
+  referredUserId: uuid("referred_user_id").references(() => users.id),
+  referredEmail: text("referred_email"),
+  status: text("status").notNull().default("pending"), // pending | signed_up | qualified | rewarded
+  qualifiedAt: timestamp("qualified_at"),
+  rewardedAt: timestamp("rewarded_at"),
+  rewardType: text("reward_type"), // trial_extension | plan_credit | custom
+  rewardAmount: text("reward_amount"), // "14 days" or "$50"
   createdAt: timestamp("created_at").defaultNow(),
 });
 

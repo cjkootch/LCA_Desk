@@ -48,6 +48,7 @@ import {
   cancellationFeedback,
   announcements,
   teamInvites,
+  referrals,
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -964,6 +965,45 @@ export async function checkSuperAdmin(): Promise<boolean> {
     .limit(1);
 
   return user?.isSuperAdmin ?? false;
+}
+
+// ─── REFERRALS ───────────────────────────────────────────────────
+export async function fetchMyReferralInfo() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const [user] = await db.select({ referralCode: users.referralCode })
+    .from(users).where(eq(users.id, session.user.id)).limit(1);
+
+  if (!user?.referralCode) {
+    // Generate one if missing (for users created before referrals existed)
+    const name = session.user.name || "USER";
+    const refBase = name.split(" ")[0].toUpperCase().slice(0, 6);
+    const refSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code = `${refBase}-${refSuffix}`;
+    await db.update(users).set({ referralCode: code }).where(eq(users.id, session.user.id));
+    return { code, referrals: [], totalReferred: 0, totalSignedUp: 0, totalQualified: 0 };
+  }
+
+  const myReferrals = await db.select({
+    id: referrals.id,
+    referredEmail: referrals.referredEmail,
+    status: referrals.status,
+    rewardType: referrals.rewardType,
+    rewardAmount: referrals.rewardAmount,
+    createdAt: referrals.createdAt,
+  }).from(referrals)
+    .where(eq(referrals.referrerUserId, session.user.id))
+    .orderBy(desc(referrals.createdAt))
+    .limit(50);
+
+  return {
+    code: user.referralCode,
+    referrals: myReferrals,
+    totalReferred: myReferrals.length,
+    totalSignedUp: myReferrals.filter(r => r.status !== "pending").length,
+    totalQualified: myReferrals.filter(r => r.status === "qualified" || r.status === "rewarded").length,
+  };
 }
 
 // ─── PROFILE ──────────────────────────────────────────────────────
