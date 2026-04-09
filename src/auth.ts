@@ -102,6 +102,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
+      if (token.name) session.user.name = token.name as string;
+      if (token.email) session.user.email = token.email as string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session.user as any).isSuperAdmin = (token as any).isSuperAdmin ?? false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
