@@ -1054,7 +1054,7 @@ export const secretariatOffices = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
-    jurisdictionId: uuid("jurisdiction_id").unique().references(() => jurisdictions.id),
+    jurisdictionId: uuid("jurisdiction_id").references(() => jurisdictions.id),
     country: text("country").default("GY"),
     active: boolean("active").default(true),
     logoUrl: text("logo_url"),

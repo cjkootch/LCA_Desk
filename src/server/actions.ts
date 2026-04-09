@@ -64,47 +64,12 @@ async function getSessionTenant(opts?: { skipTrialCheck?: boolean }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
 
-  const [memberRow] = await db.select({
-    tenantId: tenantMembers.tenantId,
-    role: tenantMembers.role,
-  }).from(tenantMembers)
-    .where(eq(tenantMembers.userId, session.user.id))
-    .limit(1);
+  const membership = await db.query.tenantMembers.findFirst({
+    where: eq(tenantMembers.userId, session.user.id),
+    with: { tenant: { with: { jurisdiction: true } } },
+  });
 
-  if (!memberRow) throw new Error("No tenant found");
-
-  const [tenantRow] = await db.select({
-    id: tenants.id,
-    name: tenants.name,
-    slug: tenants.slug,
-    jurisdictionId: tenants.jurisdictionId,
-    plan: tenants.plan,
-    planEntityLimit: tenants.planEntityLimit,
-    active: tenants.active,
-    trialEndsAt: tenants.trialEndsAt,
-    stripeCustomerId: tenants.stripeCustomerId,
-    stripeSubscriptionId: tenants.stripeSubscriptionId,
-    stripePriceId: tenants.stripePriceId,
-    stripeSubscriptionStatus: tenants.stripeSubscriptionStatus,
-  }).from(tenants)
-    .where(eq(tenants.id, memberRow.tenantId))
-    .limit(1);
-
-  if (!tenantRow) throw new Error("No tenant found");
-
-  // Fetch jurisdiction separately
-  let jurisdiction = null;
-  if (tenantRow.jurisdictionId) {
-    const [j] = await db.select().from(jurisdictions)
-      .where(eq(jurisdictions.id, tenantRow.jurisdictionId)).limit(1);
-    jurisdiction = j || null;
-  }
-
-  const membership = {
-    tenantId: memberRow.tenantId,
-    role: memberRow.role,
-    tenant: { ...tenantRow, jurisdiction },
-  };
+  if (!membership) throw new Error("No tenant found");
 
   // After trial expires without payment, users get read-only Essentials.
   // No hard lockout at the action level — the layout handles the interstitial.
