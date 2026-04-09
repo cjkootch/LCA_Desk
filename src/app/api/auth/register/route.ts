@@ -1,10 +1,11 @@
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites } from "@/server/db/schema";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { notifyWelcome } from "@/lib/email/unified-notify";
+import { acceptPendingInvites } from "@/server/actions";
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -103,6 +104,25 @@ export async function POST(req: NextRequest) {
 
     // Send welcome notification (in-app + email)
     notifyWelcome({ userId: user.id, email, name, role });
+
+    // ─── ACCEPT PENDING TEAM INVITES ──────────────────────────────
+    // If this user was invited by an admin before they registered,
+    // auto-join them to the team/office now.
+    try {
+      const accepted = await acceptPendingInvites(user.id, email);
+      if (accepted > 0) {
+        // User was invited — they'll be joined to the team automatically.
+        // For filer invites, skip tenant creation below since they're joining an existing one.
+        const hasTeamInvite = await db.select({ id: tenantMembers.id }).from(tenantMembers)
+          .where(eq(tenantMembers.userId, user.id)).limit(1);
+        if (hasTeamInvite.length > 0 && role === "filer") {
+          return NextResponse.json(
+            { success: true, userId: user.id, role, redirectTo: "/auth/login" },
+            { headers: cors }
+          );
+        }
+      }
+    } catch {}
 
     // ─── FILER REGISTRATION ──────────────────────────────────────
     if (role === "filer") {

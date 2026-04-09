@@ -30,8 +30,12 @@ export default function SecretariatTeamPage() {
     if (!inviteEmail.trim() || !officeId) { toast.error("Email required"); return; }
     setInviting(true);
     try {
-      await addSecretariatMember(officeId, inviteEmail.trim(), inviteRole);
-      toast.success(`${inviteEmail} added as ${inviteRole}`);
+      const result = await addSecretariatMember(officeId, inviteEmail.trim(), inviteRole);
+      if (result && "invited" in result) {
+        toast.success(`Invitation sent to ${inviteEmail}. They'll join when they sign up.`);
+      } else {
+        toast.success(`${inviteEmail} added as ${inviteRole}`);
+      }
       setInviteEmail("");
       const fresh = await fetchSecretariatDashboard();
       setMembers(fresh.members);

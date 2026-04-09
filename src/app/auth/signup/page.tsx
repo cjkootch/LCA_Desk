@@ -17,12 +17,14 @@ type AccountType = "self" | "others" | null;
 function SignupContent() {
   const searchParams = useSearchParams();
   const initialRole = searchParams.get("role") as UserRole;
+  const inviteToken = searchParams.get("invite");
+  const inviteEmail = searchParams.get("email");
 
   const [step, setStep] = useState<0 | 1 | 2>(initialRole ? (initialRole === "filer" ? 1 : 2) : 0);
   const [role, setRole] = useState<UserRole>(initialRole);
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(inviteEmail || "");
   const [companyName, setCompanyName] = useState("");
   const passwordRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -193,14 +195,22 @@ function SignupContent() {
                 <ArrowLeft className="h-3.5 w-3.5" /> Back
               </button>
 
+              {inviteToken && (
+                <div className="rounded-lg border border-accent/30 bg-accent-light p-3 mb-4 text-center">
+                  <p className="text-sm font-medium text-accent">You&apos;ve been invited to join a team</p>
+                  <p className="text-xs text-text-secondary mt-0.5">Create your account to accept the invitation.</p>
+                </div>
+              )}
+
               <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
-                Create your account
+                {inviteToken ? "Accept Invitation" : "Create your account"}
               </h1>
               <p className="text-sm text-text-secondary text-center mb-6">
-                {role === "filer" && accountType === "self" && "Set up your company's compliance account."}
-                {role === "filer" && accountType === "others" && "Set up your consulting firm's account."}
-                {role === "supplier" && "Set up your supplier account to get discovered by contractors."}
-                {role === "job_seeker" && "Create your profile to find energy sector opportunities."}
+                {inviteToken && "Create your account to join the team."}
+                {!inviteToken && role === "filer" && accountType === "self" && "Set up your company's compliance account."}
+                {!inviteToken && role === "filer" && accountType === "others" && "Set up your consulting firm's account."}
+                {!inviteToken && role === "supplier" && "Set up your supplier account to get discovered by contractors."}
+                {!inviteToken && role === "job_seeker" && "Create your profile to find energy sector opportunities."}
               </p>
 
               <form onSubmit={handleSignup} className="space-y-4">

@@ -154,6 +154,22 @@ export const tenantMembers = pgTable(
   (table) => [unique("tenant_members_unique").on(table.tenantId, table.userId)]
 );
 
+// ─── TEAM INVITES (pending invitations for unregistered users) ────
+export const teamInvites = pgTable("team_invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  token: text("token").notNull().unique(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  secretariatOfficeId: uuid("secretariat_office_id").references(() => secretariatOffices.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"),
+  invitedBy: uuid("invited_by").notNull().references(() => users.id),
+  inviterName: text("inviter_name"),
+  status: text("status").notNull().default("pending"), // pending | accepted | expired
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ─── ENTITIES ─────────────────────────────────────────────────────
 export const entities = pgTable(
   "entities",

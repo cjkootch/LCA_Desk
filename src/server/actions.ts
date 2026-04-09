@@ -47,6 +47,7 @@ import {
   industryNews,
   cancellationFeedback,
   announcements,
+  teamInvites,
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -1022,7 +1023,10 @@ export async function fetchTeamMembers() {
 }
 
 export async function inviteTeamMember(data: { email: string; role: string }) {
-  const { tenantId, plan } = await getSessionTenant();
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const { tenantId, tenant, plan } = await getSessionTenant();
+
   // Check team member limit
   const currentMembers = await db.select({ id: tenantMembers.id }).from(tenantMembers).where(eq(tenantMembers.tenantId, tenantId));
   const limit = getPlan(plan).teamMemberLimit;
@@ -1037,32 +1041,104 @@ export async function inviteTeamMember(data: { email: string; role: string }) {
     .where(eq(users.email, data.email))
     .limit(1);
 
-  if (!existingUser) {
-    throw new Error("No account found with that email. They must sign up first.");
+  if (existingUser) {
+    // User exists — add directly
+    const existing = await db.query.tenantMembers.findFirst({
+      where: and(
+        eq(tenantMembers.tenantId, tenantId),
+        eq(tenantMembers.userId, existingUser.id)
+      ),
+    });
+    if (existing) throw new Error("This user is already a team member.");
+
+    const [member] = await db
+      .insert(tenantMembers)
+      .values({ tenantId, userId: existingUser.id, role: data.role })
+      .returning();
+
+    // Notify the new member
+    const inviterName = session.user.name || "A team admin";
+    unifiedNotifyTeamInvite({
+      userId: existingUser.id,
+      tenantId,
+      inviterName,
+      companyName: tenant.name,
+    }).catch(() => {});
+
+    return member;
   }
 
-  // Check if already a member
-  const existing = await db.query.tenantMembers.findFirst({
-    where: and(
-      eq(tenantMembers.tenantId, tenantId),
-      eq(tenantMembers.userId, existingUser.id)
-    ),
+  // User doesn't exist — create a pending invite
+  const { randomUUID } = await import("crypto");
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
+  await db.insert(teamInvites).values({
+    email: data.email,
+    token,
+    tenantId,
+    role: data.role,
+    invitedBy: session.user.id,
+    inviterName: session.user.name || "A team admin",
+    expiresAt,
   });
 
-  if (existing) {
-    throw new Error("This user is already a team member.");
+  // Send invite email
+  try {
+    const { sendEmail } = await import("@/lib/email/client");
+    const baseUrl = process.env.NEXTAUTH_URL || "https://app.lcadesk.com";
+    const signupUrl = `${baseUrl}/auth/signup?invite=${token}&email=${encodeURIComponent(data.email)}&role=filer`;
+    await sendEmail({
+      to: data.email,
+      subject: `You're invited to join ${tenant.name} on LCA Desk`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#0F172A">${session.user.name || "A team admin"} invited you to ${tenant.name}</h2>
+        <p style="color:#475569">You've been invited to join <strong>${tenant.name}</strong> on LCA Desk — the local content compliance platform for the petroleum sector.</p>
+        <p style="color:#475569">Click below to create your account and join the team:</p>
+        <a href="${signupUrl}" style="display:inline-block;padding:12px 24px;background:#047857;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;margin:16px 0">Accept Invitation</a>
+        <p style="color:#94A3B8;font-size:13px">This invitation expires in 14 days. If you didn't expect this, you can ignore it.</p>
+      </div>`,
+    });
+  } catch {}
+
+  return { invited: true, email: data.email };
+}
+
+export async function acceptPendingInvites(userId: string, email: string) {
+  const pending = await db.select().from(teamInvites)
+    .where(and(eq(teamInvites.email, email), eq(teamInvites.status, "pending")));
+
+  for (const invite of pending) {
+    if (new Date(invite.expiresAt) < new Date()) {
+      await db.update(teamInvites).set({ status: "expired" }).where(eq(teamInvites.id, invite.id));
+      continue;
+    }
+
+    if (invite.tenantId) {
+      // Filer team invite
+      const existing = await db.query.tenantMembers.findFirst({
+        where: and(eq(tenantMembers.tenantId, invite.tenantId), eq(tenantMembers.userId, userId)),
+      });
+      if (!existing) {
+        await db.insert(tenantMembers).values({ tenantId: invite.tenantId, userId, role: invite.role });
+      }
+    }
+
+    if (invite.secretariatOfficeId) {
+      // Secretariat invite
+      const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, userId)).limit(1);
+      const currentRole = userData?.userRole || "";
+      if (!currentRole.includes("secretariat")) {
+        const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
+        await db.update(users).set({ userRole: newRole }).where(eq(users.id, userId));
+      }
+      await db.insert(secretariatMembers).values({ officeId: invite.secretariatOfficeId, userId, role: invite.role });
+    }
+
+    await db.update(teamInvites).set({ status: "accepted", acceptedAt: new Date() }).where(eq(teamInvites.id, invite.id));
   }
 
-  const [member] = await db
-    .insert(tenantMembers)
-    .values({
-      tenantId,
-      userId: existingUser.id,
-      role: data.role,
-    })
-    .returning();
-
-  return member;
+  return pending.filter(i => new Date(i.expiresAt) >= new Date()).length;
 }
 
 export async function removeTeamMember(memberId: string) {
@@ -5112,21 +5188,69 @@ export async function acknowledgeSubmission(periodId: string, data: {
 }
 
 export async function addSecretariatMember(officeId: string, email: string, role: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
   const ctx = await getSecretariatContext();
   if (ctx.role !== "admin") throw new Error("Only secretariat admins can add members");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (!user) throw new Error("User not found — they must register first");
 
-  // Update user role to include secretariat
-  const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, user.id)).limit(1);
-  const currentRole = userData?.userRole || "";
-  if (!currentRole.includes("secretariat")) {
-    const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
-    await db.update(users).set({ userRole: newRole }).where(eq(users.id, user.id));
+  if (user) {
+    // User exists — add directly
+    const [userData] = await db.select({ userRole: users.userRole }).from(users).where(eq(users.id, user.id)).limit(1);
+    const currentRole = userData?.userRole || "";
+    if (!currentRole.includes("secretariat")) {
+      const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
+      await db.update(users).set({ userRole: newRole }).where(eq(users.id, user.id));
+    }
+
+    await db.insert(secretariatMembers).values({ officeId, userId: user.id, role });
+
+    // Notify the new member
+    unifiedNotifyTeamInvite({
+      userId: user.id,
+      tenantId: officeId,
+      inviterName: session.user.name || "A secretariat admin",
+      companyName: "Local Content Secretariat",
+    }).catch(() => {});
+
+    return { added: true };
   }
 
-  await db.insert(secretariatMembers).values({ officeId, userId: user.id, role });
+  // User doesn't exist — create a pending invite
+  const { randomUUID } = await import("crypto");
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+  await db.insert(teamInvites).values({
+    email,
+    token,
+    secretariatOfficeId: officeId,
+    role,
+    invitedBy: session.user.id,
+    inviterName: session.user.name || "A secretariat admin",
+    expiresAt,
+  });
+
+  // Send invite email
+  try {
+    const { sendEmail } = await import("@/lib/email/client");
+    const baseUrl = process.env.NEXTAUTH_URL || "https://app.lcadesk.com";
+    const signupUrl = `${baseUrl}/auth/signup?invite=${token}&email=${encodeURIComponent(email)}&role=secretariat`;
+    await sendEmail({
+      to: email,
+      subject: "You're invited to the Local Content Secretariat on LCA Desk",
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#0F172A">${session.user.name || "An admin"} invited you to the Secretariat Portal</h2>
+        <p style="color:#475569">You've been invited to join the <strong>Local Content Secretariat</strong> team on LCA Desk — the regulatory compliance platform.</p>
+        <p style="color:#475569">Click below to create your account and get started:</p>
+        <a href="${signupUrl}" style="display:inline-block;padding:12px 24px;background:#047857;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;margin:16px 0">Accept Invitation</a>
+        <p style="color:#94A3B8;font-size:13px">This invitation expires in 14 days.</p>
+      </div>`,
+    });
+  } catch {}
+
+  return { invited: true, email };
 }
 
 export async function fetchSubmissionDetail(periodId: string) {

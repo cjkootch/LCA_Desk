@@ -354,8 +354,12 @@ function TeamTab() {
     }
     setInviting(true);
     try {
-      await inviteTeamMember({ email: inviteEmail, role: inviteRole });
-      toast.success("Team member invited successfully.");
+      const result = await inviteTeamMember({ email: inviteEmail, role: inviteRole });
+      if (result && "invited" in result) {
+        toast.success(`Invitation email sent to ${inviteEmail}. They'll join the team when they sign up.`);
+      } else {
+        toast.success("Team member added successfully.");
+      }
       setInviteEmail("");
       setInviteRole("member");
       loadMembers();
