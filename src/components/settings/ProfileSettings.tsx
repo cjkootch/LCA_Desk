@@ -125,7 +125,8 @@ export function ProfileSettings() {
           <div className="flex items-center gap-4">
             <div className="relative">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="h-16 w-16 rounded-full object-cover border-2 border-border" />
+                <img src={avatarUrl} alt="Avatar" className="h-16 w-16 rounded-full object-cover border-2 border-border"
+                  onError={() => setAvatarUrl("")} />
               ) : (
                 <div className="h-16 w-16 rounded-full bg-accent-light flex items-center justify-center border-2 border-border">
                   <User className="h-7 w-7 text-accent" />

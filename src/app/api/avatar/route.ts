@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const userId = url.searchParams.get("id");
 
-  if (!userId) {
+  if (!userId || userId === "undefined" || userId === "null") {
     return new NextResponse(null, { status: 400 });
   }
 
@@ -23,23 +23,36 @@ export async function GET(request: Request) {
 
     let rawUrl = user?.avatarUrl || "";
 
-    // Extract blob URL from old proxy format if needed
-    if (rawUrl.startsWith("/api/submission/download")) {
+    if (!rawUrl) {
+      return new NextResponse(null, { status: 404 });
+    }
+
+    // Handle old proxy format: /api/submission/download?key=BLOB_URL&name=...
+    if (rawUrl.startsWith("/api/")) {
       try {
         const parsed = new URL(rawUrl, "https://app.lcadesk.com");
         rawUrl = parsed.searchParams.get("key") || "";
       } catch {}
     }
 
-    if (!rawUrl || !rawUrl.includes("blob.vercel-storage.com")) {
+    if (!rawUrl) {
       return new NextResponse(null, { status: 404 });
     }
 
-    // Get a signed download URL and redirect — browsers follow 302 on <img src>
-    const signedUrl = await getDownloadUrl(rawUrl);
-    return NextResponse.redirect(signedUrl, 302);
+    // Vercel Blob URL — get signed download URL and redirect
+    if (rawUrl.includes("blob.vercel-storage.com")) {
+      const signedUrl = await getDownloadUrl(rawUrl);
+      return NextResponse.redirect(signedUrl, 302);
+    }
+
+    // Any other http URL — redirect directly
+    if (rawUrl.startsWith("http")) {
+      return NextResponse.redirect(rawUrl, 302);
+    }
+
+    return new NextResponse(null, { status: 404 });
   } catch (err) {
-    console.error("[avatar] error:", err instanceof Error ? err.message : err);
+    console.error("[avatar] error for userId", userId, ":", err instanceof Error ? err.message : err);
     return new NextResponse(null, { status: 500 });
   }
 }

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
                 registrationStatus: `lcs_cert_${tier}`,
               });
             }
-          } catch {}
+          } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
         }
         break;
       }
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
               if (sub.trial_end) {
                 trialEndsAt = new Date(sub.trial_end * 1000);
               }
-            } catch {}
+            } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
           }
 
           await db.update(tenants).set({
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
               const { syncSignup } = await import("@/lib/hubspot-sync");
               await syncSignup(owner.email, owner.email, "", "filer", trialEndsAt ?? undefined);
             }
-          } catch {}
+          } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
         }
         break;
       }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
             const { syncPayment } = await import("@/lib/hubspot-sync");
             await syncPayment(owner.email, plan, session.customer as string);
           }
-        } catch {}
+        } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
       }
       break;
     }
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
             const { syncPaymentFailed } = await import("@/lib/hubspot-sync");
             await syncPaymentFailed(owner.email);
           }
-        } catch {}
+        } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
 
         console.error(
           `Payment failed for tenant ${tenant.id} (${tenant.name}), ` +
@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
             const { syncChurn } = await import("@/lib/hubspot-sync");
             await syncChurn(owner.email);
           }
-        } catch {}
+        } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
 
         console.error(`Subscription canceled for tenant ${tenant.id} (${tenant.name})`);
       }

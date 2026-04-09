@@ -51,7 +51,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!valid) return null;
 
         // Track last login
-        db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).catch(() => {});
+        db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).catch((err) => {
+          console.error(`[auth] Failed to update lastLoginAt for user ${user.id}:`, err instanceof Error ? err.message : err);
+        });
 
         return {
           id: user.id,
