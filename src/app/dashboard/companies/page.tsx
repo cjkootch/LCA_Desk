@@ -15,6 +15,7 @@ import {
 import { fetchAllCompanyProfiles, aggregateCompanyProfiles } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function CompaniesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,61 +107,63 @@ export default function CompaniesPage() {
             <EmptyState icon={Search} title="No companies match" description="Try a different search." />
           )
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((p) => (
-              <Link key={p.id} href={`/dashboard/companies/${p.slug}`}>
-                <Card className="hover:border-accent/30 transition-colors cursor-pointer h-full">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <CompanyLogo companyName={p.companyName} size={40} />
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-text-primary truncate">{p.companyName}</h3>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {p.lcsRegistered ? (
-                            <Badge variant="success" className="text-xs gap-0.5">
-                              <Shield className="h-2.5 w-2.5" /> LCS Verified
-                            </Badge>
-                          ) : (
-                            <Badge variant="default" className="text-xs">Unverified</Badge>
-                          )}
-                          {p.claimed && (
-                            <Badge variant="accent" className="text-xs gap-0.5">
-                              <CheckCircle className="h-2.5 w-2.5" /> Claimed
-                            </Badge>
-                          )}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map((p) => {
+              const initial = (p.companyName || "?").charAt(0).toUpperCase();
+              return (
+                <Link key={p.id} href={`/dashboard/companies/${p.slug}`}>
+                  <Card className="hover:shadow-lg transition-all cursor-pointer overflow-hidden group h-full">
+                    {/* Cover banner */}
+                    <div className={cn("h-14 relative",
+                      p.lcsRegistered
+                        ? "bg-gradient-to-r from-accent/15 via-accent/5 to-gold/5"
+                        : "bg-gradient-to-r from-slate-100 via-slate-50 to-white"
+                    )} />
+                    {/* Logo */}
+                    <div className="px-4 -mt-7 relative">
+                      <div className="h-14 w-14 rounded-xl border-4 border-white shadow-sm mx-auto overflow-hidden bg-white">
+                        <CompanyLogo companyName={p.companyName} size={48} />
+                      </div>
+                    </div>
+                    <CardContent className="pt-2 pb-4 px-4 text-center">
+                      {/* Name */}
+                      <p className="text-sm font-semibold text-text-primary truncate mb-1">{p.companyName}</p>
+                      {/* Status */}
+                      <div className="flex justify-center gap-1 mb-2">
+                        {p.lcsRegistered ? (
+                          <Badge variant="success" className="text-xs gap-0.5"><Shield className="h-2.5 w-2.5" /> LCS Verified</Badge>
+                        ) : (
+                          <Badge variant="default" className="text-xs">Unverified</Badge>
+                        )}
+                        {p.claimed && <Badge variant="accent" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /></Badge>}
+                      </div>
+                      {/* Stats */}
+                      <div className="space-y-1 text-xs text-text-muted mb-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <Megaphone className="h-3 w-3" />
+                          {p.totalOpportunities} opportunit{p.totalOpportunities !== 1 ? "ies" : "y"}
+                          {p.activeOpportunities > 0 && <span className="text-accent font-medium">({p.activeOpportunities} active)</span>}
+                        </div>
+                        <div className="flex items-center justify-center gap-1">
+                          <Briefcase className="h-3 w-3" />
+                          {p.totalJobPostings} job{p.totalJobPostings !== 1 ? "s" : ""}
+                          {p.openJobPostings > 0 && <span className="text-success font-medium">({p.openJobPostings} open)</span>}
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-xs text-text-muted">
-                      <span className="flex items-center gap-1">
-                        <Megaphone className="h-3 w-3" />
-                        {p.totalOpportunities} opportunit{p.totalOpportunities !== 1 ? "ies" : "y"}
-                        {p.activeOpportunities > 0 && <span className="text-accent">({p.activeOpportunities} active)</span>}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-text-muted mt-1">
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3" />
-                        {p.totalJobPostings} job{p.totalJobPostings !== 1 ? "s" : ""}
-                        {p.openJobPostings > 0 && <span className="text-success">({p.openJobPostings} open)</span>}
-                      </span>
-                    </div>
-
-                    {p.procurementCategories?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {p.procurementCategories.slice(0, 3).map((c: string) => (
-                          <Badge key={c} variant="default" className="text-xs">{c}</Badge>
-                        ))}
-                        {p.procurementCategories.length > 3 && (
-                          <span className="text-xs text-text-muted">+{p.procurementCategories.length - 3}</span>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                      {/* Categories */}
+                      {p.procurementCategories?.length > 0 && (
+                        <p className="text-xs text-text-muted line-clamp-1 mb-3">
+                          {p.procurementCategories.slice(0, 2).join(", ")}
+                        </p>
+                      )}
+                      <Button variant="outline" size="sm" className="w-full text-xs group-hover:border-accent group-hover:text-accent transition-colors">
+                        View Company
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
