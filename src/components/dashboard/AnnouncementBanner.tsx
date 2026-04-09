@@ -77,9 +77,19 @@ export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
               </p>
               <p className="text-xs text-text-secondary mt-0.5 whitespace-pre-line">{a.body}</p>
               {a.authorName && (
-                <p className="text-xs text-text-muted mt-1">
-                  — {a.authorName}, Local Content Secretariat
-                </p>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="h-5 w-5 rounded-full bg-bg-primary flex items-center justify-center overflow-hidden shrink-0">
+                    {a.authorId ? (
+                      <img src={`/api/avatar?id=${a.authorId}`} alt="" className="h-full w-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = a.authorName?.charAt(0) || "S"; }} />
+                    ) : (
+                      <span className="text-[10px] font-bold text-text-muted">{a.authorName?.charAt(0)}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    {a.authorName}, Local Content Secretariat
+                  </p>
+                </div>
               )}
             </div>
 

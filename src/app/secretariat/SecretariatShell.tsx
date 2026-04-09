@@ -72,8 +72,11 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-white/10 px-3 py-4">
           <div className="flex items-center gap-3 px-3 py-2">
             <Link href="/secretariat/settings" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                {profile?.full_name?.charAt(0) || "S"}
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden">
+                {profile?.id ? (
+                  <img src={`/api/avatar?id=${profile.id}`} alt="" className="h-full w-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = profile?.full_name?.charAt(0) || "S"; }} />
+                ) : (profile?.full_name?.charAt(0) || "S")}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{profile?.full_name || "User"}</p>
