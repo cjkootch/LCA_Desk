@@ -90,14 +90,14 @@ export function ProfileSettings() {
       const formData = new FormData();
       formData.append("file", new File([croppedBlob], cropFile?.name || "avatar.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error();
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
       setAvatarUrl(data.fileKey);
       await updateUserSettings({ avatarUrl: data.fileKey });
       toast.success("Profile picture updated");
       setCropSrc(null);
       setCropFile(null);
-    } catch { toast.error("Failed to upload image"); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to upload image"); }
     setUploading(false);
   };
 
