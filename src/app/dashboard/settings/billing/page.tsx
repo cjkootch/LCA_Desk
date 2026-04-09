@@ -11,14 +11,13 @@ import { Check, X, Sparkles, Crown, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchPlanAndUsage } from "@/server/actions";
 import { toast } from "sonner";
-import { PLANS, getPlan, type PlanCode } from "@/lib/plans";
-
-const ANNUAL_DISCOUNT = 0.20; // 20% off
+import { getPlan } from "@/lib/plans";
 
 export default function BillingPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchPlanAndUsage>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlanAndUsage()
@@ -26,8 +25,6 @@ export default function BillingPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   const currentPlan = getPlan(data?.plan);
 
@@ -65,33 +62,89 @@ export default function BillingPage() {
     }
   };
 
-  const getPrice = (monthlyPrice: number) => {
-    if (monthlyPrice === 0) return 0;
-    if (billing === "annual") {
-      return Math.round(monthlyPrice * (1 - ANNUAL_DISCOUNT));
-    }
-    return monthlyPrice;
-  };
-
-  const features: { label: string; lite: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
-    { label: "Entities", lite: "1", pro: "5", enterprise: "Unlimited" },
-    { label: "Team Members", lite: "3", pro: "15", enterprise: "Unlimited" },
-    { label: "Report Exports", lite: "2/yr + $25 each", pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "Data Entry & Tracking", lite: true, pro: true, enterprise: true },
-    { label: "Compliance Health Score", lite: true, pro: true, enterprise: true },
-    { label: "AI Narrative Drafting", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "AI Expert Chat", lite: false, pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "AI Compliance Scan", lite: false, pro: true, enterprise: true },
-    { label: "Deadline Alerts", lite: true, pro: true, enterprise: true },
-    { label: "Audit Trail", lite: false, pro: true, enterprise: true },
-    { label: "QuickBooks Integration", lite: false, pro: true, enterprise: true },
-    { label: "Job Board & Talent Pool", lite: false, pro: true, enterprise: true },
-    { label: "Supplier Search + Contacts", lite: false, pro: true, enterprise: true },
-    { label: "Market Intelligence", lite: false, pro: true, enterprise: true },
-    { label: "AI Data Extraction", lite: false, pro: false, enterprise: true },
-    { label: "API Access", lite: false, pro: false, enterprise: true },
-    { label: "Priority Support (SLA)", lite: false, pro: false, enterprise: true },
+  // ─── Plan definitions matching website ─────────────────────────
+  const plans = [
+    {
+      code: "lite",
+      name: "Essentials",
+      bestFor: "Small vendors · 1–15 employees",
+      monthlyPrice: 199,
+      annualEquiv: 159,
+      annualTotal: 1908,
+      features: [
+        "1 entity",
+        "3 users",
+        "All 6 mandatory submissions",
+        "Guided data entry wizard",
+        "Deadline alerts & filing calendar",
+        "Unlimited report generation",
+        "1 year data history",
+        "Email support (48hrs)",
+      ],
+    },
+    {
+      code: "pro",
+      name: "Professional",
+      bestFor: "Growing contractors · 15–150 employees",
+      monthlyPrice: 399,
+      annualEquiv: 319,
+      annualTotal: 3828,
+      popular: true,
+      features: [
+        "Up to 5 entities/projects",
+        "15 users",
+        "Unlimited report generation",
+        "AI Narrative Drafting",
+        "AI Compliance Gap Detection",
+        "Compliance Health Score",
+        "Workforce + procurement dashboards",
+        "Payment log & audit trail",
+        "Unlimited data history",
+        "Priority support (24hrs)",
+      ],
+    },
+    {
+      code: "enterprise",
+      name: "Enterprise",
+      bestFor: "Large contractors · multi-entity",
+      monthlyPrice: 0,
+      annualEquiv: 0,
+      annualTotal: 0,
+      features: [
+        "Unlimited entities",
+        "Unlimited users",
+        "Role-based permissions",
+        "AI-powered reporting",
+        "API / ERP integrations",
+        "White-glove onboarding",
+        "Custom dashboards",
+        "SLA support (4hr named CSM)",
+      ],
+    },
+    {
+      code: "managed",
+      name: "Managed Service",
+      bestFor: "Full compliance outsourcing",
+      monthlyPrice: 2500,
+      annualEquiv: 0,
+      annualTotal: 0,
+      managed: true,
+      features: [
+        "Software included",
+        "Data collection coordination",
+        "Report preparation",
+        "AI drafting + human review",
+        "Secretariat submission on your behalf",
+        "Acknowledgment tracking",
+        "Secretariat follow up",
+      ],
+    },
   ];
+
+  const getPrice = (plan: typeof plans[0]) => {
+    if (plan.monthlyPrice === 0) return null;
+    return billing === "annual" ? plan.annualEquiv : plan.monthlyPrice;
+  };
 
   if (loading) {
     return (
@@ -104,7 +157,7 @@ export default function BillingPage() {
   return (
     <div>
       <TopBar title="Billing & Plans" />
-      <div className="p-8 max-w-5xl">
+      <div className="p-8 max-w-6xl">
         <PageHeader
           title="Choose Your Plan"
           description="Scale your compliance operations with the right plan."
@@ -220,24 +273,23 @@ export default function BillingPage() {
           </button>
         </div>
 
-        {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {(Object.values(PLANS) as typeof PLANS[PlanCode][]).map((plan) => {
+        {/* Plan cards — 4 columns matching website */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+          {plans.map((plan) => {
             const isCurrent = plan.code === currentPlan.code;
-            const isPopular = plan.code === "pro";
-            const price = getPrice(plan.price);
-            const originalPrice = plan.price;
+            const price = getPrice(plan);
 
             return (
               <Card
                 key={plan.code}
                 className={cn(
-                  "relative",
-                  isPopular && "border-accent ring-1 ring-accent",
-                  isCurrent && "bg-accent-light"
+                  "relative flex flex-col",
+                  plan.popular && "border-accent ring-1 ring-accent",
+                  plan.managed && "bg-[#1e293b] text-white border-[#1e293b]",
+                  isCurrent && !plan.managed && "bg-accent-light"
                 )}
               >
-                {isPopular && (
+                {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge variant="accent" className="px-3">
                       <Crown className="h-3 w-3 mr-1" />
@@ -245,80 +297,49 @@ export default function BillingPage() {
                     </Badge>
                   </div>
                 )}
-                <CardHeader>
-                  <CardTitle className="text-lg">{plan.name}</CardTitle>
-                  <div className="mt-2">
-                    {plan.price === 0 ? (
+                <CardHeader className="pb-3">
+                  <CardTitle className={cn("text-lg", plan.managed && "text-white")}>{plan.name}</CardTitle>
+                  <p className={cn("text-xs mt-0.5", plan.managed ? "text-white/60" : "text-text-muted")}>{plan.bestFor}</p>
+                  <div className="mt-3">
+                    {plan.code === "enterprise" ? (
+                      <span className="text-3xl font-bold">Custom</span>
+                    ) : plan.managed ? (
                       <>
-                        <span className="text-3xl font-bold text-text-primary">$0</span>
-                        <span className="text-text-muted text-sm ml-1">Free</span>
+                        <p className="text-xs text-white/60">From</p>
+                        <span className="text-3xl font-bold text-white">${plan.monthlyPrice.toLocaleString()}</span>
+                        <span className="text-white/60 text-sm">/mo</span>
                       </>
                     ) : (
                       <>
-                        <span className="text-3xl font-bold text-text-primary">${price}</span>
-                        <span className="text-text-muted text-sm">/month</span>
-                        {billing === "annual" && (
+                        <span className="text-3xl font-bold">${price}</span>
+                        <span className={cn("text-sm", plan.managed ? "text-white/60" : "text-text-muted")}>/mo</span>
+                        {billing === "annual" && plan.annualTotal > 0 && (
                           <div className="mt-1">
-                            <span className="text-sm text-text-muted line-through">${originalPrice}/mo</span>
+                            <span className="text-sm text-text-muted line-through">${plan.monthlyPrice}/mo</span>
                             <span className="text-sm text-accent font-medium ml-2">
-                              ${price * 12}/year
+                              ${(price! * 12).toLocaleString()}/yr
                             </span>
                           </div>
                         )}
-                        {billing === "monthly" && plan.price > 0 && plan.annualPrice > 0 && (
+                        {billing === "monthly" && plan.annualEquiv > 0 && (
                           <p className="text-xs text-text-muted mt-1">
-                            or ${plan.annualMonthlyEquivalent}/mo · ${plan.annualPrice.toLocaleString()}/yr billed annually
+                            or ${plan.annualEquiv}/mo billed annually
                           </p>
                         )}
                       </>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6">
-                    <li className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-success shrink-0" />
-                      {plan.entityLimit === -1 ? "Unlimited" : plan.entityLimit} entit{plan.entityLimit === 1 ? "y" : "ies"}
-                    </li>
-                    <li className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-success shrink-0" />
-                      {plan.teamMemberLimit === -1 ? "Unlimited" : plan.teamMemberLimit} team member{plan.teamMemberLimit === 1 ? "" : "s"}
-                    </li>
-                    <li className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-success shrink-0" />
-                      {plan.aiDraftsPerMonth === -1 ? "Unlimited" : `${plan.aiDraftsPerMonth}/mo`} AI drafts
-                    </li>
-                    <li className="text-sm flex items-center gap-2">
-                      {plan.features.excelExport ? (
-                        <Check className="h-4 w-4 text-success shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 text-text-muted shrink-0" />
-                      )}
-                      <span className={!plan.features.excelExport ? "text-text-muted" : ""}>
-                        Excel & PDF export
-                      </span>
-                    </li>
-                    <li className="text-sm flex items-center gap-2">
-                      {plan.features.qboIntegration ? (
-                        <Check className="h-4 w-4 text-success shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 text-text-muted shrink-0" />
-                      )}
-                      <span className={!plan.features.qboIntegration ? "text-text-muted" : ""}>
-                        QuickBooks integration
-                      </span>
-                    </li>
-                    <li className="text-sm flex items-center gap-2">
-                      {plan.features.dataExtraction ? (
-                        <Check className="h-4 w-4 text-success shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 text-text-muted shrink-0" />
-                      )}
-                      <span className={!plan.features.dataExtraction ? "text-text-muted" : ""}>
-                        AI Data Extraction
-                      </span>
-                    </li>
+                <CardContent className="flex-1 flex flex-col">
+                  <ul className="space-y-2 flex-1 mb-5">
+                    {plan.features.map((f) => (
+                      <li key={f} className={cn("text-sm flex items-start gap-2", plan.managed && "text-white/80")}>
+                        <Check className={cn("h-4 w-4 shrink-0 mt-0.5", plan.managed ? "text-accent" : "text-success")} />
+                        {f}
+                      </li>
+                    ))}
                   </ul>
+
                   {isCurrent ? (
                     currentPlan.code !== "lite" ? (
                       <Button variant="outline" className="w-full" onClick={handleManageSubscription}>
@@ -330,19 +351,25 @@ export default function BillingPage() {
                         Current Plan
                       </Button>
                     )
-                  ) : plan.price === 0 ? (
-                    <Button variant="outline" className="w-full" disabled>
+                  ) : plan.code === "enterprise" ? (
+                    <Button variant="outline" className="w-full"
+                      onClick={() => window.open("mailto:hello@lcadesk.com?subject=Enterprise%20Plan%20Inquiry", "_blank")}>
                       Contact Us
+                    </Button>
+                  ) : plan.managed ? (
+                    <Button className="w-full bg-accent hover:bg-accent-hover text-white"
+                      onClick={() => window.open("mailto:hello@lcadesk.com?subject=Managed%20Service%20Inquiry", "_blank")}>
+                      Get a Quote
                     </Button>
                   ) : (
                     <Button
-                      variant={isPopular ? "primary" : "outline"}
+                      variant={plan.popular ? "primary" : "outline"}
                       className="w-full"
                       onClick={() => handleUpgrade(plan.code)}
                       loading={upgrading === plan.code}
                     >
                       <Sparkles className="h-4 w-4 mr-1" />
-                      Upgrade to {plan.name}
+                      {data?.isInTrial ? "Start 30-Day Trial" : `Upgrade to ${plan.name}`}
                     </Button>
                   )}
                 </CardContent>
@@ -351,7 +378,11 @@ export default function BillingPage() {
           })}
         </div>
 
-        {/* Feature comparison table */}
+        <p className="text-xs text-text-muted text-center mb-8">
+          30-day trial with card collected upfront. Cancel anytime. Data exportable on request.
+        </p>
+
+        {/* Feature comparison table — matches website exactly */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Feature Comparison</CardTitle>
@@ -360,32 +391,65 @@ export default function BillingPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 pr-4 font-medium text-text-secondary">Feature</th>
-                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Essentials</th>
-                    <th className="text-center py-3 px-2 font-medium text-accent">Professional</th>
-                    <th className="text-center py-3 px-2 font-medium text-text-secondary">Enterprise</th>
+                  <tr className="border-b-2 border-border">
+                    <th className="text-left py-3 pr-4 font-medium text-xs uppercase tracking-wider text-text-muted">Feature</th>
+                    <th className="text-center py-3 px-2 font-medium text-xs uppercase tracking-wider text-text-muted">Essentials</th>
+                    <th className="text-center py-3 px-2 font-semibold text-xs uppercase tracking-wider text-accent">Professional</th>
+                    <th className="text-center py-3 px-2 font-medium text-xs uppercase tracking-wider text-text-muted">Enterprise</th>
+                    <th className="text-center py-3 px-2 font-medium text-xs uppercase tracking-wider text-text-muted">Managed</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {features.map((f) => (
-                    <tr key={f.label} className="border-b border-border-light">
-                      <td className="py-3 pr-4 text-text-primary">{f.label}</td>
-                      {(["lite", "pro", "enterprise"] as const).map((plan) => (
-                        <td key={plan} className="text-center py-3 px-2">
-                          {typeof f[plan] === "boolean" ? (
-                            f[plan] ? (
-                              <Check className="h-4 w-4 text-success mx-auto" />
-                            ) : (
-                              <X className="h-4 w-4 text-text-muted mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-text-primary font-medium text-xs">{f[plan]}</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {/* ── CAPACITY ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Capacity</td></tr>
+                  <FeatureRow label="Entities / projects" vals={["1", "Up to 5", "Unlimited", "Unlimited"]} />
+                  <FeatureRow label="Users" vals={["3", "10", "Unlimited", "N/A"]} />
+                  <FeatureRow label="Data history" vals={["1 year", "Unlimited", "Unlimited", "Unlimited"]} />
+
+                  {/* ── FILING & REPORTING ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Filing & Reporting</td></tr>
+                  <FeatureRow label="All 5 submission types" vals={[true, true, true, true]} />
+                  <FeatureRow label="Guided data entry wizard" vals={[true, true, true, true]} />
+                  <FeatureRow label="Unlimited report generation" vals={[true, true, true, true]} />
+                  <FeatureRow label="Secretariat-ready exports (PDF & Excel)" vals={[true, true, true, true]} />
+                  <FeatureRow label="Notice of Submission letter" vals={[true, true, true, true]} />
+                  <FeatureRow label="Deadline alerts & filing calendar" vals={[true, true, true, true]} />
+
+                  {/* ── AI FEATURES ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">AI Features</td></tr>
+                  <FeatureRow label="AI Narrative Drafting" vals={[false, true, true, true]} />
+                  <FeatureRow label="AI Compliance Gap Detection" vals={[false, true, true, true]} />
+                  <FeatureRow label="Ask the LCA Expert (AI assistant)" vals={[false, true, true, true]} />
+                  <FeatureRow label="Document Intelligence" vals={[false, false, true, true]} />
+
+                  {/* ── ANALYTICS & INSIGHTS ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Analytics & Insights</td></tr>
+                  <FeatureRow label="Compliance Health Score" vals={[true, true, true, true]} />
+                  <FeatureRow label="Workforce dashboards" vals={[false, true, true, true]} />
+                  <FeatureRow label="Procurement dashboards" vals={[false, true, true, true]} />
+                  <FeatureRow label="Payment log" vals={[false, true, true, true]} />
+                  <FeatureRow label="Full audit trail" vals={[false, true, true, true]} />
+
+                  {/* ── ADMINISTRATION ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Administration</td></tr>
+                  <FeatureRow label="Role-based permissions" vals={[false, false, true, "N/A"]} />
+                  <FeatureRow label="API / ERP integrations" vals={[false, false, true, "N/A"]} />
+                  <FeatureRow label="Custom workflows" vals={[false, false, true, "N/A"]} />
+                  <FeatureRow label="White-glove onboarding" vals={[false, false, true, true]} />
+
+                  {/* ── MANAGED SERVICES ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Managed Services</td></tr>
+                  <FeatureRow label="Data collection coordination" vals={[false, false, false, true]} />
+                  <FeatureRow label="Report preparation" vals={[false, false, false, true]} />
+                  <FeatureRow label="AI drafting + human review" vals={[false, false, false, true]} />
+                  <FeatureRow label="Secretariat submission on your behalf" vals={[false, false, false, true]} />
+                  <FeatureRow label="Acknowledgement tracking" vals={[false, false, false, true]} />
+                  <FeatureRow label="Audit defense" vals={[false, false, false, true]} />
+
+                  {/* ── SUPPORT ── */}
+                  <tr><td colSpan={5} className="pt-5 pb-2 text-xs font-bold uppercase tracking-wider text-accent">Support</td></tr>
+                  <FeatureRow label="Email support" vals={["48hr", "24hr", "4hr SLA", "4hr SLA"]} />
+                  <FeatureRow label="Named CSM" vals={[false, false, true, true]} />
                 </tbody>
               </table>
             </div>
@@ -393,5 +457,24 @@ export default function BillingPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function FeatureRow({ label, vals }: { label: string; vals: (boolean | string)[] }) {
+  return (
+    <tr className="border-b border-border-light">
+      <td className="py-3 pr-4 text-text-primary">{label}</td>
+      {vals.map((v, i) => (
+        <td key={i} className="text-center py-3 px-2">
+          {typeof v === "boolean" ? (
+            v ? <Check className="h-4 w-4 text-accent mx-auto" /> : <span className="text-text-muted">—</span>
+          ) : v === "N/A" ? (
+            <span className="text-text-muted text-xs">N/A</span>
+          ) : (
+            <span className="text-text-primary font-medium text-xs">{v}</span>
+          )}
+        </td>
+      ))}
+    </tr>
   );
 }
