@@ -10,6 +10,7 @@ import {
   GraduationCap, Building2, FileText, PieChart, Sparkles, Copy,
 } from "lucide-react";
 import { fetchSecretariatAnalytics, fetchSecretariatDashboard, fetchSecretariatMarketIntel } from "@/server/actions";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +76,7 @@ export default function SecretariatReportsPage() {
   const [loading, setLoading] = useState(true);
   const [configOpen, setConfigOpen] = useState(false);
   const [enabledWidgets, setEnabledWidgets] = useState<string[]>(getStoredWidgets());
+  const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [aiSummary, setAiSummary] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
@@ -259,28 +261,32 @@ Write in formal government report style. Open with the headline metric (LC rate)
         {(isEnabled("local_spend") || isEnabled("jobs_created") || isEnabled("staff_hours") || isEnabled("economic_impact")) && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {isEnabled("local_spend") && (
-              <Card className="p-4 bg-gradient-to-br from-success/5 to-transparent border-success/20">
+              <Card className="p-4 bg-gradient-to-br from-success/5 to-transparent border-success/20 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/secretariat/market")}>
                 <p className="text-xs font-semibold text-success uppercase tracking-wider mb-1">Local Spend</p>
                 <p className="text-2xl font-bold text-success">{formatCurrency(analytics.localSpend)}</p>
                 <p className="text-xs text-text-muted mt-0.5">{analytics.guyaneseSupplierCount} suppliers · {analytics.overallLcRate}% LC rate</p>
               </Card>
             )}
             {isEnabled("jobs_created") && (
-              <Card className="p-4 bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
+              <Card className="p-4 bg-gradient-to-br from-accent/5 to-transparent border-accent/20 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/secretariat/market")}>
                 <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-1">Jobs Created</p>
                 <p className="text-2xl font-bold text-accent">{analytics.jobsCreated.toLocaleString()}</p>
                 <p className="text-xs text-text-muted mt-0.5">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
               </Card>
             )}
             {isEnabled("staff_hours") && (
-              <Card className="p-4 bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
+              <Card className="p-4 bg-gradient-to-br from-gold/5 to-transparent border-gold/20 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/secretariat/dashboard")}>
                 <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-1">Staff Hours Saved</p>
                 <p className="text-2xl font-bold text-gold">{analytics.staffHoursSaved.toLocaleString()}</p>
                 <p className="text-xs text-text-muted mt-0.5">{analytics.totalSubmissions} submissions processed</p>
               </Card>
             )}
             {isEnabled("economic_impact") && (
-              <Card className="p-4 bg-gradient-to-br from-text-primary/5 to-transparent">
+              <Card className="p-4 bg-gradient-to-br from-text-primary/5 to-transparent cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/secretariat/compliance")}>
                 <p className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-1">Economic Impact</p>
                 <p className="text-2xl font-bold">{formatCurrency(analytics.economicImpact)}</p>
                 <p className="text-xs text-text-muted mt-0.5">{analytics.uniqueFilers} companies filing</p>
@@ -308,7 +314,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
               </CardContent></Card>
             )}
             {isEnabled("filing_status") && dashboard && (
-              <Card><CardContent className="p-4">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/secretariat/dashboard")}><CardContent className="p-4">
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Submission Queue</p>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center">
@@ -379,7 +385,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
         {(isEnabled("supplier_stats") || isEnabled("opportunities")) && marketIntel && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isEnabled("supplier_stats") && (
-              <Card><CardContent className="p-4">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/secretariat/market")}><CardContent className="p-4">
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Supplier Ecosystem</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div><p className="text-2xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-xs text-text-muted">Guyanese Suppliers</p></div>
@@ -390,7 +396,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
               </CardContent></Card>
             )}
             {isEnabled("opportunities") && (
-              <Card><CardContent className="p-4">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/secretariat/market")}><CardContent className="p-4">
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Procurement Opportunities</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div><p className="text-2xl font-bold">{marketIntel.opportunities?.total || 0}</p><p className="text-xs text-text-muted">Total Notices</p></div>
@@ -405,7 +411,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
 
         {/* Submission methods */}
         {isEnabled("submission_method") && dashboard && (
-          <Card><CardContent className="p-4">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/secretariat/dashboard")}><CardContent className="p-4">
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Submission Methods</p>
             <div className="grid grid-cols-3 gap-4">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -420,7 +426,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
 
         {/* Top filers */}
         {isEnabled("top_filers") && dashboard && (
-          <Card><CardContent className="p-4">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/secretariat/dashboard")}><CardContent className="p-4">
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Recent Submissions</p>
             <div className="space-y-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
