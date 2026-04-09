@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     const blob = await put(fileKey, file, {
       access: "public",
       addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN || process.env.LCA_DESK_BLOB_READ_WRITE_TOKEN,
     });
 
     return NextResponse.json({

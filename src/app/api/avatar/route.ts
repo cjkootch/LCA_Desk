@@ -35,9 +35,9 @@ export async function GET(request: Request) {
 
     if (!rawUrl) return new NextResponse(null, { status: 404 });
 
-    // Get signed URL for private blob
+    // For private blobs, get signed URL; public blobs work directly
     let imageUrl = rawUrl;
-    if (rawUrl.includes("blob.vercel-storage.com")) {
+    if (rawUrl.includes("blob.vercel-storage.com") && !rawUrl.includes("public")) {
       imageUrl = await getDownloadUrl(rawUrl);
     }
 
