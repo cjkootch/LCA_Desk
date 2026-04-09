@@ -118,63 +118,107 @@ export default function MarketIntelPage() {
           </div>
 
           {/* Posting trend */}
-          <Card><CardContent className="p-4">
-            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Posting Volume by Month</p>
-            <div className="flex items-end gap-1 h-28">
-              {data.opportunities.byMonth.slice(-12).map(([month, count]) => {
-                const jobCount = data.jobs.byMonth.find(([m]) => m === month)?.[1] || 0;
-                const maxCount = Math.max(...data.opportunities.byMonth.map(([, c]) => c), 1);
-                const oppH = Math.max((count / maxCount) * 100, 4);
-                const jobH = Math.max((jobCount / maxCount) * 100, 2);
-                return (
-                  <div key={month} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[11px] font-bold text-text-primary">{count}</span>
-                    <div className="w-full flex flex-col gap-0.5">
-                      <div className="w-full rounded-t bg-gold/70" style={{ height: `${oppH}%` }} title={`${count} opportunities`} />
-                      <div className="w-full rounded-t bg-accent/70" style={{ height: `${jobH}%` }} title={`${jobCount} jobs`} />
-                    </div>
-                    <span className="text-[7px] text-text-muted">{month.slice(5)}</span>
-                  </div>
-                );
-              })}
+          <Card><CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-text-primary">Posting Volume by Month</p>
+              <div className="flex items-center gap-4 text-xs text-text-muted">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold/80" /> Opportunities</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-accent/80" /> Employment</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-gold/70" /> Opportunities</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-accent/70" /> Employment</span>
-            </div>
+            {(() => {
+              const months = data.opportunities.byMonth.slice(-12);
+              const allMonths = new Set([...months.map(([m]) => m), ...data.jobs.byMonth.map(([m]) => m)]);
+              const sortedMonths = [...allMonths].sort();
+              const maxVal = Math.max(
+                ...months.map(([, c]) => c),
+                ...data.jobs.byMonth.map(([, c]) => c),
+                1
+              );
+              if (sortedMonths.length === 0) return <p className="text-sm text-text-muted py-8 text-center">No posting data yet</p>;
+              return (
+                <div className="space-y-3">
+                  {sortedMonths.slice(-12).map(month => {
+                    const oppCount = months.find(([m]) => m === month)?.[1] || 0;
+                    const jobCount = data.jobs.byMonth.find(([m]) => m === month)?.[1] || 0;
+                    const oppPct = (oppCount / maxVal) * 100;
+                    const jobPct = (jobCount / maxVal) * 100;
+                    const label = new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                    return (
+                      <div key={month} className="flex items-center gap-3">
+                        <span className="text-xs text-text-muted w-20 shrink-0 text-right">{label}</span>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 rounded bg-gold/80 transition-all" style={{ width: `${Math.max(oppPct, 2)}%` }} />
+                            <span className="text-xs font-semibold text-text-primary">{oppCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 rounded bg-accent/80 transition-all" style={{ width: `${Math.max(jobPct, 2)}%` }} />
+                            <span className="text-xs font-semibold text-text-primary">{jobCount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </CardContent></Card>
 
           {/* Top companies + engagement */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card><CardContent className="p-4">
-              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Top Companies (Opportunities)</p>
-              <div className="space-y-1.5">
-                {data.opportunities.topCompanies.slice(0, 8).map(([company, count]) => (
-                  <div key={company} className="flex items-center justify-between text-xs">
-                    <span className="text-text-secondary truncate mr-2">{company}</span>
-                    <Badge variant="default" className="text-xs shrink-0">{count}</Badge>
-                  </div>
-                ))}
+            <Card><CardContent className="p-5">
+              <p className="text-sm font-semibold text-text-primary mb-4">Top Companies (Opportunities)</p>
+              <div className="space-y-2.5">
+                {data.opportunities.topCompanies.slice(0, 8).map(([company, count], i) => {
+                  const maxC = data.opportunities.topCompanies[0]?.[1] || 1;
+                  const pct = (count / maxC) * 100;
+                  return (
+                    <div key={company}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-text-primary truncate mr-2">{company}</span>
+                        <span className="text-sm font-bold text-text-primary shrink-0">{count}</span>
+                      </div>
+                      <div className="h-2 bg-bg-primary rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-gold/60 transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent></Card>
 
-            <Card><CardContent className="p-4">
-              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Most Saved by Filers</p>
+            <Card><CardContent className="p-5">
+              <p className="text-sm font-semibold text-text-primary mb-4">Most Saved by Filers</p>
               {data.opportunities.mostSaved.length === 0 ? (
-                <p className="text-xs text-text-muted py-4 text-center">No saves yet</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Save className="h-8 w-8 text-text-muted/30 mb-2" />
+                  <p className="text-sm text-text-muted">No saves yet</p>
+                  <p className="text-xs text-text-muted mt-1">When filers save opportunities, the most popular ones will appear here.</p>
+                </div>
               ) : (
-                <div className="space-y-1.5">
-                  {data.opportunities.mostSaved.slice(0, 8).map(item => (
-                    <div key={item.id} className="flex items-center justify-between text-xs">
-                      <div className="truncate mr-2">
-                        <span className="text-text-primary font-medium">{decodeHtml(item.title).slice(0, 40)}</span>
-                        <span className="text-text-muted ml-1">— {item.company}</span>
+                <div className="space-y-3">
+                  {data.opportunities.mostSaved.slice(0, 8).map((item, i) => {
+                    const maxS = data.opportunities.mostSaved[0]?.saves || 1;
+                    const pct = (item.saves / maxS) * 100;
+                    return (
+                      <div key={item.id}>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0">
+                            <p className="text-sm text-text-primary font-medium truncate">{decodeHtml(item.title).slice(0, 50)}</p>
+                            <p className="text-xs text-text-muted">{item.company}</p>
+                          </div>
+                          <div className="flex items-center gap-1 text-accent shrink-0">
+                            <Save className="h-3.5 w-3.5" />
+                            <span className="text-sm font-bold">{item.saves}</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-bg-primary rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-accent/50 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-accent shrink-0">
-                        <Save className="h-3 w-3" /> {item.saves}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent></Card>
