@@ -4,12 +4,14 @@ import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getDownloadUrl } from "@vercel/blob";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const userId = url.searchParams.get("id");
 
   if (!userId) {
-    return new NextResponse("Missing id", { status: 400 });
+    return new NextResponse(null, { status: 400 });
   }
 
   try {
@@ -19,50 +21,25 @@ export async function GET(request: Request) {
       .where(eq(users.id, userId))
       .limit(1);
 
-    const rawUrl = user?.avatarUrl;
-    if (!rawUrl) {
-      return new NextResponse(null, { status: 404 });
-    }
+    let rawUrl = user?.avatarUrl || "";
 
-    console.log("[avatar] rawUrl:", rawUrl.slice(0, 100));
-
-    // Old proxy format: /api/submission/download?key=BLOB_URL&name=...
-    // Extract the actual blob URL from the key param
-    let blobUrl = rawUrl;
+    // Extract blob URL from old proxy format if needed
     if (rawUrl.startsWith("/api/submission/download")) {
       try {
         const parsed = new URL(rawUrl, "https://app.lcadesk.com");
-        blobUrl = parsed.searchParams.get("key") || rawUrl;
-        console.log("[avatar] extracted from proxy:", blobUrl.slice(0, 100));
+        rawUrl = parsed.searchParams.get("key") || "";
       } catch {}
     }
 
-    // Vercel Blob URL — get signed download and proxy bytes
-    if (blobUrl.includes("blob.vercel-storage.com")) {
-      const signedUrl = await getDownloadUrl(blobUrl);
-      const res = await fetch(signedUrl);
-      if (!res.ok) {
-        console.error("[avatar] blob fetch failed:", res.status);
-        return new NextResponse(null, { status: 502 });
-      }
-
-      return new NextResponse(res.body, {
-        headers: {
-          "Content-Type": res.headers.get("content-type") || "image/jpeg",
-          "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
-        },
-      });
+    if (!rawUrl || !rawUrl.includes("blob.vercel-storage.com")) {
+      return new NextResponse(null, { status: 404 });
     }
 
-    // Any other http URL — redirect
-    if (blobUrl.startsWith("http")) {
-      return NextResponse.redirect(blobUrl);
-    }
-
-    console.error("[avatar] unrecognized format:", blobUrl.slice(0, 100));
-    return new NextResponse(null, { status: 404 });
+    // Get a signed download URL and redirect — browsers follow 302 on <img src>
+    const signedUrl = await getDownloadUrl(rawUrl);
+    return NextResponse.redirect(signedUrl, 302);
   } catch (err) {
-    console.error("[avatar] error:", err);
+    console.error("[avatar] error:", err instanceof Error ? err.message : err);
     return new NextResponse(null, { status: 500 });
   }
 }
