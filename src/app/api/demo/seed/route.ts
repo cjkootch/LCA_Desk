@@ -36,9 +36,21 @@ export async function POST(req: NextRequest) {
     return user;
   }
 
-  async function ensureTenant(userId: string, name: string, slug: string, plan: string, trialDays?: number) {
+  async function ensureTenant(
+    userId: string, name: string, slug: string, plan: string,
+    opts?: { trialDays?: number; stripeStatus?: string }
+  ) {
     const [existing] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
     if (existing) {
+      // Update existing demo tenants to have correct billing state
+      if (opts?.stripeStatus) {
+        const trialEndsAt = opts.trialDays ? new Date(Date.now() + opts.trialDays * 24 * 60 * 60 * 1000) : null;
+        await db.update(tenants).set({
+          stripeSubscriptionId: opts.stripeStatus !== "canceled" ? `demo_sub_${slug}` : null,
+          stripeSubscriptionStatus: opts.stripeStatus,
+          trialEndsAt,
+        }).where(eq(tenants.id, existing.id));
+      }
       const [membership] = await db.select().from(tenantMembers)
         .where(eq(tenantMembers.userId, userId)).limit(1);
       if (!membership) {
@@ -47,11 +59,13 @@ export async function POST(req: NextRequest) {
       return existing;
     }
 
-    const trialEndsAt = trialDays ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000) : null;
+    const trialEndsAt = opts?.trialDays ? new Date(Date.now() + opts.trialDays * 24 * 60 * 60 * 1000) : null;
     const [tenant] = await db.insert(tenants).values({
       name, slug, jurisdictionId, plan,
       trialEndsAt,
       planEntityLimit: plan === "pro" ? 5 : plan === "enterprise" ? -1 : 1,
+      stripeSubscriptionId: opts?.stripeStatus && opts.stripeStatus !== "canceled" ? `demo_sub_${slug}` : null,
+      stripeSubscriptionStatus: opts?.stripeStatus ?? null,
     }).returning();
     await db.insert(tenantMembers).values({ tenantId: tenant.id, userId, role: "owner" });
     return tenant;
@@ -60,7 +74,7 @@ export async function POST(req: NextRequest) {
   try {
     // ═══ 1. Filer (Essentials) ═══
     const filerLite = await ensureUser("demo-filer-lite@lcadesk.com", "Sarah Mitchell", "filer");
-    const tenantLite = await ensureTenant(filerLite.id, "Georgetown Supplies Ltd", "georgetown-supplies", "lite");
+    const tenantLite = await ensureTenant(filerLite.id, "Georgetown Supplies Ltd", "georgetown-supplies", "lite", { stripeStatus: "active" });
     results.push(`✓ Filer Essentials: ${filerLite.email}`);
 
     const [entityLite] = await db.select().from(entities).where(eq(entities.tenantId, tenantLite.id)).limit(1);
@@ -103,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     // ═══ 2. Filer (Professional) — with SUBMITTED report for secretariat ═══
     const filerPro = await ensureUser("demo-filer-pro@lcadesk.com", "Marcus Williams", "filer");
-    const tenantPro = await ensureTenant(filerPro.id, "Demerara Oilfield Services", "demerara-oilfield", "pro");
+    const tenantPro = await ensureTenant(filerPro.id, "Demerara Oilfield Services", "demerara-oilfield", "pro", { stripeStatus: "active" });
     results.push(`✓ Filer Professional: ${filerPro.email}`);
 
     const [entityPro] = await db.select().from(entities).where(eq(entities.tenantId, tenantPro.id)).limit(1);
@@ -176,12 +190,12 @@ export async function POST(req: NextRequest) {
 
     // ═══ 3. Filer (30-day Trial) ═══
     const filerTrial = await ensureUser("demo-filer-trial@lcadesk.com", "Priya Persaud", "filer");
-    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "lite", 30);
+    await ensureTenant(filerTrial.id, "Essequibo Marine Services", "essequibo-marine", "lite", { trialDays: 30, stripeStatus: "trialing" });
     results.push(`✓ Filer Trial: ${filerTrial.email} (30-day Professional trial)`);
 
     // ═══ 4. Filer (Expired Trial) ═══
     const filerExpired = await ensureUser("demo-filer-expired@lcadesk.com", "James Rodrigues", "filer");
-    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "lite", -7);
+    await ensureTenant(filerExpired.id, "Atlantic Drilling Co.", "atlantic-drilling", "lite", { trialDays: -7, stripeStatus: "canceled" });
     results.push(`✓ Filer Expired: ${filerExpired.email} (trial expired 7 days ago)`);
 
     // ═══ 6. Job Seeker ═══
@@ -248,7 +262,7 @@ export async function POST(req: NextRequest) {
 
     // ═══ 9. Super Admin ═══
     const admin = await ensureUser("demo-admin@lcadesk.com", "Cole Kootch", "filer", true);
-    await ensureTenant(admin.id, "LCA Desk Admin", "lcadesk-admin", "enterprise");
+    await ensureTenant(admin.id, "LCA Desk Admin", "lcadesk-admin", "enterprise", { stripeStatus: "active" });
     results.push(`✓ Admin: ${admin.email} (superAdmin=true)`);
 
     return NextResponse.json({ success: true, results, password: DEMO_PASSWORD });
