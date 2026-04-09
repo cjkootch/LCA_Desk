@@ -13,6 +13,14 @@ interface AnnouncementBannerProps {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Announcement = any;
 
+const CATEGORY_ILLUSTRATIONS: Record<string, string> = {
+  filing: "/filing-illustration.svg",
+  upgrade: "/upgrade-illustration.svg",
+  training: "/training-illustration.svg",
+  policy: "/policy-illustration.svg",
+  general: "/general-illustration.svg",
+};
+
 export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
   const [items, setItems] = useState<Announcement[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -95,11 +103,11 @@ export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
                 ) : null}
               </div>
 
-              {/* Illustration — hidden on small screens */}
+              {/* Illustration — changes based on announcement category */}
               {!isUrgent && (
                 <div className="hidden sm:block shrink-0 w-36 md:w-44 self-stretch relative">
                   <img
-                    src="/filing-illustration.svg"
+                    src={CATEGORY_ILLUSTRATIONS[a.category] || CATEGORY_ILLUSTRATIONS.general}
                     alt=""
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-28 md:h-32 w-auto opacity-80 pointer-events-none select-none"
                   />

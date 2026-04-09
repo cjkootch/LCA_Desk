@@ -1405,6 +1405,7 @@ export const announcements = pgTable("announcements", {
   title: text("title").notNull(),
   body: text("body").notNull(),
   priority: text("priority").notNull().default("normal"), // normal | important | urgent
+  category: text("category").notNull().default("general"), // filing | upgrade | training | policy | general
   targetRoles: text("target_roles").notNull().default("all"), // JSON array: ["filer","supplier","seeker","secretariat"] or "all"
   authorId: uuid("author_id").notNull().references(() => users.id),
   authorName: text("author_name"),
