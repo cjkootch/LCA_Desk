@@ -33,15 +33,26 @@ export async function POST(req: NextRequest) {
     const slug = (companyName || "admin")
       .toLowerCase().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-").replace(/^-+|-+$/g, "");
 
-    const [tenant] = await db.insert(tenants).values({
-      name: companyName || "LCA Desk Admin",
-      slug,
-      jurisdictionId,
-      plan: plan || "enterprise",
-      planEntityLimit: -1,
-      stripeSubscriptionId: "admin_internal",
-      stripeSubscriptionStatus: "active",
-    }).returning();
+    // Check if tenant with this slug already exists
+    const [existingTenant] = await db.select({ id: tenants.id }).from(tenants)
+      .where(eq(tenants.slug, slug)).limit(1);
+
+    let tenant;
+    if (existingTenant) {
+      // Use existing tenant
+      tenant = existingTenant;
+    } else {
+      const [newTenant] = await db.insert(tenants).values({
+        name: companyName || "LCA Desk Admin",
+        slug,
+        jurisdictionId,
+        plan: plan || "enterprise",
+        planEntityLimit: -1,
+        stripeSubscriptionId: "admin_internal",
+        stripeSubscriptionStatus: "active",
+      }).returning();
+      tenant = newTenant;
+    }
 
     await db.insert(tenantMembers).values({
       tenantId: tenant.id, userId: user.id, role: "owner",
