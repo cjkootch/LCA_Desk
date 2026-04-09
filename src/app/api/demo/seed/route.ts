@@ -30,10 +30,8 @@ export async function POST(req: NextRequest) {
   async function ensureUser(email: string, name: string, role: string, isSuperAdmin = false) {
     const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existing) {
-      // Ensure demo flag is set on existing demo users
-      if (!existing.isDemo) {
-        await db.update(users).set({ isDemo: true }).where(eq(users.id, existing.id));
-      }
+      // Always refresh password hash + demo flag so demo login works after re-seed
+      await db.update(users).set({ passwordHash, isDemo: true, name }).where(eq(users.id, existing.id));
       return existing;
     }
     const [user] = await db.insert(users).values({
