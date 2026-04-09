@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import {
   Building2, Briefcase, Truck, Shield, Crown, Lock,
-  User, Search,
+  User, Search, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -244,44 +245,91 @@ function DemoContent() {
           ))}
         </div>
 
-        {/* Seed button */}
-        <Card className="mt-6 bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">Setup Demo Users</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Creates all demo accounts with sample data. Safe to run multiple times.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={loading}
-              className="gap-1.5 shrink-0"
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  const res = await fetch("/api/demo/seed", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ secret: masterPassword }),
-                  });
-                  const data = await res.json();
-                  if (data.success) {
-                    toast.success("Demo users created!");
-                  } else {
-                    toast.error(data.error || "Setup failed");
-                  }
-                } catch { toast.error("Setup failed"); }
-                setLoading(false);
-              }}
-            >
-              <User className="h-3.5 w-3.5" /> Create Demo Users
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Demo tools */}
+        <div className="mt-6 space-y-3">
+          {/* Seed all */}
+          <Card className="bg-white">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary">Seed All Demo Data</h3>
+                <p className="text-xs text-text-muted mt-0.5">Creates all preset demo accounts. Safe to run multiple times.</p>
+              </div>
+              <Button variant="outline" size="sm" loading={loading} className="gap-1.5 shrink-0"
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const res = await fetch("/api/demo/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secret: masterPassword }) });
+                    const data = await res.json();
+                    if (data.success) toast.success("Demo data seeded!"); else toast.error(data.error || "Failed");
+                  } catch { toast.error("Failed"); }
+                  setLoading(false);
+                }}>
+                <User className="h-3.5 w-3.5" /> Seed All
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Quick create */}
+          <QuickCreateUser masterPassword={masterPassword} />
+        </div>
       </div>
     </div>
+  );
+}
+
+function QuickCreateUser({ masterPassword }: { masterPassword: string }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("job_seeker");
+  const [jurisdiction, setJurisdiction] = useState("GY");
+  const [creating, setCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!name.trim()) { toast.error("Name is required"); return; }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/demo/quick-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: masterPassword, name: name.trim(), role, jurisdiction }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Created ${name} as ${role} (${data.email})`);
+        setName("");
+      } else {
+        toast.error(data.error || "Failed to create");
+      }
+    } catch { toast.error("Failed to create"); }
+    setCreating(false);
+  };
+
+  return (
+    <Card className="bg-white">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Plus className="h-4 w-4 text-accent" />
+          <h3 className="text-sm font-semibold text-text-primary">Quick Create Demo User</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="text-sm" />
+          <Select value={role} onChange={e => setRole(e.target.value)} options={[
+            { value: "job_seeker", label: "Job Seeker" },
+            { value: "filer", label: "Filer (Company)" },
+            { value: "supplier", label: "Supplier" },
+          ]} />
+          <Select value={jurisdiction} onChange={e => setJurisdiction(e.target.value)} options={[
+            { value: "GY", label: "Guyana" },
+            { value: "SR", label: "Suriname" },
+            { value: "NG", label: "Nigeria" },
+            { value: "NA", label: "Namibia" },
+          ]} />
+          <Button onClick={handleCreate} loading={creating} size="sm" className="gap-1">
+            <Plus className="h-3.5 w-3.5" /> Create
+          </Button>
+        </div>
+        <p className="text-xs text-text-muted mt-2">Creates a demo user with <code className="text-xs">isDemo=true</code>. Password: <code className="text-xs">demo-password-2026</code></p>
+      </CardContent>
+    </Card>
   );
 }
 
