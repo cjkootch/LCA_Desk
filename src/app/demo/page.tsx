@@ -136,15 +136,15 @@ function DemoContent() {
         return;
       }
 
-      // Redirect based on role
+      // Redirect based on role — use window.location for full page load so session is fresh
       if (user.role === "job_seeker") {
-        router.push("/seeker/dashboard");
+        window.location.href = "/seeker/dashboard";
       } else if (user.role === "supplier") {
-        router.push("/supplier-portal/dashboard");
+        window.location.href = "/supplier-portal/dashboard";
       } else if (user.role === "secretariat") {
-        router.push("/secretariat/dashboard");
+        window.location.href = "/secretariat/dashboard";
       } else {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     } catch {
       toast.error("Login failed");

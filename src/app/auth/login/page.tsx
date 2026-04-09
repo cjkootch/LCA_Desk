@@ -48,7 +48,7 @@ function LoginForm() {
       return;
     }
 
-    router.push(getPostLoginPath());
+    window.location.href = getPostLoginPath();
   };
 
   const roleLabels: Record<string, string> = {

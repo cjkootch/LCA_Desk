@@ -72,9 +72,9 @@ function SignupContent() {
         router.push("/auth/login");
       } else {
         toast.success("Account created!");
-        if (role === "job_seeker") router.push("/seeker/dashboard");
-        else if (role === "supplier") router.push("/supplier-portal/dashboard");
-        else router.push("/dashboard/activate"); // Filers must add CC before trial starts
+        if (role === "job_seeker") window.location.href = "/seeker/dashboard";
+        else if (role === "supplier") window.location.href = "/supplier-portal/dashboard";
+        else window.location.href = "/dashboard/activate"; // Filers must add CC before trial starts
       }
     } catch {
       toast.error("Registration failed");
