@@ -1280,7 +1280,7 @@ export async function fetchPlanAndUsage() {
     stripeSubscriptionId: stripeSubId,
     stripeSubscriptionStatus: stripeSubStatus,
     billingAccess,
-    isInTrial: isInTrial(trialEndsAt),
+    isInTrial: isInTrial(trialEndsAt) || stripeSubStatus === "trialing",
     isTrialExpired: isTrialExpired(trialEndsAt, stripeSubId),
     trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),
     effectivePlan: getEffectivePlan(plan, trialEndsAt).code,
@@ -6087,6 +6087,8 @@ export async function cancelSubscription() {
   if (!tenant) throw new Error("Tenant not found");
 
   // Cancel Stripe subscription if exists
+  // cancel_at_period_end keeps access until trial/billing period ends
+  // Stripe fires customer.subscription.deleted when it actually ends → locks them out
   if (tenant.stripeSubscriptionId) {
     try {
       const Stripe = (await import("stripe")).default;
@@ -6097,13 +6099,13 @@ export async function cancelSubscription() {
     } catch (err) {
       console.error("Stripe cancel error:", err);
     }
+  } else {
+    // No Stripe subscription (legacy or edge case) — lock immediately
+    await db
+      .update(tenants)
+      .set({ stripeSubscriptionStatus: "canceled" })
+      .where(eq(tenants.id, tenant.id));
   }
-
-  // Update tenant plan
-  await db
-    .update(tenants)
-    .set({ stripeSubscriptionStatus: "canceled" })
-    .where(eq(tenants.id, tenant.id));
 
   // Log to audit
   await db.insert(auditLogs).values({

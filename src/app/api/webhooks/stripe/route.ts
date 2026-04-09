@@ -89,7 +89,45 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Standard subscription checkout
+      // Trial activation checkout (CC collected, 30-day trial starts)
+      if (session.metadata?.type === "trial_activation") {
+        const tenantId = session.metadata.tenantId;
+        const plan = session.metadata.plan || "lite";
+        if (tenantId) {
+          // Fetch subscription to get trial_end date
+          let trialEndsAt: Date | null = null;
+          if (session.subscription) {
+            try {
+              const sub = await getStripe().subscriptions.retrieve(session.subscription as string);
+              if (sub.trial_end) {
+                trialEndsAt = new Date(sub.trial_end * 1000);
+              }
+            } catch {}
+          }
+
+          await db.update(tenants).set({
+            plan,
+            stripeSubscriptionId: session.subscription as string,
+            stripeCustomerId: session.customer as string,
+            stripeSubscriptionStatus: "trialing",
+            trialEndsAt: trialEndsAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          }).where(eq(tenants.id, tenantId));
+
+          // Sync trial activation to HubSpot
+          try {
+            const [owner] = await db.select({ email: users.email }).from(tenantMembers)
+              .innerJoin(users, eq(tenantMembers.userId, users.id))
+              .where(eq(tenantMembers.tenantId, tenantId)).limit(1);
+            if (owner?.email) {
+              const { syncSignup } = await import("@/lib/hubspot-sync");
+              await syncSignup(owner.email, owner.email, "", "filer", trialEndsAt ?? undefined);
+            }
+          } catch {}
+        }
+        break;
+      }
+
+      // Standard subscription checkout (upgrade from billing page)
       const tenantId = session.metadata?.tenantId;
       const plan = session.metadata?.plan;
       if (tenantId && plan) {

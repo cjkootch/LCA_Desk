@@ -18,6 +18,7 @@ const ALLOWED_PATHS = [
   "/dashboard/settings/billing",
   "/dashboard/trial-expired",
   "/dashboard/payment-required",
+  "/dashboard/activate",
 ];
 
 export function DashboardShell({ children, billingAccess }: DashboardShellProps) {
@@ -29,7 +30,9 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
 
   useEffect(() => {
     if (!billingAccess.canAccess && !isAllowedPath) {
-      if (billingAccess.state === "trial_expired") {
+      if (billingAccess.state === "setup_required") {
+        router.replace("/dashboard/activate");
+      } else if (billingAccess.state === "trial_expired") {
         router.replace("/dashboard/trial-expired");
       } else if (billingAccess.state === "locked") {
         router.replace(`/dashboard/payment-required?reason=${billingAccess.lockReason || "canceled"}`);

@@ -125,9 +125,7 @@ export async function POST(req: NextRequest) {
         .replace(/[\s_]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 30);
-
+      // Trial starts after Stripe checkout (CC required) — trialEndsAt set by webhook
       const [tenant] = await db
         .insert(tenants)
         .values({
@@ -136,7 +134,6 @@ export async function POST(req: NextRequest) {
           jurisdictionId: guyana?.id,
           plan: "lite",
           planEntityLimit: accountType === "others" ? 5 : 1,
-          trialEndsAt,
         })
         .returning();
 
@@ -160,7 +157,7 @@ export async function POST(req: NextRequest) {
       // Sync filer to HubSpot
       try {
         const { syncSignup } = await import("@/lib/hubspot-sync");
-        await syncSignup(email, name, companyName || name, "filer", trialEndsAt);
+        await syncSignup(email, name, companyName || name, "filer");
       } catch {}
 
       return NextResponse.json({

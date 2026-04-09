@@ -242,7 +242,8 @@ export type AccessState =
   | "trial"
   | "past_due"
   | "locked"
-  | "trial_expired";
+  | "trial_expired"
+  | "setup_required";
 
 export interface BillingAccess {
   state: AccessState;
@@ -263,8 +264,19 @@ export function getBillingAccess(
     return { state: "active", canAccess: true, showWarning: false, warningUrgency: "low" };
   }
 
-  // Active trial
-  if (isInTrial(trialEndsAt)) {
+  // Stripe-managed trial (CC on file, not yet charged)
+  if (stripeSubscriptionId && stripeSubscriptionStatus === "trialing") {
+    const days = getTrialDaysRemaining(trialEndsAt) ?? 0;
+    return {
+      state: "trial",
+      canAccess: true,
+      showWarning: true,
+      warningUrgency: days <= 3 ? "critical" : days <= 7 ? "high" : "low",
+    };
+  }
+
+  // Legacy active trial (trialEndsAt set, subscription exists)
+  if (isInTrial(trialEndsAt) && stripeSubscriptionId) {
     const days = getTrialDaysRemaining(trialEndsAt) ?? 0;
     return {
       state: "trial",
@@ -295,7 +307,7 @@ export function getBillingAccess(
     };
   }
 
-  // Canceled — subscription deleted
+  // Canceled — subscription deleted or canceled after trial
   if (stripeSubscriptionStatus === "canceled") {
     return {
       state: "locked",
@@ -317,6 +329,12 @@ export function getBillingAccess(
     };
   }
 
-  // No trial, no subscription — default to active (new user or edge case)
-  return { state: "active", canAccess: true, showWarning: false, warningUrgency: "low" };
+  // No trial, no subscription — billing setup required
+  return {
+    state: "setup_required",
+    canAccess: false,
+    showWarning: true,
+    warningUrgency: "critical",
+    lockReason: "setup_required",
+  };
 }

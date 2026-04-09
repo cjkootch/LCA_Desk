@@ -74,7 +74,7 @@ function SignupContent() {
         toast.success("Account created!");
         if (role === "job_seeker") router.push("/seeker/dashboard");
         else if (role === "supplier") router.push("/supplier-portal/dashboard");
-        else router.push("/dashboard");
+        else router.push("/dashboard/activate"); // Filers must add CC before trial starts
       }
     } catch {
       toast.error("Registration failed");
@@ -222,7 +222,7 @@ function SignupContent() {
 
               {role === "filer" && (
                 <p className="text-[10px] text-text-muted text-center mt-3">
-                  30-day Professional trial. No credit card required.
+                  30-day Professional trial. Cancel anytime — you won't be charged during the trial.
                 </p>
               )}
             </>
