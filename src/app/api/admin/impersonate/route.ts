@@ -12,16 +12,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Verify caller is super admin
+  // Verify caller is super admin OR is returning from impersonation
+  const impersonatedBy = (session.user as Record<string, unknown>).impersonatedBy as string | null;
   const [admin] = await db.select({ isSuperAdmin: users.isSuperAdmin })
     .from(users).where(eq(users.id, session.user.id)).limit(1);
-  if (!admin?.isSuperAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { userId } = await req.json();
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
+  }
+
+  // Allow if: (a) caller is super admin, or (b) caller is impersonated and returning to their admin
+  const isAdmin = !!admin?.isSuperAdmin;
+  const isReturningToAdmin = !!impersonatedBy && userId === impersonatedBy;
+
+  if (!isAdmin && !isReturningToAdmin) {
+    // For return-to-admin, verify the original admin is actually a super admin
+    if (impersonatedBy) {
+      const [origAdmin] = await db.select({ isSuperAdmin: users.isSuperAdmin })
+        .from(users).where(eq(users.id, impersonatedBy)).limit(1);
+      if (!origAdmin?.isSuperAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   // Fetch the target user
