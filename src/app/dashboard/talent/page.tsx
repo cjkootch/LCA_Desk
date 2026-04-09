@@ -122,20 +122,25 @@ export default function TalentPoolPage() {
         ) : (
           <div className="space-y-3">
             {candidates.map(c => (
-              <Card key={c.id} className="hover:border-accent/20 transition-colors cursor-pointer" onClick={() => setSelectedCandidate(c)}>
+              <Card key={c.id} className={cn("hover:border-accent/20 transition-colors cursor-pointer", c.badges?.length > 0 && "border-gold/20 bg-gold/[0.02]")} onClick={() => setSelectedCandidate(c)}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="h-9 w-9 rounded-full bg-accent-light flex items-center justify-center shrink-0">
-                          <span className="text-sm font-bold text-accent">
+                        <div className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0",
+                          c.badges?.length > 0 ? "bg-gold/10 ring-2 ring-gold/30" : "bg-accent-light"
+                        )}>
+                          <span className={cn("text-sm font-bold", c.badges?.length > 0 ? "text-gold" : "text-accent")}>
                             {(c.userName || "?").charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-text-primary truncate">
-                            {isPro ? c.userName : `${(c.userName || "").split(" ")[0]} ${(c.userName || "").split(" ")[1]?.charAt(0) || ""}.`}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-text-primary truncate">
+                              {isPro ? c.userName : `${(c.userName || "").split(" ")[0]} ${(c.userName || "").split(" ")[1]?.charAt(0) || ""}.`}
+                            </p>
+                            {c.badges?.length >= 2 && <Badge variant="gold" className="text-[8px] gap-0.5 shrink-0"><Trophy className="h-2 w-2" /> Certified</Badge>}
+                          </div>
                           {c.headline && <p className="text-xs text-text-secondary truncate">{c.headline}</p>}
                           {!c.headline && c.currentJobTitle && <p className="text-xs text-text-secondary">{c.currentJobTitle}</p>}
                         </div>
