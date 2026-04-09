@@ -4976,6 +4976,29 @@ async function getSecretariatContext() {
   return { userId: session.user.id, officeId: membership[0].officeId, role: membership[0].role };
 }
 
+export async function fetchSecretariatOfficeSettings() {
+  const { officeId } = await getSecretariatContext();
+  const office = await db.select().from(secretariatOffices).where(eq(secretariatOffices.id, officeId)).limit(1);
+  if (!office[0]) throw new Error("Office not found");
+  return office[0];
+}
+
+export async function updateSecretariatOfficeSettings(data: {
+  name?: string;
+  logoUrl?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  signatoryName?: string;
+  signatoryTitle?: string;
+  submissionEmail?: string;
+}) {
+  const { officeId, role } = await getSecretariatContext();
+  if (role !== "admin") throw new Error("Only admins can update office settings");
+  await db.update(secretariatOffices).set(data).where(eq(secretariatOffices.id, officeId));
+  return { success: true };
+}
+
 export async function fetchSecretariatDashboard() {
   const { officeId } = await getSecretariatContext();
 

@@ -1039,6 +1039,13 @@ export const secretariatOffices = pgTable(
     jurisdictionId: uuid("jurisdiction_id").references(() => jurisdictions.id),
     country: text("country").default("GY"),
     active: boolean("active").default(true),
+    logoUrl: text("logo_url"),
+    phone: text("phone"),
+    address: text("address"),
+    website: text("website"),
+    signatoryName: text("signatory_name"),
+    signatoryTitle: text("signatory_title"),
+    submissionEmail: text("submission_email"),
     createdAt: timestamp("created_at").defaultNow(),
   }
 );
