@@ -120,59 +120,76 @@ export default function TalentPoolPage() {
         ) : candidates.length === 0 ? (
           <EmptyState icon={Users} title="No candidates found" description="Try adjusting your filters." />
         ) : (
-          <div className="space-y-3">
-            {candidates.map(c => (
-              <Card key={c.id} className={cn("hover:border-accent/20 transition-colors cursor-pointer", c.badges?.length > 0 && "border-gold/20 bg-gold/[0.02]")} onClick={() => setSelectedCandidate(c)}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0",
-                          c.badges?.length > 0 ? "bg-gold/10 ring-2 ring-gold/30" : "bg-accent-light"
-                        )}>
-                          <span className={cn("text-sm font-bold", c.badges?.length > 0 ? "text-gold" : "text-accent")}>
-                            {(c.userName || "?").charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium text-text-primary truncate">
-                              {isPro ? c.userName : `${(c.userName || "").split(" ")[0]} ${(c.userName || "").split(" ")[1]?.charAt(0) || ""}.`}
-                            </p>
-                            {c.badges?.length >= 2 && <Badge variant="gold" className="text-[11px] gap-0.5 shrink-0"><Trophy className="h-2 w-2" /> Certified</Badge>}
-                          </div>
-                          {c.headline && <p className="text-xs text-text-secondary truncate">{c.headline}</p>}
-                          {!c.headline && c.currentJobTitle && <p className="text-xs text-text-secondary">{c.currentJobTitle}</p>}
-                        </div>
-                      </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {candidates.map(c => {
+              const displayName = isPro
+                ? c.userName
+                : `${(c.userName || "").split(" ")[0]} ${(c.userName || "").split(" ")[1]?.charAt(0) || ""}.`;
+              const isCertified = c.badges?.length >= 2;
+              const avatarUrl = c.avatarUrl ? `/api/avatar?id=${c.userId}` : null;
 
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {c.isGuyanese && <Badge variant="success" className="text-xs">Guyanese</Badge>}
-                        {c.employmentCategory && <Badge variant="default" className="text-xs">{c.employmentCategory}</Badge>}
-                        {c.badges?.map((b: string) => (
-                          <Badge key={b} variant="gold" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" />{b}</Badge>
-                        ))}
-                        {c.yearsExperience && <Badge variant="default" className="text-xs">{c.yearsExperience}yr exp</Badge>}
-                      </div>
+              return (
+                <Card key={c.id}
+                  className={cn("hover:shadow-lg transition-all cursor-pointer overflow-hidden group",
+                    isCertified && "ring-1 ring-gold/30"
+                  )}
+                  onClick={() => setSelectedCandidate(c)}>
+                  {/* Cover banner */}
+                  <div className={cn("h-16 relative",
+                    isCertified
+                      ? "bg-gradient-to-r from-gold/20 via-gold/10 to-accent/10"
+                      : "bg-gradient-to-r from-accent/10 via-accent/5 to-bg-primary"
+                  )} />
 
-                      {c.skills?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {c.skills.slice(0, 5).map((s: string) => (
-                            <span key={s} className="text-xs bg-bg-primary text-text-secondary px-1.5 py-0.5 rounded">{s}</span>
-                          ))}
-                          {c.skills.length > 5 && <span className="text-xs text-text-muted">+{c.skills.length - 5}</span>}
-                        </div>
+                  {/* Avatar overlapping banner */}
+                  <div className="px-4 -mt-8 relative">
+                    <div className={cn(
+                      "h-16 w-16 rounded-full flex items-center justify-center border-4 border-white shadow-sm mx-auto",
+                      isCertified ? "bg-gold/10" : "bg-accent-light"
+                    )}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="h-full w-full rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      ) : (
+                        <span className={cn("text-xl font-bold", isCertified ? "text-gold" : "text-accent")}>
+                          {(c.userName || "?").charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <CardContent className="pt-2 pb-4 px-4 text-center">
+                    {/* Name + verified */}
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                      <p className="text-sm font-semibold text-text-primary truncate">{displayName}</p>
+                      {c.isGuyanese && <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />}
+                    </div>
+
+                    {/* Title / headline */}
+                    <p className="text-xs text-text-muted line-clamp-2 mb-2 min-h-[2rem]">
+                      {c.headline || c.currentJobTitle || c.employmentCategory || "Job Seeker"}
+                    </p>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap justify-center gap-1 mb-3 min-h-[1.5rem]">
+                      {isCertified && (
+                        <Badge variant="gold" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" /> Certified</Badge>
+                      )}
+                      {c.yearsExperience > 0 && (
+                        <Badge variant="default" className="text-xs">{c.yearsExperience}yr</Badge>
+                      )}
+                      {c.employmentCategory && !c.headline && (
+                        <Badge variant="default" className="text-xs">{c.employmentCategory}</Badge>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {!isPro && <Lock className="h-4 w-4 text-text-muted" />}
-                      <ChevronDown className="h-4 w-4 text-text-muted" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Connect / View button */}
+                    <Button variant="outline" size="sm" className="w-full text-xs group-hover:border-accent group-hover:text-accent transition-colors">
+                      {isPro ? "View Profile" : <><Lock className="h-3 w-3 mr-1" /> View Profile</>}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
