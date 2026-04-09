@@ -4,15 +4,6 @@ import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_TYPES = [
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-  "application/vnd.ms-excel", // .xls
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-];
 
 export async function POST(request: Request) {
   try {
@@ -31,24 +22,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File too large. Maximum 10 MB." }, { status: 400 });
     }
 
-    // Allow any image type (cropper outputs image/jpeg, but browsers may vary)
     const isImage = file.type.startsWith("image/");
-    const isAllowed = ALLOWED_TYPES.includes(file.type);
+    const isDoc = ["application/pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"].includes(file.type);
 
-    if (!isImage && !isAllowed) {
-      return NextResponse.json({ error: `File type "${file.type}" not accepted. Use PDF, Excel, JPG, PNG, WebP, or GIF.` }, { status: 400 });
+    if (!isImage && !isDoc) {
+      return NextResponse.json({ error: `File type "${file.type}" not accepted.` }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop() || (isImage ? "jpg" : "bin");
-    const fileKey = `avatars/${session.user.id}/${randomUUID()}.${ext}`;
+    const fileKey = `${session.user.id}/${randomUUID()}.${ext}`;
 
     const blob = await put(fileKey, file, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
     });
 
+    // Return a proxy URL through our download endpoint so private blobs are accessible
+    const proxyUrl = `/api/submission/download?key=${encodeURIComponent(blob.url)}&name=${encodeURIComponent(file.name)}`;
+
     return NextResponse.json({
       fileKey: blob.url,
+      proxyUrl,
       fileName: file.name,
       fileSize: file.size,
     });

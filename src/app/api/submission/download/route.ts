@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getDownloadUrl } from "@vercel/blob";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -15,11 +16,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid file key" }, { status: 400 });
   }
 
-  // Vercel Blob URLs are direct public URLs — redirect to them
-  if (fileKey.startsWith("http")) {
-    return NextResponse.redirect(fileKey);
-  }
+  try {
+    // Vercel Blob private URL — get a signed download URL
+    if (fileKey.includes("blob.vercel-storage.com")) {
+      const downloadUrl = await getDownloadUrl(fileKey);
+      return NextResponse.redirect(downloadUrl);
+    }
 
-  // Legacy local file fallback — return 404 since local storage doesn't persist on Vercel
-  return NextResponse.json({ error: "File not found. It may have been uploaded before cloud storage was enabled." }, { status: 404 });
+    // Direct URL (legacy or already signed)
+    if (fileKey.startsWith("http")) {
+      return NextResponse.redirect(fileKey);
+    }
+
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
+  } catch (err) {
+    console.error("Download error:", err);
+    return NextResponse.json({ error: "Failed to retrieve file" }, { status: 500 });
+  }
 }

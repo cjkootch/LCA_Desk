@@ -92,8 +92,9 @@ export function ProfileSettings() {
       const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
-      setAvatarUrl(data.fileKey);
-      await updateUserSettings({ avatarUrl: data.fileKey });
+      const avatarSrc = data.proxyUrl || data.fileKey;
+      setAvatarUrl(avatarSrc);
+      await updateUserSettings({ avatarUrl: avatarSrc });
       toast.success("Profile picture updated");
       setCropSrc(null);
       setCropFile(null);
