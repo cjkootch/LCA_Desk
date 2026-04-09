@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-import { Building2, Plus, GraduationCap, ArrowRight } from "lucide-react";
+import { Building2, Plus, GraduationCap, ArrowRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
 import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
@@ -130,6 +130,36 @@ export default function DashboardPage() {
             footer={health ? `Based on ${formatCurrency(health.totalExpenditure || 0)} total expenditure across ${entities.length} entit${entities.length === 1 ? "y" : "ies"}` : undefined}
           />
 
+          {/* Start Filing CTA */}
+          {upcomingDeadlines.length > 0 && entities.length > 0 && (
+            <div className="mb-4">
+              <Link href={`/dashboard/entities/${upcomingDeadlines[0].entity_id}`}>
+                <Card className="border-accent/20 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer bg-accent-light/30">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-accent/10">
+                        <FileText className="h-5 w-5 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-text-primary">Start Next Report</p>
+                        <p className="text-xs text-text-muted">
+                          {upcomingDeadlines[0].label} — {upcomingDeadlines[0].entity_name}
+                          {upcomingDeadlines[0].days_remaining > 0
+                            ? ` · Due in ${upcomingDeadlines[0].days_remaining} days`
+                            : ` · ${Math.abs(upcomingDeadlines[0].days_remaining)} days overdue`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <Button size="sm" className="gap-1.5 shrink-0">
+                      Begin Filing <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-4">
@@ -154,27 +184,32 @@ export default function DashboardPage() {
                 }>
                   <div className="space-y-2">
                     {upcomingDeadlines.slice(0, 5).map((d, i) => (
-                      <Card key={i} className={cn("border-0 shadow-sm", d.status === "overdue" ? "bg-danger/5" : d.status === "due_soon" ? "bg-warning/5" : "")}>
-                        <CardContent className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={cn("h-2 w-2 rounded-full shrink-0",
-                              d.status === "overdue" ? "bg-danger" : d.status === "due_soon" ? "bg-warning" : "bg-accent"
-                            )} />
-                            <div>
-                              <p className="text-sm font-medium text-text-primary">{d.label}</p>
-                              <p className="text-xs text-text-muted">{d.entity_name}</p>
+                      <Link key={i} href={d.entity_id ? `/dashboard/entities/${d.entity_id}` : "/dashboard/entities"}>
+                        <Card className={cn("border-0 shadow-sm hover:shadow-md transition-all cursor-pointer", d.status === "overdue" ? "bg-danger/5" : d.status === "due_soon" ? "bg-warning/5" : "")}>
+                          <CardContent className="p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={cn("h-2 w-2 rounded-full shrink-0",
+                                d.status === "overdue" ? "bg-danger" : d.status === "due_soon" ? "bg-warning" : "bg-accent"
+                              )} />
+                              <div>
+                                <p className="text-sm font-medium text-text-primary">{d.label}</p>
+                                <p className="text-xs text-text-muted">{d.entity_name}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={cn("text-xs font-medium",
-                              d.status === "overdue" ? "text-danger" : d.status === "due_soon" ? "text-warning" : "text-text-secondary"
-                            )}>
-                              {d.days_remaining < 0 ? `${Math.abs(d.days_remaining)}d overdue` : d.days_remaining === 0 ? "Due today" : `${d.days_remaining}d left`}
-                            </p>
-                            <p className="text-xs text-text-muted">{d.due_date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <p className={cn("text-xs font-medium",
+                                  d.status === "overdue" ? "text-danger" : d.status === "due_soon" ? "text-warning" : "text-text-secondary"
+                                )}>
+                                  {d.days_remaining < 0 ? `${Math.abs(d.days_remaining)}d overdue` : d.days_remaining === 0 ? "Due today" : `${d.days_remaining}d left`}
+                                </p>
+                                <p className="text-xs text-text-muted">{d.due_date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                              </div>
+                              <Button size="sm" variant="outline" className="text-xs h-7 px-2.5 shrink-0">File</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
                     ))}
                   </div>
                 </DashboardSection>
