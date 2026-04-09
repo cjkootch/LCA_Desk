@@ -196,25 +196,25 @@ export default function ApplicationsPage() {
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-text-primary">{applications.length}</p>
-              <p className="text-[11px] text-text-muted">Total Applicants</p>
+              <p className="text-sm text-text-muted">Total Applicants</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-success">{guyaneseCount}</p>
-              <p className="text-[11px] text-text-muted">Guyanese</p>
+              <p className="text-sm text-text-muted">Guyanese</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-text-primary">{internationalCount}</p>
-              <p className="text-[11px] text-text-muted">International</p>
+              <p className="text-sm text-text-muted">International</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-accent">{selectedCount}</p>
-              <p className="text-[11px] text-text-muted">Selected</p>
+              <p className="text-sm text-text-muted">Selected</p>
             </CardContent>
           </Card>
         </div>
@@ -288,10 +288,10 @@ export default function ApplicationsPage() {
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-text-primary truncate">{app.applicantName}</p>
                             {app.isGuyanese && (
-                              <Badge variant="success" className="text-[10px] px-1.5">GY</Badge>
+                              <Badge variant="success" className="text-xs px-1.5">GY</Badge>
                             )}
                             {isHired && (
-                              <Badge variant="accent" className="text-[10px] px-1.5">Hired</Badge>
+                              <Badge variant="accent" className="text-xs px-1.5">Hired</Badge>
                             )}
                           </div>
                           <p className="text-xs text-text-muted">{app.applicantEmail}</p>
@@ -299,7 +299,7 @@ export default function ApplicationsPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[11px] text-text-muted hidden sm:block">
+                        <span className="text-sm text-text-muted hidden sm:block">
                           {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : ""}
                         </span>
                         <Select
@@ -393,7 +393,7 @@ export default function ApplicationsPage() {
 
                         {/* Actions */}
                         <div className="mt-4 flex items-center justify-between">
-                          <span className="text-[11px] text-text-muted">
+                          <span className="text-sm text-text-muted">
                             Applied: {app.createdAt ? new Date(app.createdAt).toLocaleDateString("en-US", {
                               weekday: "short", month: "short", day: "numeric", year: "numeric",
                             }) : "Unknown"}
@@ -460,7 +460,7 @@ export default function ApplicationsPage() {
                   <option key={e.id} value={e.id}>{e.legalName}</option>
                 ))}
               </select>
-              <p className="text-[11px] text-text-muted mt-1">The employee record will be linked to this entity for compliance reporting</p>
+              <p className="text-sm text-text-muted mt-1">The employee record will be linked to this entity for compliance reporting</p>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setHireDialogOpen(false)}>Cancel</Button>

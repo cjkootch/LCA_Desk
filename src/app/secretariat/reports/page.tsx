@@ -235,7 +235,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
             </div>
             {Object.entries(CATEGORY_LABELS).map(([cat, label]) => (
               <div key={cat} className="mb-3">
-                <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">{label}</p>
+                <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">{label}</p>
                 <div className="flex flex-wrap gap-2">
                   {WIDGETS.filter(w => w.category === cat).map(w => (
                     <button key={w.id} onClick={() => toggleWidget(w.id)}
@@ -260,30 +260,30 @@ Write in formal government report style. Open with the headline metric (LC rate)
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {isEnabled("local_spend") && (
               <Card className="p-4 bg-gradient-to-br from-success/5 to-transparent border-success/20">
-                <p className="text-[10px] font-semibold text-success uppercase tracking-wider mb-1">Local Spend</p>
+                <p className="text-xs font-semibold text-success uppercase tracking-wider mb-1">Local Spend</p>
                 <p className="text-2xl font-bold text-success">{formatCurrency(analytics.localSpend)}</p>
-                <p className="text-[10px] text-text-muted mt-0.5">{analytics.guyaneseSupplierCount} suppliers · {analytics.overallLcRate}% LC rate</p>
+                <p className="text-xs text-text-muted mt-0.5">{analytics.guyaneseSupplierCount} suppliers · {analytics.overallLcRate}% LC rate</p>
               </Card>
             )}
             {isEnabled("jobs_created") && (
               <Card className="p-4 bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
-                <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Jobs Created</p>
+                <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-1">Jobs Created</p>
                 <p className="text-2xl font-bold text-accent">{analytics.jobsCreated.toLocaleString()}</p>
-                <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
+                <p className="text-xs text-text-muted mt-0.5">{analytics.totalEmployees.toLocaleString()} total · {analytics.employmentPct}% Guyanese</p>
               </Card>
             )}
             {isEnabled("staff_hours") && (
               <Card className="p-4 bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
-                <p className="text-[10px] font-semibold text-gold uppercase tracking-wider mb-1">Staff Hours Saved</p>
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-1">Staff Hours Saved</p>
                 <p className="text-2xl font-bold text-gold">{analytics.staffHoursSaved.toLocaleString()}</p>
-                <p className="text-[10px] text-text-muted mt-0.5">{analytics.totalSubmissions} submissions processed</p>
+                <p className="text-xs text-text-muted mt-0.5">{analytics.totalSubmissions} submissions processed</p>
               </Card>
             )}
             {isEnabled("economic_impact") && (
               <Card className="p-4 bg-gradient-to-br from-text-primary/5 to-transparent">
-                <p className="text-[10px] font-semibold text-text-primary uppercase tracking-wider mb-1">Economic Impact</p>
+                <p className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-1">Economic Impact</p>
                 <p className="text-2xl font-bold">{formatCurrency(analytics.economicImpact)}</p>
-                <p className="text-[10px] text-text-muted mt-0.5">{analytics.uniqueFilers} companies filing</p>
+                <p className="text-xs text-text-muted mt-0.5">{analytics.uniqueFilers} companies filing</p>
               </Card>
             )}
           </div>
@@ -313,15 +313,15 @@ Write in formal government report style. Open with the headline metric (LC rate)
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center">
                     <p className="text-2xl font-bold">{dashboard.stats.total}</p>
-                    <p className="text-[10px] text-text-muted">Total</p>
+                    <p className="text-xs text-text-muted">Total</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-warning">{dashboard.stats.pending}</p>
-                    <p className="text-[10px] text-text-muted">Pending</p>
+                    <p className="text-xs text-text-muted">Pending</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-success">{dashboard.stats.acknowledged}</p>
-                    <p className="text-[10px] text-text-muted">Reviewed</p>
+                    <p className="text-xs text-text-muted">Reviewed</p>
                   </div>
                 </div>
               </CardContent></Card>
@@ -359,15 +359,15 @@ Write in formal government report style. Open with the headline metric (LC rate)
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-2xl font-bold">{analytics.totalTrainingParticipants.toLocaleString()}</p>
-                    <p className="text-[10px] text-text-muted">Participants Trained</p>
+                    <p className="text-xs text-text-muted">Participants Trained</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{analytics.totalTrainingDays.toLocaleString()}</p>
-                    <p className="text-[10px] text-text-muted">Training Days</p>
+                    <p className="text-xs text-text-muted">Training Days</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-lg font-bold text-accent">{formatCurrency(analytics.totalCapacitySpend)}</p>
-                    <p className="text-[10px] text-text-muted">Investment in Capacity Building</p>
+                    <p className="text-xs text-text-muted">Investment in Capacity Building</p>
                   </div>
                 </div>
               </CardContent></Card>
@@ -382,10 +382,10 @@ Write in formal government report style. Open with the headline metric (LC rate)
               <Card><CardContent className="p-4">
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Supplier Ecosystem</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-2xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-[10px] text-text-muted">Guyanese Suppliers</p></div>
-                  <div><p className="text-2xl font-bold">{marketIntel.seekers?.total || 0}</p><p className="text-[10px] text-text-muted">Registered Job Seekers</p></div>
-                  <div><p className="text-2xl font-bold">{marketIntel.seekers?.inTalentPool || 0}</p><p className="text-[10px] text-text-muted">In Talent Pool</p></div>
-                  <div><p className="text-2xl font-bold">{marketIntel.applications?.total || 0}</p><p className="text-[10px] text-text-muted">Job Applications</p></div>
+                  <div><p className="text-2xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-xs text-text-muted">Guyanese Suppliers</p></div>
+                  <div><p className="text-2xl font-bold">{marketIntel.seekers?.total || 0}</p><p className="text-xs text-text-muted">Registered Job Seekers</p></div>
+                  <div><p className="text-2xl font-bold">{marketIntel.seekers?.inTalentPool || 0}</p><p className="text-xs text-text-muted">In Talent Pool</p></div>
+                  <div><p className="text-2xl font-bold">{marketIntel.applications?.total || 0}</p><p className="text-xs text-text-muted">Job Applications</p></div>
                 </div>
               </CardContent></Card>
             )}
@@ -393,10 +393,10 @@ Write in formal government report style. Open with the headline metric (LC rate)
               <Card><CardContent className="p-4">
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Procurement Opportunities</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-2xl font-bold">{marketIntel.opportunities?.total || 0}</p><p className="text-[10px] text-text-muted">Total Notices</p></div>
-                  <div><p className="text-2xl font-bold text-success">{marketIntel.opportunities?.active || 0}</p><p className="text-[10px] text-text-muted">Active</p></div>
-                  <div><p className="text-2xl font-bold">{marketIntel.jobs?.total || 0}</p><p className="text-[10px] text-text-muted">Employment Notices</p></div>
-                  <div><p className="text-2xl font-bold text-accent">{marketIntel.opportunities?.totalSaves || 0}</p><p className="text-[10px] text-text-muted">Saves by Filers</p></div>
+                  <div><p className="text-2xl font-bold">{marketIntel.opportunities?.total || 0}</p><p className="text-xs text-text-muted">Total Notices</p></div>
+                  <div><p className="text-2xl font-bold text-success">{marketIntel.opportunities?.active || 0}</p><p className="text-xs text-text-muted">Active</p></div>
+                  <div><p className="text-2xl font-bold">{marketIntel.jobs?.total || 0}</p><p className="text-xs text-text-muted">Employment Notices</p></div>
+                  <div><p className="text-2xl font-bold text-accent">{marketIntel.opportunities?.totalSaves || 0}</p><p className="text-xs text-text-muted">Saves by Filers</p></div>
                 </div>
               </CardContent></Card>
             )}
@@ -410,9 +410,9 @@ Write in formal government report style. Open with the headline metric (LC rate)
             <div className="grid grid-cols-3 gap-4">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {(() => { const subs = dashboard.submissions || []; const platform = subs.filter((s: any) => s.submissionMethod === "platform").length; const upload = subs.filter((s: any) => s.submissionMethod === "upload").length; const email = subs.filter((s: any) => s.submissionMethod === "email" || !s.submissionMethod).length; return (<>
-                <div className="text-center"><p className="text-2xl font-bold text-accent">{platform}</p><p className="text-[10px] text-text-muted">Via LCA Desk</p></div>
-                <div className="text-center"><p className="text-2xl font-bold">{upload}</p><p className="text-[10px] text-text-muted">File Upload</p></div>
-                <div className="text-center"><p className="text-2xl font-bold text-text-muted">{email}</p><p className="text-[10px] text-text-muted">Email</p></div>
+                <div className="text-center"><p className="text-2xl font-bold text-accent">{platform}</p><p className="text-xs text-text-muted">Via LCA Desk</p></div>
+                <div className="text-center"><p className="text-2xl font-bold">{upload}</p><p className="text-xs text-text-muted">File Upload</p></div>
+                <div className="text-center"><p className="text-2xl font-bold text-text-muted">{email}</p><p className="text-xs text-text-muted">Email</p></div>
               </>); })()}
             </div>
           </CardContent></Card>
@@ -430,7 +430,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
                     <span className="font-medium text-text-primary">{s.entityName}</span>
                     <span className="text-text-muted ml-2">{s.reportType?.replace(/_/g, " ")} FY{s.fiscalYear}</span>
                   </div>
-                  <Badge variant={s.submissionMethod === "platform" ? "accent" : "default"} className="text-[9px]">
+                  <Badge variant={s.submissionMethod === "platform" ? "accent" : "default"} className="text-xs">
                     {s.submissionMethod === "platform" ? "Platform" : s.submissionMethod === "upload" ? "Upload" : "Email"}
                   </Badge>
                 </div>
@@ -441,7 +441,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
       </div>
 
       {/* Report date stamp */}
-      <p className="text-[10px] text-text-muted text-center mt-6">
+      <p className="text-xs text-text-muted text-center mt-6">
         Report generated {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} · LCA Desk Secretariat Portal
       </p>
     </div>

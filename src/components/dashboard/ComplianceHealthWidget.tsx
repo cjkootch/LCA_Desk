@@ -62,9 +62,9 @@ export function ComplianceHealthWidget() {
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div className="text-center p-2 bg-bg-primary rounded-lg">
               <p className={cn("text-lg font-bold", data.lcRate >= 50 ? "text-success" : "text-warning")}>{data.lcRate}%</p>
-              <p className="text-[10px] text-text-muted">LC Rate</p>
+              <p className="text-xs text-text-muted">LC Rate</p>
               {lcTrend !== 0 && (
-                <span className={cn("flex items-center justify-center gap-0.5 text-[10px]", lcTrend > 0 ? "text-success" : "text-danger")}>
+                <span className={cn("flex items-center justify-center gap-0.5 text-xs", lcTrend > 0 ? "text-success" : "text-danger")}>
                   {lcTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                   {Math.abs(lcTrend).toFixed(1)}%
                 </span>
@@ -72,7 +72,7 @@ export function ComplianceHealthWidget() {
             </div>
             <div className="text-center p-2 bg-bg-primary rounded-lg">
               <p className="text-lg font-bold text-text-primary">{data.totalEmployees}</p>
-              <p className="text-[10px] text-text-muted">Employees</p>
+              <p className="text-xs text-text-muted">Employees</p>
             </div>
           </div>
         </CardContent>
@@ -117,13 +117,13 @@ export function ComplianceHealthWidget() {
             {data.overduePeriods.map((p: { periodId: string; entityName: string; reportType: string; daysOverdue: number }) => (
               <div key={p.periodId} className="flex items-center justify-between text-xs">
                 <span className="text-text-primary">{p.entityName} — {p.reportType.replace(/_/g, " ")}</span>
-                <Badge variant="danger" className="text-[9px]">{p.daysOverdue}d overdue</Badge>
+                <Badge variant="danger" className="text-xs">{p.daysOverdue}d overdue</Badge>
               </div>
             ))}
             {data.expiringCerts.map((c: { certId: string; supplierName: string; daysLeft: number }) => (
               <div key={c.certId} className="flex items-center justify-between text-xs">
                 <span className="text-text-primary truncate">{c.supplierName}</span>
-                <Badge variant={c.daysLeft <= 30 ? "danger" : "warning"} className="text-[9px]">
+                <Badge variant={c.daysLeft <= 30 ? "danger" : "warning"} className="text-xs">
                   Cert {c.daysLeft <= 0 ? "expired" : `expires ${c.daysLeft}d`}
                 </Badge>
               </div>
@@ -151,7 +151,7 @@ export function ComplianceHealthWidget() {
                   </div>
                   <div className="text-right">
                     <p className={cn("font-bold", d.daysLeft <= 14 ? "text-danger" : d.daysLeft <= 30 ? "text-warning" : "text-text-primary")}>{d.daysLeft}d</p>
-                    <p className="text-[10px] text-text-muted">{new Date(d.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                    <p className="text-xs text-text-muted">{new Date(d.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                   </div>
                 </div>
               </Link>
@@ -168,7 +168,7 @@ export function ComplianceHealthWidget() {
               <Megaphone className="h-4 w-4 text-accent shrink-0" />
               <div className="flex-1">
                 <p className="text-xs font-medium text-text-primary">{data.matchingOpportunities} opportunities match your categories</p>
-                <p className="text-[10px] text-text-muted">Based on your procurement history</p>
+                <p className="text-xs text-text-muted">Based on your procurement history</p>
               </div>
               <ArrowRight className="h-3.5 w-3.5 text-text-muted" />
             </CardContent>

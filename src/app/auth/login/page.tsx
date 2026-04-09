@@ -126,7 +126,7 @@ function LoginForm() {
               Learn more about LCA Desk →
             </a>
           </p>
-          <a href="/demo" className="text-[9px] text-border hover:text-text-muted transition-colors">
+          <a href="/demo" className="text-xs text-border hover:text-text-muted transition-colors">
             ·
           </a>
         </div>

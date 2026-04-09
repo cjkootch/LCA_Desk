@@ -169,7 +169,7 @@ export function CsvImport({ type, periodId, entityId, onImported }: SpreadsheetI
               <FileText className="h-4 w-4 text-accent mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs font-medium text-text-primary">Using the Secretariat template?</p>
-                <p className="text-[11px] text-text-secondary mt-0.5">
+                <p className="text-sm text-text-secondary mt-0.5">
                   Upload the official v4.1 Excel file directly. We auto-detect the Expenditure, Employment, and Capacity Development tabs and import all records at once.
                 </p>
               </div>
@@ -187,7 +187,7 @@ export function CsvImport({ type, periodId, entityId, onImported }: SpreadsheetI
                 </div>
 
                 {result.format === "secretariat_v4" && (
-                  <Badge variant="accent" className="text-[10px]">Detected: LCS Secretariat v4.1 Template</Badge>
+                  <Badge variant="accent" className="text-xs">Detected: LCS Secretariat v4.1 Template</Badge>
                 )}
 
                 {result.details && (result.details.expenditures > 0 || result.details.employment > 0 || result.details.capacity > 0) && (
@@ -205,7 +205,7 @@ export function CsvImport({ type, periodId, entityId, onImported }: SpreadsheetI
                 {result.warnings && result.warnings.length > 0 && (
                   <div className="bg-warning-light rounded-lg p-2">
                     {result.warnings.map((w, i) => (
-                      <p key={i} className="text-[11px] text-warning flex items-start gap-1">
+                      <p key={i} className="text-sm text-warning flex items-start gap-1">
                         <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {w}
                       </p>
                     ))}

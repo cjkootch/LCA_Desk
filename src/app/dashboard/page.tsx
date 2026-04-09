@@ -168,7 +168,7 @@ export default function DashboardPage() {
                             )}>
                               {d.days_remaining < 0 ? `${Math.abs(d.days_remaining)}d overdue` : d.days_remaining === 0 ? "Due today" : `${d.days_remaining}d left`}
                             </p>
-                            <p className="text-[10px] text-text-muted">{d.due_date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                            <p className="text-xs text-text-muted">{d.due_date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                           </div>
                         </CardContent>
                       </Card>

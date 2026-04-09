@@ -117,14 +117,14 @@ export default function CompaniesPage() {
                         <h3 className="text-sm font-semibold text-text-primary truncate">{p.companyName}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
                           {p.lcsRegistered ? (
-                            <Badge variant="success" className="text-[9px] gap-0.5">
+                            <Badge variant="success" className="text-xs gap-0.5">
                               <Shield className="h-2.5 w-2.5" /> LCS Verified
                             </Badge>
                           ) : (
-                            <Badge variant="default" className="text-[9px]">Unverified</Badge>
+                            <Badge variant="default" className="text-xs">Unverified</Badge>
                           )}
                           {p.claimed && (
-                            <Badge variant="accent" className="text-[9px] gap-0.5">
+                            <Badge variant="accent" className="text-xs gap-0.5">
                               <CheckCircle className="h-2.5 w-2.5" /> Claimed
                             </Badge>
                           )}
@@ -150,10 +150,10 @@ export default function CompaniesPage() {
                     {p.procurementCategories?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {p.procurementCategories.slice(0, 3).map((c: string) => (
-                          <Badge key={c} variant="default" className="text-[9px]">{c}</Badge>
+                          <Badge key={c} variant="default" className="text-xs">{c}</Badge>
                         ))}
                         {p.procurementCategories.length > 3 && (
-                          <span className="text-[10px] text-text-muted">+{p.procurementCategories.length - 3}</span>
+                          <span className="text-xs text-text-muted">+{p.procurementCategories.length - 3}</span>
                         )}
                       </div>
                     )}

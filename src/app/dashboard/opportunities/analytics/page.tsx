@@ -161,12 +161,12 @@ export default function OpportunityAnalyticsPage() {
             <div className="flex items-end gap-1" style={{ height: "160px" }}>
               {sortedMonths.map(([month, count]) => (
                 <div key={month} className="flex-1 flex flex-col items-center justify-end gap-1">
-                  <span className="text-[10px] text-text-muted font-medium">{count}</span>
+                  <span className="text-xs text-text-muted font-medium">{count}</span>
                   <div
                     className="w-full bg-accent rounded-t min-h-[4px]"
                     style={{ height: `${(count / maxMonthly) * 130}px` }}
                   />
-                  <span className="text-[9px] text-text-muted">{month.slice(5)}</span>
+                  <span className="text-xs text-text-muted">{month.slice(5)}</span>
                 </div>
               ))}
             </div>

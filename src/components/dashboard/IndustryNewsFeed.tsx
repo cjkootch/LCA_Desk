@@ -67,7 +67,7 @@ export function IndustryNewsFeed({ userType, expanded }: IndustryNewsFeedProps) 
           <div className="flex items-center gap-2">
             <Newspaper className="h-4 w-4 text-accent" />
             <h3 className="text-sm font-semibold text-text-primary">Industry News</h3>
-            <span className="text-[10px] text-text-muted">({filtered.length})</span>
+            <span className="text-xs text-text-muted">({filtered.length})</span>
           </div>
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn("p-1.5 rounded-lg transition-colors", showFilters ? "bg-accent-light text-accent" : "text-text-muted hover:text-text-primary")}>
@@ -86,7 +86,7 @@ export function IndustryNewsFeed({ userType, expanded }: IndustryNewsFeedProps) 
             <div className="flex flex-wrap gap-1">
               {CATEGORIES.map(cat => (
                 <button key={cat.value} onClick={() => setCategoryFilter(cat.value)}
-                  className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
+                  className={cn("px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
                     categoryFilter === cat.value ? "bg-accent text-white" : "bg-bg-primary text-text-muted hover:text-text-primary"
                   )}>
                   {cat.label}
@@ -110,14 +110,14 @@ export function IndustryNewsFeed({ userType, expanded }: IndustryNewsFeedProps) 
                     <p className="text-xs text-text-muted mt-1 line-clamp-2">{article.aiSummary}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-[10px] text-text-muted">{article.sourceName}</span>
+                    <span className="text-xs text-text-muted">{article.sourceName}</span>
                     {article.publishedAt && (
-                      <span className="text-[10px] text-text-muted">
+                      <span className="text-xs text-text-muted">
                         · {new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}
                     {article.category && article.category !== "general" && (
-                      <Badge variant={CATEGORY_COLORS[article.category] || "default"} className="text-[8px]">
+                      <Badge variant={CATEGORY_COLORS[article.category] || "default"} className="text-[11px]">
                         {article.category.replace(/_/g, " ")}
                       </Badge>
                     )}
@@ -125,7 +125,7 @@ export function IndustryNewsFeed({ userType, expanded }: IndustryNewsFeedProps) 
                       <Sparkles className="h-3 w-3 text-gold" />
                     )}
                     {article.companies?.length > 0 && (
-                      <span className="text-[9px] text-text-muted">{article.companies.slice(0, 2).join(", ")}</span>
+                      <span className="text-xs text-text-muted">{article.companies.slice(0, 2).join(", ")}</span>
                     )}
                   </div>
                 </div>

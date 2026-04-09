@@ -207,7 +207,7 @@ export default function RegisterLcsPage() {
             {STEPS.map((s, i) => (
               <div key={s} className="flex-1 flex flex-col items-center">
                 <div className={cn("h-2 w-full rounded-full", i <= step ? "bg-accent" : "bg-border")} />
-                <span className={cn("text-[10px] mt-1", i <= step ? "text-accent font-medium" : "text-text-muted")}>{s}</span>
+                <span className={cn("text-xs mt-1", i <= step ? "text-accent font-medium" : "text-text-muted")}>{s}</span>
               </div>
             ))}
           </div>
@@ -249,14 +249,14 @@ export default function RegisterLcsPage() {
                       className={cn("text-left rounded-xl border-2 p-5 transition-all relative",
                         tier === t.id ? "border-accent bg-accent-light ring-1 ring-accent/20" : "border-border hover:border-accent/40"
                       )}>
-                      {t.popular && <Badge variant="accent" className="absolute -top-2 right-3 text-[9px]">Most Popular</Badge>}
+                      {t.popular && <Badge variant="accent" className="absolute -top-2 right-3 text-xs">Most Popular</Badge>}
                       <t.icon className="h-5 w-5 text-accent mb-2" />
                       <p className="font-semibold text-text-primary">{t.name}</p>
                       <p className="text-2xl font-bold text-accent mt-1">${t.price}</p>
                       <p className="text-xs text-text-secondary mt-1">{t.description}</p>
                       <ul className="mt-3 space-y-1">
                         {t.features.map(f => (
-                          <li key={f} className="text-[11px] text-text-secondary flex items-start gap-1">
+                          <li key={f} className="text-sm text-text-secondary flex items-start gap-1">
                             <CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> {f}
                           </li>
                         ))}
@@ -404,7 +404,7 @@ export default function RegisterLcsPage() {
                       )}
                       <div>
                         <p className="text-sm text-text-primary">{doc.label} {doc.required && <span className="text-danger">*</span>}</p>
-                        {uploadedDocs[doc.key] && <p className="text-[10px] text-success">{uploadedDocs[doc.key].name}</p>}
+                        {uploadedDocs[doc.key] && <p className="text-xs text-success">{uploadedDocs[doc.key].name}</p>}
                       </div>
                     </div>
                     <label className="cursor-pointer">

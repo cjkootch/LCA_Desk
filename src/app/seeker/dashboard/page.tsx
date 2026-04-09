@@ -97,7 +97,7 @@ export default function SeekerDashboard() {
                 <Progress value={profileCompletion} className="h-1.5" />
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                   {completionItems.filter(i => !i.done).map(i => (
-                    <span key={i.label} className="text-[10px] text-text-muted">· {i.label}</span>
+                    <span key={i.label} className="text-xs text-text-muted">· {i.label}</span>
                   ))}
                 </div>
               </div>
@@ -212,7 +212,7 @@ export default function SeekerDashboard() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-text-primary truncate">{app.jobTitle}</p>
                         <p className="text-xs text-text-secondary">{app.companyName}</p>
-                        <p className="text-[11px] text-text-muted mt-0.5">
+                        <p className="text-sm text-text-muted mt-0.5">
                           Applied {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : ""}
                         </p>
                       </div>
@@ -278,7 +278,7 @@ export default function SeekerDashboard() {
                       <p className="text-sm font-medium text-text-primary">{job.title}</p>
                       <p className="text-xs text-text-secondary mt-0.5">{job.company}</p>
                       {job.category && (
-                        <Badge variant="default" className="text-[10px] mt-2">{job.category}</Badge>
+                        <Badge variant="default" className="text-xs mt-2">{job.category}</Badge>
                       )}
                     </CardContent>
                   </Card>

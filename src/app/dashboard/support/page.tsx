@@ -178,12 +178,12 @@ export default function SupportPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-                            <Badge variant={priorityCfg.variant} className="text-[10px]">{priorityCfg.label}</Badge>
-                            <span className="text-[10px] text-text-muted capitalize">{ticket.category}</span>
+                            <Badge variant={priorityCfg.variant} className="text-xs">{priorityCfg.label}</Badge>
+                            <span className="text-xs text-text-muted capitalize">{ticket.category}</span>
                           </div>
                           <h3 className="text-sm font-medium text-text-primary">{ticket.subject}</h3>
                           <p className="text-xs text-text-muted mt-1 line-clamp-1">{ticket.description}</p>
-                          <p className="text-[11px] text-text-muted mt-1">
+                          <p className="text-sm text-text-muted mt-1">
                             {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString("en-US", {
                               month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
                             }) : ""}
@@ -240,8 +240,8 @@ export default function SupportPage() {
                                       <span className="text-xs font-medium text-text-primary">
                                         {reply.userName || "User"}
                                       </span>
-                                      {reply.isAdmin && <Badge variant="accent" className="text-[9px]">Support</Badge>}
-                                      <span className="text-[10px] text-text-muted">
+                                      {reply.isAdmin && <Badge variant="accent" className="text-xs">Support</Badge>}
+                                      <span className="text-xs text-text-muted">
                                         {reply.createdAt ? new Date(reply.createdAt).toLocaleDateString("en-US", {
                                           month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
                                         }) : ""}
@@ -438,7 +438,7 @@ export default function SupportPage() {
                 >
                   <ImagePlus className="h-6 w-6 text-text-muted mx-auto mb-1" />
                   <p className="text-xs text-text-muted">Click to upload or drag & drop</p>
-                  <p className="text-[10px] text-text-muted">PNG, JPG up to 5MB each</p>
+                  <p className="text-xs text-text-muted">PNG, JPG up to 5MB each</p>
                 </div>
                 <input
                   id="screenshot-upload"
@@ -471,7 +471,7 @@ export default function SupportPage() {
                         <button
                           type="button"
                           onClick={() => setScreenshotPreviews(prev => prev.filter((_, j) => j !== i))}
-                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-danger text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-danger text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           &times;
                         </button>

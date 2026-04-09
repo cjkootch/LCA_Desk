@@ -126,7 +126,7 @@ export function AiSummaryPanel({ summary }: { summary: any }) {
           <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Key Dates</h4>
           <div className="flex flex-wrap gap-2">
             {summary.key_dates.map((d: string, i: number) => (
-              <Badge key={i} variant="default" className="text-[10px]">
+              <Badge key={i} variant="default" className="text-xs">
                 <CalendarDays className="h-2.5 w-2.5 mr-1" />{d}
               </Badge>
             ))}
@@ -186,7 +186,7 @@ export function AiSummaryPanel({ summary }: { summary: any }) {
           <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">LCA Categories</h4>
           <div className="flex flex-wrap gap-1">
             {summary.lca_categories.map((cat: string, i: number) => (
-              <Badge key={i} variant="default" className="text-[10px]">{cat}</Badge>
+              <Badge key={i} variant="default" className="text-xs">{cat}</Badge>
             ))}
           </div>
         </div>

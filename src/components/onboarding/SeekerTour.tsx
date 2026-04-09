@@ -17,7 +17,7 @@ const STEPS: TourStep[] = [
       <div className="mt-4 grid grid-cols-2 gap-2">
         {["Company-Posted Jobs", "LCS Employment Notices", "Filter by Category", "One-Click Apply"].map(f => (
           <div key={f} className="rounded-lg bg-bg-primary p-2 text-center">
-            <p className="text-[10px] text-text-secondary">{f}</p>
+            <p className="text-xs text-text-secondary">{f}</p>
           </div>
         ))}
       </div>
@@ -35,7 +35,7 @@ const STEPS: TourStep[] = [
     extra: (
       <div className="mt-4 rounded-lg border border-accent/20 bg-accent-light p-3">
         <p className="text-xs text-accent font-medium mb-1">Talent Pool</p>
-        <p className="text-[11px] text-text-secondary">When you opt in, contractors browsing the Talent Pool can see your profile, skills, and certifications. Your contact info is only visible to Professional plan subscribers.</p>
+        <p className="text-sm text-text-secondary">When you opt in, contractors browsing the Talent Pool can see your profile, skills, and certifications. Your contact info is only visible to Professional plan subscribers.</p>
       </div>
     ),
   },

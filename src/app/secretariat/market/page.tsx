@@ -94,26 +94,26 @@ export default function MarketIntelPage() {
             <Card className="p-4 text-center">
               <Briefcase className="h-5 w-5 text-gold mx-auto mb-1" />
               <p className="text-2xl font-bold">{data.opportunities.total}</p>
-              <p className="text-[10px] text-text-muted">Procurement Notices</p>
-              <p className="text-[9px] text-success">{data.opportunities.active} active</p>
+              <p className="text-xs text-text-muted">Procurement Notices</p>
+              <p className="text-xs text-success">{data.opportunities.active} active</p>
             </Card>
             <Card className="p-4 text-center">
               <FileText className="h-5 w-5 text-accent mx-auto mb-1" />
               <p className="text-2xl font-bold">{data.jobs.total}</p>
-              <p className="text-[10px] text-text-muted">Employment Notices</p>
-              <p className="text-[9px] text-success">{data.jobs.open} open</p>
+              <p className="text-xs text-text-muted">Employment Notices</p>
+              <p className="text-xs text-success">{data.jobs.open} open</p>
             </Card>
             <Card className="p-4 text-center">
               <Users className="h-5 w-5 text-success mx-auto mb-1" />
               <p className="text-2xl font-bold">{data.seekers.total}</p>
-              <p className="text-[10px] text-text-muted">Registered Job Seekers</p>
-              <p className="text-[9px] text-accent">{data.seekers.inTalentPool} in talent pool</p>
+              <p className="text-xs text-text-muted">Registered Job Seekers</p>
+              <p className="text-xs text-accent">{data.seekers.inTalentPool} in talent pool</p>
             </Card>
             <Card className="p-4 text-center">
               <UserCheck className="h-5 w-5 text-warning mx-auto mb-1" />
               <p className="text-2xl font-bold">{data.applications.total}</p>
-              <p className="text-[10px] text-text-muted">Job Applications</p>
-              <p className="text-[9px] text-success">{data.applications.guyanese} Guyanese ({data.applications.total > 0 ? Math.round((data.applications.guyanese / data.applications.total) * 100) : 0}%)</p>
+              <p className="text-xs text-text-muted">Job Applications</p>
+              <p className="text-xs text-success">{data.applications.guyanese} Guyanese ({data.applications.total > 0 ? Math.round((data.applications.guyanese / data.applications.total) * 100) : 0}%)</p>
             </Card>
           </div>
 
@@ -128,7 +128,7 @@ export default function MarketIntelPage() {
                 const jobH = Math.max((jobCount / maxCount) * 100, 2);
                 return (
                   <div key={month} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[8px] font-bold text-text-primary">{count}</span>
+                    <span className="text-[11px] font-bold text-text-primary">{count}</span>
                     <div className="w-full flex flex-col gap-0.5">
                       <div className="w-full rounded-t bg-gold/70" style={{ height: `${oppH}%` }} title={`${count} opportunities`} />
                       <div className="w-full rounded-t bg-accent/70" style={{ height: `${jobH}%` }} title={`${jobCount} jobs`} />
@@ -138,7 +138,7 @@ export default function MarketIntelPage() {
                 );
               })}
             </div>
-            <div className="flex items-center gap-4 mt-2 text-[10px] text-text-muted">
+            <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-gold/70" /> Opportunities</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-accent/70" /> Employment</span>
             </div>
@@ -152,7 +152,7 @@ export default function MarketIntelPage() {
                 {data.opportunities.topCompanies.slice(0, 8).map(([company, count]) => (
                   <div key={company} className="flex items-center justify-between text-xs">
                     <span className="text-text-secondary truncate mr-2">{company}</span>
-                    <Badge variant="default" className="text-[9px] shrink-0">{count}</Badge>
+                    <Badge variant="default" className="text-xs shrink-0">{count}</Badge>
                   </div>
                 ))}
               </div>
@@ -228,7 +228,7 @@ export default function MarketIntelPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-text-primary">{data.opportunities.total} Procurement Notices</p>
-            <div className="flex items-center gap-2 text-[10px] text-text-muted">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <span className="text-success">{data.opportunities.active} active</span>
               <span>·</span>
               <span>{data.opportunities.pinned} pinned</span>
@@ -247,34 +247,34 @@ export default function MarketIntelPage() {
                       <h3 className="text-sm font-semibold text-text-primary truncate">{decodeHtml(opp.title)}</h3>
                     </div>
                     <p className="text-xs text-text-muted">{opp.company} · {opp.type} · {opp.postedDate}</p>
-                    {opp.deadline && <p className="text-[10px] text-text-muted">Deadline: {opp.deadline}</p>}
-                    {opp.note && <p className="text-[10px] text-warning mt-1 italic">Note: {opp.note}</p>}
+                    {opp.deadline && <p className="text-xs text-text-muted">Deadline: {opp.deadline}</p>}
+                    {opp.note && <p className="text-xs text-warning mt-1 italic">Note: {opp.note}</p>}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {opp.saves > 0 && <Badge variant="accent" className="text-[9px]"><Save className="h-2.5 w-2.5 mr-0.5" />{opp.saves}</Badge>}
-                    <Badge variant={opp.status === "active" ? "success" : opp.status === "closed" ? "default" : "warning"} className="text-[9px]">{opp.status}</Badge>
+                    {opp.saves > 0 && <Badge variant="accent" className="text-xs"><Save className="h-2.5 w-2.5 mr-0.5" />{opp.saves}</Badge>}
+                    <Badge variant={opp.status === "active" ? "success" : opp.status === "closed" ? "default" : "warning"} className="text-xs">{opp.status}</Badge>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2 border-t border-border pt-2">
                   <button onClick={() => handlePin(opp.id, "opp", !!opp.pinned)}
-                    className="text-[10px] text-text-muted hover:text-gold flex items-center gap-1">
+                    className="text-xs text-text-muted hover:text-gold flex items-center gap-1">
                     {opp.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
                     {opp.pinned ? "Unpin" : "Pin"}
                   </button>
                   {opp.status === "active" && (
                     <button onClick={() => handleStatusChange(opp.id, "opp", "closed")}
-                      className="text-[10px] text-text-muted hover:text-danger flex items-center gap-1">
+                      className="text-xs text-text-muted hover:text-danger flex items-center gap-1">
                       Mark Closed
                     </button>
                   )}
                   {opp.status === "closed" && (
                     <button onClick={() => handleStatusChange(opp.id, "opp", "active")}
-                      className="text-[10px] text-text-muted hover:text-success flex items-center gap-1">
+                      className="text-xs text-text-muted hover:text-success flex items-center gap-1">
                       Reopen
                     </button>
                   )}
                   <button onClick={() => setNoteEdit({ id: opp.id, type: "opp", note: opp.note || "" })}
-                    className="text-[10px] text-text-muted hover:text-accent flex items-center gap-1">
+                    className="text-xs text-text-muted hover:text-accent flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" /> {opp.note ? "Edit Note" : "Add Note"}
                   </button>
                 </div>
@@ -289,7 +289,7 @@ export default function MarketIntelPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-text-primary">{data.jobs.total} Employment Notices</p>
-            <div className="flex items-center gap-2 text-[10px] text-text-muted">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <span className="text-success">{data.jobs.open} open</span>
               <span>·</span>
               <span>{data.jobs.pinned} pinned</span>
@@ -306,31 +306,31 @@ export default function MarketIntelPage() {
                       <h3 className="text-sm font-semibold text-text-primary truncate">{decodeHtml(job.title)}</h3>
                     </div>
                     <p className="text-xs text-text-muted">{job.company} · {job.category || "Uncategorized"} · {job.postedDate}</p>
-                    {job.closingDate && <p className="text-[10px] text-text-muted">Closing: {job.closingDate}</p>}
-                    {job.note && <p className="text-[10px] text-warning mt-1 italic">Note: {job.note}</p>}
+                    {job.closingDate && <p className="text-xs text-text-muted">Closing: {job.closingDate}</p>}
+                    {job.note && <p className="text-xs text-warning mt-1 italic">Note: {job.note}</p>}
                   </div>
-                  <Badge variant={job.status === "open" ? "success" : "default"} className="text-[9px] shrink-0">{job.status}</Badge>
+                  <Badge variant={job.status === "open" ? "success" : "default"} className="text-xs shrink-0">{job.status}</Badge>
                 </div>
                 <div className="flex items-center gap-2 mt-2 border-t border-border pt-2">
                   <button onClick={() => handlePin(job.id, "job", !!job.pinned)}
-                    className="text-[10px] text-text-muted hover:text-gold flex items-center gap-1">
+                    className="text-xs text-text-muted hover:text-gold flex items-center gap-1">
                     {job.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
                     {job.pinned ? "Unpin" : "Pin"}
                   </button>
                   {job.status === "open" && (
                     <button onClick={() => handleStatusChange(job.id, "job", "closed")}
-                      className="text-[10px] text-text-muted hover:text-danger flex items-center gap-1">
+                      className="text-xs text-text-muted hover:text-danger flex items-center gap-1">
                       Mark Closed
                     </button>
                   )}
                   {job.status === "closed" && (
                     <button onClick={() => handleStatusChange(job.id, "job", "open")}
-                      className="text-[10px] text-text-muted hover:text-success flex items-center gap-1">
+                      className="text-xs text-text-muted hover:text-success flex items-center gap-1">
                       Reopen
                     </button>
                   )}
                   <button onClick={() => setNoteEdit({ id: job.id, type: "job", note: job.note || "" })}
-                    className="text-[10px] text-text-muted hover:text-accent flex items-center gap-1">
+                    className="text-xs text-text-muted hover:text-accent flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" /> {job.note ? "Edit Note" : "Add Note"}
                   </button>
                 </div>
@@ -346,19 +346,19 @@ export default function MarketIntelPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Card className="p-4 text-center">
               <p className="text-2xl font-bold">{data.seekers.total}</p>
-              <p className="text-[10px] text-text-muted">Total Registered</p>
+              <p className="text-xs text-text-muted">Total Registered</p>
             </Card>
             <Card className="p-4 text-center">
               <p className="text-2xl font-bold text-success">{data.seekers.guyanese}</p>
-              <p className="text-[10px] text-text-muted">Guyanese Nationals</p>
+              <p className="text-xs text-text-muted">Guyanese Nationals</p>
             </Card>
             <Card className="p-4 text-center">
               <p className="text-2xl font-bold text-accent">{data.seekers.inTalentPool}</p>
-              <p className="text-[10px] text-text-muted">In Talent Pool</p>
+              <p className="text-xs text-text-muted">In Talent Pool</p>
             </Card>
             <Card className="p-4 text-center">
               <p className="text-2xl font-bold">{data.seekers.avgExperience} yrs</p>
-              <p className="text-[10px] text-text-muted">Avg Experience</p>
+              <p className="text-xs text-text-muted">Avg Experience</p>
             </Card>
           </div>
 
@@ -385,7 +385,7 @@ export default function MarketIntelPage() {
               <div className="space-y-2">
                 {Object.entries(data.applications.byStatus).sort((a, b) => b[1] - a[1]).map(([status, count]) => (
                   <div key={status} className="flex items-center justify-between text-xs">
-                    <Badge variant={status === "hired" ? "success" : status === "rejected" ? "danger" : status === "reviewed" ? "accent" : "default"} className="text-[9px]">{status}</Badge>
+                    <Badge variant={status === "hired" ? "success" : status === "rejected" ? "danger" : status === "reviewed" ? "accent" : "default"} className="text-xs">{status}</Badge>
                     <span className="font-medium">{count}</span>
                   </div>
                 ))}

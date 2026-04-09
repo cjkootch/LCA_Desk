@@ -79,7 +79,7 @@ export function EmploymentTable({ records, onDelete, onEdit, onInlineUpdate, onP
   return (
     <div ref={tableRef} tabIndex={0} className="outline-none">
       {onPasteRows && !locked && (
-        <div className="flex items-center gap-1.5 text-[10px] text-text-muted mb-2 px-1">
+        <div className="flex items-center gap-1.5 text-xs text-text-muted mb-2 px-1">
           <ClipboardPaste className="h-3 w-3" />
           <span>Tip: Copy rows from Excel and paste here to bulk-add records</span>
         </div>
@@ -111,7 +111,7 @@ export function EmploymentTable({ records, onDelete, onEdit, onInlineUpdate, onP
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={CATEGORY_VARIANT[r.employment_category] || "default"} className="text-[9px]">
+                  <Badge variant={CATEGORY_VARIANT[r.employment_category] || "default"} className="text-xs">
                     {r.employment_category}
                   </Badge>
                 </TableCell>

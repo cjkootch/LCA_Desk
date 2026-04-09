@@ -226,7 +226,7 @@ export default function JobDetailPage() {
                       value={coverNote}
                       onChange={(e) => setCoverNote(e.target.value)}
                     />
-                    <p className="text-[11px] text-text-muted">
+                    <p className="text-sm text-text-muted">
                       Your profile details (name, email, category, nationality) will be included automatically.
                     </p>
                     <div className="flex gap-2">

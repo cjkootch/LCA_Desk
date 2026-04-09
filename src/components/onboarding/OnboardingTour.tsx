@@ -44,7 +44,7 @@ const TOUR_STEPS: TourStep[] = [
         ].map((item) => (
           <div key={item.label} className="rounded-lg bg-bg-primary p-2.5 text-center">
             <p className="text-xs font-semibold text-accent">{item.label}</p>
-            <p className="text-[10px] text-text-muted mt-0.5">{item.desc}</p>
+            <p className="text-xs text-text-muted mt-0.5">{item.desc}</p>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ const TOUR_STEPS: TourStep[] = [
             <div className={cn("mx-auto h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold", s.color)}>
               {s.num}
             </div>
-            <p className="text-[9px] text-text-muted mt-1 leading-tight">{s.label}</p>
+            <p className="text-xs text-text-muted mt-1 leading-tight">{s.label}</p>
           </div>
         ))}
       </div>
@@ -97,7 +97,7 @@ const TOUR_STEPS: TourStep[] = [
     extra: (
       <div className="mt-4 rounded-lg border border-accent/20 bg-accent-light p-3">
         <p className="text-xs text-accent font-medium mb-1">AI-Generated Draft</p>
-        <p className="text-[11px] text-text-secondary italic leading-relaxed">
+        <p className="text-sm text-text-secondary italic leading-relaxed">
           &quot;During the reporting period, first consideration was accorded to Guyanese suppliers across all reserved sector categories...&quot;
         </p>
       </div>

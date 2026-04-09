@@ -44,7 +44,7 @@ export function TopBar({ title, description, action }: TopBarProps) {
             <Button variant="outline" size="sm" className="border-accent/30 text-accent hover:bg-accent-light">
               <Sparkles className="h-3.5 w-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Upgrade</span>
-              <Badge variant="accent" className="ml-1.5 text-[10px] px-1.5 py-0">
+              <Badge variant="accent" className="ml-1.5 text-xs px-1.5 py-0">
                 {planConfig.name}
               </Badge>
             </Button>

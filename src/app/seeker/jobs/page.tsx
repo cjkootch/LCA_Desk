@@ -263,7 +263,7 @@ export default function SeekerJobsPage() {
 
                       {job.guyaneseFirstStatement && (
                         <div className="mt-3 px-3 py-2 bg-accent-light rounded-md">
-                          <p className="text-[11px] text-accent font-medium">
+                          <p className="text-sm text-accent font-medium">
                             First Consideration: {job.guyaneseFirstStatement}
                           </p>
                         </div>

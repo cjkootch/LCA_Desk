@@ -30,7 +30,7 @@ export function StatCard({ icon: Icon, label, value, sublabel, color, iconColor,
       )}
       <p className={cn("text-2xl sm:text-3xl font-bold", color || "text-text-primary")}>{value}</p>
       <p className="text-xs font-medium text-text-muted mt-0.5">{label}</p>
-      {sublabel && <p className={cn("text-[10px] mt-0.5", color ? color.replace("text-", "text-") : "text-text-muted")}>{sublabel}</p>}
+      {sublabel && <p className={cn("text-xs mt-0.5", color ? color.replace("text-", "text-") : "text-text-muted")}>{sublabel}</p>}
     </div>
   );
 }

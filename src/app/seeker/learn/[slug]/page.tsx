@@ -206,7 +206,7 @@ export default function CoursePage() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-text-primary">{completedCount}/{modules.length} modules</span>
-              {hasBadge && <Badge variant="success" className="text-[10px] gap-0.5"><Trophy className="h-2.5 w-2.5" /> {course.badgeLabel}</Badge>}
+              {hasBadge && <Badge variant="success" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" /> {course.badgeLabel}</Badge>}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
               <Star className="h-3 w-3 text-gold" />
@@ -252,7 +252,7 @@ export default function CoursePage() {
                   )}>
                   {complete ? <CheckCircle className="h-4 w-4 shrink-0" /> :
                    locked ? <Lock className="h-4 w-4 shrink-0" /> :
-                   <div className="h-4 w-4 rounded-full border-2 border-current shrink-0 flex items-center justify-center text-[8px] font-bold">{i + 1}</div>}
+                   <div className="h-4 w-4 rounded-full border-2 border-current shrink-0 flex items-center justify-center text-[11px] font-bold">{i + 1}</div>}
                   <span className="truncate">{m.title}</span>
                   {complete && <Star className="h-3 w-3 ml-auto text-gold shrink-0" />}
                 </button>
@@ -266,9 +266,9 @@ export default function CoursePage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-[10px]">Module {activeModule + 1}</Badge>
-                    {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-[10px] gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
-                    <span className="text-[10px] text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
+                    <Badge variant="default" className="text-xs">Module {activeModule + 1}</Badge>
+                    {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
+                    <span className="text-xs text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
                   </div>
                   <CardTitle className="text-lg mt-1">{currentModule.title}</CardTitle>
                 </CardHeader>
@@ -307,7 +307,7 @@ export default function CoursePage() {
                   {quizQuestions.map((q: { question: string; options: string[]; correctIndex: number }, qi: number) => (
                     <div key={qi} className={cn("rounded-lg p-4 transition-colors", answers[qi] !== undefined ? "bg-bg-primary" : "")}>
                       <p className="text-sm font-medium text-text-primary mb-3">
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-accent text-white text-[10px] font-bold mr-2">{qi + 1}</span>
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-accent text-white text-xs font-bold mr-2">{qi + 1}</span>
                         {q.question}
                       </p>
                       <div className="space-y-2 ml-7">

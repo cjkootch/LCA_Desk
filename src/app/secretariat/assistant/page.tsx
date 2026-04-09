@@ -242,7 +242,7 @@ export default function SecretariatAssistantPage() {
             <Shield className="h-5 w-5 text-gold" />
             <div>
               <h1 className="text-sm font-semibold text-text-primary">Compliance Analyst</h1>
-              <p className="text-[10px] text-text-muted">AI-powered regulatory analysis with sector-wide compliance data</p>
+              <p className="text-xs text-text-muted">AI-powered regulatory analysis with sector-wide compliance data</p>
             </div>
           </div>
 
@@ -303,7 +303,7 @@ export default function SecretariatAssistantPage() {
                 <Send className="h-4 w-4" />
               </Button>
             </form>
-            <p className="text-[10px] text-text-muted text-center mt-2">
+            <p className="text-xs text-text-muted text-center mt-2">
               Analysis is based on the Local Content Act and live submission data. Always verify before taking enforcement action.
             </p>
           </div>

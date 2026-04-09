@@ -77,8 +77,8 @@ export default function SeekerSavedPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="accent" className="text-[9px]">Job</Badge>
-                        {item.category && <Badge variant="default" className="text-[9px]">{item.category}</Badge>}
+                        <Badge variant="accent" className="text-xs">Job</Badge>
+                        {item.category && <Badge variant="default" className="text-xs">{item.category}</Badge>}
                       </div>
                       <Link href={item.jobType === "posted" ? `/seeker/jobs/${item.jobId}` : "#"}>
                         <h3 className="text-sm font-medium text-text-primary hover:text-accent transition-colors">{item.title}</h3>
@@ -87,7 +87,7 @@ export default function SeekerSavedPage() {
                         <Building2 className="h-3 w-3" /> {item.company}
                         {item.location && <><span>·</span>{item.location}</>}
                       </div>
-                      {item.savedAt && <p className="text-[10px] text-text-muted mt-1">Saved {new Date(item.savedAt).toLocaleDateString()}</p>}
+                      {item.savedAt && <p className="text-xs text-text-muted mt-1">Saved {new Date(item.savedAt).toLocaleDateString()}</p>}
                     </div>
                     <button onClick={() => handleUnsaveJob(item.id)} className="p-2 rounded-lg hover:bg-danger-light transition-colors" title="Remove">
                       <Trash2 className="h-4 w-4 text-text-muted hover:text-danger" />
@@ -104,16 +104,16 @@ export default function SeekerSavedPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="warning" className="text-[9px]">Opportunity</Badge>
-                        {item.type && <Badge variant="default" className="text-[9px]">{item.type}</Badge>}
+                        <Badge variant="warning" className="text-xs">Opportunity</Badge>
+                        {item.type && <Badge variant="default" className="text-xs">{item.type}</Badge>}
                       </div>
                       <h3 className="text-sm font-medium text-text-primary line-clamp-2">{item.title}</h3>
                       <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
                         <Building2 className="h-3 w-3" /> {item.contractorName}
                       </div>
                       <div className="flex items-center gap-4 mt-1">
-                        {item.deadline && <span className="text-[10px] text-text-muted flex items-center gap-1"><Calendar className="h-3 w-3" /> Due {new Date(item.deadline).toLocaleDateString()}</span>}
-                        {item.savedAt && <span className="text-[10px] text-text-muted">Saved {new Date(item.savedAt).toLocaleDateString()}</span>}
+                        {item.deadline && <span className="text-xs text-text-muted flex items-center gap-1"><Calendar className="h-3 w-3" /> Due {new Date(item.deadline).toLocaleDateString()}</span>}
+                        {item.savedAt && <span className="text-xs text-text-muted">Saved {new Date(item.savedAt).toLocaleDateString()}</span>}
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">

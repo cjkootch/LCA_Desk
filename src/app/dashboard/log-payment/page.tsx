@@ -122,7 +122,7 @@ export default function LogPaymentPage() {
                         className="w-full text-left px-3 py-2 hover:bg-bg-primary text-sm border-b border-border-light last:border-0"
                         onClick={() => { setSupplier(s.legalName); setCertId(s.certId || ""); setSupplierType("Guyanese"); setShowSuggestions(false); }}>
                         <span className="font-medium">{s.legalName}</span>
-                        {s.certId && <span className="text-[10px] text-accent ml-2">{s.certId}</span>}
+                        {s.certId && <span className="text-xs text-accent ml-2">{s.certId}</span>}
                       </button>
                     ))}
                   </div>
@@ -175,14 +175,14 @@ export default function LogPaymentPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-text-primary">{e.supplierName}</p>
-                      {e.supplierCertificateId && <Badge variant="success" className="text-[9px]">LCS</Badge>}
-                      {e.imported && <Badge variant="default" className="text-[9px]">Imported</Badge>}
+                      {e.supplierCertificateId && <Badge variant="success" className="text-xs">LCS</Badge>}
+                      {e.imported && <Badge variant="default" className="text-xs">Imported</Badge>}
                     </div>
                     <p className="text-xs text-text-muted">{e.description || e.category || "No description"}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-text-primary">${Number(e.amount).toLocaleString()}</p>
-                    <p className="text-[10px] text-text-muted">{e.paymentDate || ""}</p>
+                    <p className="text-xs text-text-muted">{e.paymentDate || ""}</p>
                   </div>
                 </CardContent>
               </Card>

@@ -51,7 +51,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="px-5 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Shield className="h-3.5 w-3.5 text-gold" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">Secretariat Portal</span>
+            <span className="text-sm font-medium uppercase tracking-wider text-white/50">Secretariat Portal</span>
           </div>
         </div>
 

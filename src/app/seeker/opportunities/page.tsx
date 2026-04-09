@@ -140,7 +140,7 @@ export default function SeekerOpportunitiesPage() {
                                   {parsedSummary.opportunity_type}
                                 </Badge>
                               )}
-                              <Badge variant={opp.type === "employment" ? "accent" : "warning"} className="text-[10px]">{opp.type}</Badge>
+                              <Badge variant={opp.type === "employment" ? "accent" : "warning"} className="text-xs">{opp.type}</Badge>
                               {opp.attachmentUrl && <FileText className="h-3.5 w-3.5 text-text-muted" />}
                               {parsedSummary && <Sparkles className="h-3.5 w-3.5 text-accent" />}
                             </div>
@@ -157,12 +157,12 @@ export default function SeekerOpportunitiesPage() {
 
                             <div className="flex items-center gap-4 mt-2">
                               {opp.postedDate && (
-                                <span className="flex items-center gap-1 text-[11px] text-text-muted">
+                                <span className="flex items-center gap-1 text-sm text-text-muted">
                                   <Calendar className="h-3 w-3" /> Posted {new Date(opp.postedDate).toLocaleDateString()}
                                 </span>
                               )}
                               {opp.deadline && (
-                                <span className="flex items-center gap-1 text-[11px] text-text-muted">
+                                <span className="flex items-center gap-1 text-sm text-text-muted">
                                   <Calendar className="h-3 w-3" /> Due {new Date(opp.deadline).toLocaleDateString()}
                                 </span>
                               )}

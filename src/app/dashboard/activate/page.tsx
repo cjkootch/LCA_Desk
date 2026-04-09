@@ -106,7 +106,7 @@ function ActivateContent() {
                 Add Payment Method & Start Trial
               </Button>
 
-              <p className="text-[10px] text-text-muted text-center leading-relaxed">
+              <p className="text-xs text-text-muted text-center leading-relaxed">
                 By starting your trial, you agree to be charged $199/month after 30 days
                 unless you cancel. Secure payment processed by Stripe.
               </p>

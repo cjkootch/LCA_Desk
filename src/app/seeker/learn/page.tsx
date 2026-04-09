@@ -81,7 +81,7 @@ export default function LearnPage() {
                       Complete at least 2 courses to earn the <strong className="text-gold">"Certified"</strong> badge on your Talent Pool profile.
                       Certified candidates get a gold highlight that makes them visible to every contractor browsing for hires.
                     </p>
-                    <div className="flex items-center gap-4 mt-2 text-[11px] text-text-muted">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-text-muted">
                       <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Gold ring on your avatar</span>
                       <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> "Certified" badge next to your name</span>
                       <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Priority visibility</span>
@@ -101,37 +101,37 @@ export default function LearnPage() {
           <Card className="p-4 text-center bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
             <div className="flex items-center justify-center gap-1.5 mb-1">
               <Zap className="h-4 w-4 text-accent" />
-              <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">Level</span>
+              <span className="text-xs font-semibold text-accent uppercase tracking-wider">Level</span>
             </div>
             <p className="text-3xl font-bold text-accent">{level}</p>
-            <p className="text-[10px] text-text-muted">{xp} XP earned</p>
+            <p className="text-xs text-text-muted">{xp} XP earned</p>
           </Card>
 
           <Card className="p-4 text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
               <BookOpen className="h-4 w-4 text-text-muted" />
-              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Courses</span>
+              <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Courses</span>
             </div>
             <p className="text-3xl font-bold">{courseList.length}</p>
-            <p className="text-[10px] text-text-muted">{totalModules} modules total</p>
+            <p className="text-xs text-text-muted">{totalModules} modules total</p>
           </Card>
 
           <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent border-success/20">
             <div className="flex items-center justify-center gap-1.5 mb-1">
               <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-[10px] font-semibold text-success uppercase tracking-wider">Completed</span>
+              <span className="text-xs font-semibold text-success uppercase tracking-wider">Completed</span>
             </div>
             <p className="text-3xl font-bold text-success">{completedCourses}</p>
-            <p className="text-[10px] text-text-muted">{completedCourses === courseList.length && courseList.length > 0 ? "All done!" : `${courseList.length - completedCourses} remaining`}</p>
+            <p className="text-xs text-text-muted">{completedCourses === courseList.length && courseList.length > 0 ? "All done!" : `${courseList.length - completedCourses} remaining`}</p>
           </Card>
 
           <Card className="p-4 text-center bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
             <div className="flex items-center justify-center gap-1.5 mb-1">
               <Trophy className="h-4 w-4 text-gold" />
-              <span className="text-[10px] font-semibold text-gold uppercase tracking-wider">Badges</span>
+              <span className="text-xs font-semibold text-gold uppercase tracking-wider">Badges</span>
             </div>
             <p className="text-3xl font-bold text-gold">{badges.length}</p>
-            <p className="text-[10px] text-text-muted">{badges.length === 0 ? "Start a course" : "Earned"}</p>
+            <p className="text-xs text-text-muted">{badges.length === 0 ? "Start a course" : "Earned"}</p>
           </Card>
         </div>
 
@@ -155,7 +155,7 @@ export default function LearnPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-text-primary">{b.badgeLabel || b.courseTitle}</p>
-                      <p className="text-[10px] text-text-muted">Verified Certification</p>
+                      <p className="text-xs text-text-muted">Verified Certification</p>
                     </div>
                   </div>
                 ))}
@@ -190,7 +190,7 @@ export default function LearnPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="text-base font-semibold text-text-primary">{course.title}</h3>
                               {hasBadge && (
-                                <Badge variant="success" className="text-[10px] gap-0.5">
+                                <Badge variant="success" className="text-xs gap-0.5">
                                   <CheckCircle className="h-2.5 w-2.5" /> Completed
                                 </Badge>
                               )}

@@ -51,17 +51,17 @@ export default function SupplierTrainingPage() {
         <Card className="p-4 text-center">
           <Zap className="h-4 w-4 text-accent mx-auto mb-1" />
           <p className="text-2xl font-bold text-accent">{Math.floor(xp / 1000) + 1}</p>
-          <p className="text-[10px] text-text-muted">Level ({xp} XP)</p>
+          <p className="text-xs text-text-muted">Level ({xp} XP)</p>
         </Card>
         <Card className="p-4 text-center">
           <BookOpen className="h-4 w-4 text-text-muted mx-auto mb-1" />
           <p className="text-2xl font-bold">{courseList.length}</p>
-          <p className="text-[10px] text-text-muted">Courses</p>
+          <p className="text-xs text-text-muted">Courses</p>
         </Card>
         <Card className="p-4 text-center">
           <Trophy className="h-4 w-4 text-gold mx-auto mb-1" />
           <p className="text-2xl font-bold text-gold">{completedCourses}</p>
-          <p className="text-[10px] text-text-muted">Badges Earned</p>
+          <p className="text-xs text-text-muted">Badges Earned</p>
         </Card>
       </div>
 
@@ -79,7 +79,7 @@ export default function SupplierTrainingPage() {
                   <Trophy className={cn("h-5 w-5", b.badgeColor === "gold" ? "text-gold" : b.badgeColor === "success" ? "text-success" : "text-accent")} />
                   <div>
                     <p className="text-sm font-bold text-text-primary">{b.badgeLabel}</p>
-                    <p className="text-[10px] text-text-muted">Verified</p>
+                    <p className="text-xs text-text-muted">Verified</p>
                   </div>
                 </div>
               ))}
@@ -107,7 +107,7 @@ export default function SupplierTrainingPage() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-base font-semibold text-text-primary">{course.title}</h3>
-                            {hasBadge && <Badge variant="success" className="text-[10px] gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Completed</Badge>}
+                            {hasBadge && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Completed</Badge>}
                           </div>
                           <p className="text-sm text-text-secondary mt-1">{course.description}</p>
                           <div className="flex flex-wrap gap-3 mt-3 text-xs text-text-muted">

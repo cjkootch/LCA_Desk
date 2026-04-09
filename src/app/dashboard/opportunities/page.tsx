@@ -370,7 +370,7 @@ export default function OpportunitiesPage() {
                               "text-right px-3 py-1.5 rounded-lg",
                               isExpired ? "bg-bg-primary" : isClosingSoon ? "bg-danger-light" : "bg-warning-light"
                             )}>
-                              <p className="text-[10px] text-text-muted uppercase tracking-wider">
+                              <p className="text-xs text-text-muted uppercase tracking-wider">
                                 {isExpired ? "Closed" : "Closes"}
                               </p>
                               <p className={cn(
@@ -380,7 +380,7 @@ export default function OpportunitiesPage() {
                                 {new Date(opp.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                               </p>
                               {!isExpired && daysUntilDeadline !== null && (
-                                <p className={cn("text-[10px] font-medium", isClosingSoon ? "text-danger" : "text-text-muted")}>
+                                <p className={cn("text-xs font-medium", isClosingSoon ? "text-danger" : "text-text-muted")}>
                                   {daysUntilDeadline} day{daysUntilDeadline !== 1 ? "s" : ""} left
                                 </p>
                               )}

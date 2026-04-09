@@ -64,7 +64,7 @@ export default function SupplierResponsesPage() {
                   <p className="text-sm font-medium text-text-primary">{r.opportunity?.title || "Unknown"}</p>
                   <p className="text-xs text-text-muted">{r.opportunity?.company} · {r.opportunity?.type}</p>
                   {r.coverNote && <p className="text-xs text-text-secondary mt-1 italic truncate">{r.coverNote}</p>}
-                  <p className="text-[10px] text-text-muted mt-1">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ""}</p>
+                  <p className="text-xs text-text-muted mt-1">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ""}</p>
                 </div>
                 <Badge variant={STATUS_VARIANT[r.status || "interested"]} className="shrink-0">{r.status}</Badge>
               </CardContent>

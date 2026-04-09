@@ -183,7 +183,7 @@ export function CancelAccount({ hasPaidPlan, userType }: CancelAccountProps) {
                     <X className="h-4 w-4 text-warning shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Cancel subscription only</p>
-                      <p className="text-[10px] text-text-muted font-normal">Keep your account and data. Downgrade to free.</p>
+                      <p className="text-xs text-text-muted font-normal">Keep your account and data. Downgrade to free.</p>
                     </div>
                   </Button>
                 )}
@@ -193,7 +193,7 @@ export function CancelAccount({ hasPaidPlan, userType }: CancelAccountProps) {
                   <Trash2 className="h-4 w-4 text-danger shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-danger">Delete my account</p>
-                    <p className="text-[10px] text-text-muted font-normal">Permanently delete account, data, and all history.</p>
+                    <p className="text-xs text-text-muted font-normal">Permanently delete account, data, and all history.</p>
                   </div>
                 </Button>
               </div>

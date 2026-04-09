@@ -219,7 +219,7 @@ export default function ExportPage() {
                 return (
                   <div key={step} className="flex-1 flex flex-col items-center">
                     <div className={`h-2 w-full rounded-full ${isComplete ? "bg-accent" : "bg-border-light"}`} />
-                    <span className={`text-[10px] mt-1 ${isComplete ? "text-accent font-medium" : "text-text-muted"}`}>
+                    <span className={`text-xs mt-1 ${isComplete ? "text-accent font-medium" : "text-text-muted"}`}>
                       {labels[i]}
                     </span>
                   </div>
@@ -244,7 +244,7 @@ export default function ExportPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Button onClick={() => handleExport("excel")} loading={exporting === "excel"} variant="outline" className="w-full gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-success" /> Excel Report <span className="text-[10px] text-text-muted ml-auto">v4.1</span>
+                  <FileSpreadsheet className="h-4 w-4 text-success" /> Excel Report <span className="text-xs text-text-muted ml-auto">v4.1</span>
                 </Button>
                 <Button onClick={() => handleExport("pdf")} loading={exporting === "pdf"} variant="outline" className="w-full gap-2">
                   <FileText className="h-4 w-4 text-danger" /> Narrative PDF
@@ -253,11 +253,11 @@ export default function ExportPage() {
                   <FileText className="h-4 w-4 text-accent" /> Notice of Submission
                 </Button>
               </div>
-              <p className="text-[10px] text-text-muted mt-2">The Notice of Submission is required by the Secretariat. Submit it alongside your Comparative Analysis Report and Excel template.</p>
+              <p className="text-xs text-text-muted mt-2">The Notice of Submission is required by the Secretariat. Submit it alongside your Comparative Analysis Report and Excel template.</p>
 
               {/* Submission email format */}
               <div className="bg-bg-primary rounded-lg p-3 mt-3 text-xs font-mono text-text-secondary space-y-1">
-                <p className="text-[10px] font-sans font-semibold text-text-primary mb-1.5">Email Submission Format</p>
+                <p className="text-xs font-sans font-semibold text-text-primary mb-1.5">Email Submission Format</p>
                 <p><span className="text-text-muted">To:</span> localcontent@nre.gov.gy</p>
                 <p><span className="text-text-muted">Subject:</span> Local Content Half-Yearly Report – {periodLabel} {period?.fiscalYear} – {entityName}</p>
                 <p className="text-text-muted mt-1">Attachments:</p>
@@ -281,7 +281,7 @@ export default function ExportPage() {
                       <Button onClick={handleSendForReview} variant="outline" className="w-full gap-2">
                         <Clock className="h-4 w-4" /> Send for Review
                       </Button>
-                      <p className="text-[11px] text-text-muted mt-1.5">Mark this report as ready for internal review before submission.</p>
+                      <p className="text-sm text-text-muted mt-1.5">Mark this report as ready for internal review before submission.</p>
                     </div>
                   )}
                   {period.status === "in_review" && (
@@ -289,7 +289,7 @@ export default function ExportPage() {
                       <Button onClick={handleApprove} variant="outline" className="w-full gap-2">
                         <CheckCircle className="h-4 w-4" /> Approve for Submission
                       </Button>
-                      <p className="text-[11px] text-text-muted mt-1.5">Confirm this report has been reviewed and is ready to submit.</p>
+                      <p className="text-sm text-text-muted mt-1.5">Confirm this report has been reviewed and is ready to submit.</p>
                     </div>
                   )}
                 </CardContent>
@@ -326,7 +326,7 @@ export default function ExportPage() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-text-primary">Submit via LCA Desk</p>
-                        <Badge variant="success" className="text-[9px] mt-0.5">Recommended</Badge>
+                        <Badge variant="success" className="text-xs mt-0.5">Recommended</Badge>
                       </div>
                     </div>
                     <ul className="text-xs text-text-secondary space-y-1 mt-3">
@@ -352,7 +352,7 @@ export default function ExportPage() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-text-primary">Export & Email</p>
-                        <Badge variant="default" className="text-[9px] mt-0.5">Traditional</Badge>
+                        <Badge variant="default" className="text-xs mt-0.5">Traditional</Badge>
                       </div>
                     </div>
                     <ul className="text-xs text-text-secondary space-y-1 mt-3">
@@ -381,7 +381,7 @@ export default function ExportPage() {
                         <Mail className="h-4 w-4" /> Compose Submission Email
                       </Button>
                     </a>
-                    <p className="text-[10px] text-text-muted">
+                    <p className="text-xs text-text-muted">
                       Remember to attach both downloaded files before sending.
                     </p>
                   </div>
@@ -535,7 +535,7 @@ export default function ExportPage() {
                           entry.action === "approve" ? "accent" :
                           entry.action === "delete" ? "danger" :
                           "default"
-                        } className="text-[9px] px-1.5">
+                        } className="text-xs px-1.5">
                           {entry.action}
                         </Badge>
                         {" "}

@@ -72,7 +72,7 @@ export default function TrialExpiredPage() {
 
           {/* Professional */}
           <div className="rounded-2xl border-2 border-accent bg-bg-card p-6 flex flex-col relative shadow-lg shadow-accent/10">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-white text-[11px] font-semibold uppercase tracking-wider px-3 py-1 rounded-full">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-white text-sm font-semibold uppercase tracking-wider px-3 py-1 rounded-full">
               What you had in your trial
             </span>
             <div className="mb-4">

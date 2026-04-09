@@ -139,7 +139,7 @@ export default function TalentPoolPage() {
                             <p className="text-sm font-medium text-text-primary truncate">
                               {isPro ? c.userName : `${(c.userName || "").split(" ")[0]} ${(c.userName || "").split(" ")[1]?.charAt(0) || ""}.`}
                             </p>
-                            {c.badges?.length >= 2 && <Badge variant="gold" className="text-[8px] gap-0.5 shrink-0"><Trophy className="h-2 w-2" /> Certified</Badge>}
+                            {c.badges?.length >= 2 && <Badge variant="gold" className="text-[11px] gap-0.5 shrink-0"><Trophy className="h-2 w-2" /> Certified</Badge>}
                           </div>
                           {c.headline && <p className="text-xs text-text-secondary truncate">{c.headline}</p>}
                           {!c.headline && c.currentJobTitle && <p className="text-xs text-text-secondary">{c.currentJobTitle}</p>}
@@ -147,20 +147,20 @@ export default function TalentPoolPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {c.isGuyanese && <Badge variant="success" className="text-[10px]">Guyanese</Badge>}
-                        {c.employmentCategory && <Badge variant="default" className="text-[10px]">{c.employmentCategory}</Badge>}
+                        {c.isGuyanese && <Badge variant="success" className="text-xs">Guyanese</Badge>}
+                        {c.employmentCategory && <Badge variant="default" className="text-xs">{c.employmentCategory}</Badge>}
                         {c.badges?.map((b: string) => (
-                          <Badge key={b} variant="gold" className="text-[10px] gap-0.5"><Trophy className="h-2.5 w-2.5" />{b}</Badge>
+                          <Badge key={b} variant="gold" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" />{b}</Badge>
                         ))}
-                        {c.yearsExperience && <Badge variant="default" className="text-[10px]">{c.yearsExperience}yr exp</Badge>}
+                        {c.yearsExperience && <Badge variant="default" className="text-xs">{c.yearsExperience}yr exp</Badge>}
                       </div>
 
                       {c.skills?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {c.skills.slice(0, 5).map((s: string) => (
-                            <span key={s} className="text-[10px] bg-bg-primary text-text-secondary px-1.5 py-0.5 rounded">{s}</span>
+                            <span key={s} className="text-xs bg-bg-primary text-text-secondary px-1.5 py-0.5 rounded">{s}</span>
                           ))}
-                          {c.skills.length > 5 && <span className="text-[10px] text-text-muted">+{c.skills.length - 5}</span>}
+                          {c.skills.length > 5 && <span className="text-xs text-text-muted">+{c.skills.length - 5}</span>}
                         </div>
                       )}
                     </div>

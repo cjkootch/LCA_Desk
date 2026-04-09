@@ -98,7 +98,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
         {NAV_SECTIONS.map((section, si) => (
           <div key={si} className={si > 0 ? "pt-3" : ""}>
             {section.label && (
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text-muted">
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-sidebar-text-muted">
                 {section.label}
               </p>
             )}
@@ -154,7 +154,7 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
             <Crown className="h-4 w-4 text-gold" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-sidebar-text">Upgrade to {getPlan(planCode).code === "lite" ? "Professional" : "Enterprise"}</p>
-              <p className="text-[10px] text-sidebar-text-muted">{getPlan(planCode).displayName} plan</p>
+              <p className="text-xs text-sidebar-text-muted">{getPlan(planCode).displayName} plan</p>
             </div>
             <Sparkles className="h-3.5 w-3.5 text-gold" />
           </Link>

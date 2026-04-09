@@ -166,12 +166,12 @@ export default function SecretariatDashboardPage() {
       {/* Secondary metrics row */}
       {analytics && (
         <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalSubmissions}</p><p className="text-[9px] text-text-muted font-medium">Submissions</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.uniqueFilers}</p><p className="text-[9px] text-text-muted font-medium">Companies</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-[9px] text-text-muted font-medium">Trained</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-[9px] text-text-muted font-medium">Training Days</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-[9px] text-text-muted font-medium">Capacity $</p></Card>
-          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-[9px] text-text-muted font-medium">GY Suppliers</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalSubmissions}</p><p className="text-xs text-text-muted font-medium">Submissions</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.uniqueFilers}</p><p className="text-xs text-text-muted font-medium">Companies</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingParticipants.toLocaleString()}</p><p className="text-xs text-text-muted font-medium">Trained</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{analytics.totalTrainingDays.toLocaleString()}</p><p className="text-xs text-text-muted font-medium">Training Days</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-text-primary">{formatCurrency(analytics.totalCapacitySpend)}</p><p className="text-xs text-text-muted font-medium">Capacity $</p></Card>
+          <Card className="p-3 text-center border-0 shadow-sm"><p className="text-xl font-bold text-success">{analytics.guyaneseSupplierCount}</p><p className="text-xs text-text-muted font-medium">GY Suppliers</p></Card>
         </div>
       )}
 
@@ -220,14 +220,14 @@ export default function SecretariatDashboardPage() {
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-text-primary">{s.entityName}</h3>
                       <p className="text-xs text-text-muted">{s.tenantName} · {s.companyType} · {s.reportType.replace(/_/g, " ").toUpperCase()} FY{s.fiscalYear}</p>
-                      <p className="text-[10px] text-text-muted mt-0.5">
+                      <p className="text-xs text-text-muted mt-0.5">
                         Submitted {s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
                         {s.submissionMethod === "platform" && " · via LCA Desk"}
                         {ack?.referenceNumber && ` · Ref: ${ack.referenceNumber}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {s.submissionMethod === "platform" && <Badge variant="accent" className="text-[9px]">Platform</Badge>}
+                      {s.submissionMethod === "platform" && <Badge variant="accent" className="text-xs">Platform</Badge>}
                       {ackCfg ? <Badge variant={ackCfg.variant}>{ackCfg.label}</Badge> : <Badge variant="warning">Pending</Badge>}
                       <Eye className="h-4 w-4 text-text-muted" />
                     </div>
@@ -261,9 +261,9 @@ export default function SecretariatDashboardPage() {
                   <div className="flex justify-between"><span className="text-text-muted">Period</span><span>{detailData.period.periodStart} to {detailData.period.periodEnd}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Submitted</span><span>{detailData.period.submittedAt ? new Date(detailData.period.submittedAt).toLocaleString() : "—"}</span></div>
                   <div className="flex justify-between"><span className="text-text-muted">Method</span><span>{
-                    detailData.submissionMethod === "platform" ? <Badge variant="accent" className="text-[9px]">LCA Desk Platform</Badge> :
-                    detailData.submissionMethod === "upload" ? <Badge variant="accent" className="text-[9px]">File Upload</Badge> :
-                    <Badge variant="default" className="text-[9px]">Email</Badge>
+                    detailData.submissionMethod === "platform" ? <Badge variant="accent" className="text-xs">LCA Desk Platform</Badge> :
+                    detailData.submissionMethod === "upload" ? <Badge variant="accent" className="text-xs">File Upload</Badge> :
+                    <Badge variant="default" className="text-xs">Email</Badge>
                   }</span></div>
                   {detailData.attester && <div className="flex justify-between"><span className="text-text-muted">Attested by</span><span>{detailData.attester.name} ({detailData.attester.email})</span></div>}
                   {detailData.uploadedFile && (
@@ -281,21 +281,21 @@ export default function SecretariatDashboardPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <Card className="p-3 text-center">
                     <p className={cn("text-xl font-bold", detailData.metrics.lcRate >= 50 ? "text-success" : "text-danger")}>{detailData.metrics.lcRate}%</p>
-                    <p className="text-[10px] text-text-muted">LC Rate</p>
+                    <p className="text-xs text-text-muted">LC Rate</p>
                   </Card>
                   <Card className="p-3 text-center">
                     <p className={cn("text-xl font-bold", detailData.metrics.employmentPct >= 60 ? "text-success" : "text-danger")}>{detailData.metrics.employmentPct}%</p>
-                    <p className="text-[10px] text-text-muted">GY Employment</p>
+                    <p className="text-xs text-text-muted">GY Employment</p>
                   </Card>
                   <Card className="p-3 text-center">
                     <p className="text-xl font-bold">{formatCurrency(detailData.metrics.totalExpenditure)}</p>
-                    <p className="text-[10px] text-text-muted">Total Spend</p>
+                    <p className="text-xs text-text-muted">Total Spend</p>
                   </Card>
                 </div>
 
                 {/* Employment breakdown */}
                 <Card><CardContent className="p-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Employment by Category</p>
+                  <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Employment by Category</p>
                   {[
                     { key: "managerial", label: "Managerial", min: 75 },
                     { key: "technical", label: "Technical", min: 60 },
@@ -316,7 +316,7 @@ export default function SecretariatDashboardPage() {
                 </CardContent></Card>
 
                 {/* Record summary */}
-                <div className="flex flex-wrap gap-3 text-[11px] text-text-muted">
+                <div className="flex flex-wrap gap-3 text-sm text-text-muted">
                   <span>{detailData.metrics.expenditureRecords} expenditure records</span>
                   <span>·</span>
                   <span>{detailData.metrics.employmentRecords} employment records</span>
@@ -329,7 +329,7 @@ export default function SecretariatDashboardPage() {
                 {/* Attestation */}
                 {detailData.period.attestation && (
                   <div className="bg-accent-light rounded-lg p-3 border border-accent/20">
-                    <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Attestation</p>
+                    <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-1">Attestation</p>
                     <p className="text-xs text-text-secondary italic">{detailData.period.attestation}</p>
                   </div>
                 )}
@@ -337,10 +337,10 @@ export default function SecretariatDashboardPage() {
                 {/* History */}
                 {detailData.history.length > 1 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1">Filing History</p>
+                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Filing History</p>
                     <div className="flex gap-1.5 flex-wrap">
                       {detailData.history.map((h: { id: string; reportType: string; fiscalYear: number }) => (
-                        <Badge key={h.id} variant={h.id === detailData.period.id ? "accent" : "default"} className="text-[10px]">
+                        <Badge key={h.id} variant={h.id === detailData.period.id ? "accent" : "default"} className="text-xs">
                           {h.reportType.replace(/_/g, " ")} {h.fiscalYear}
                         </Badge>
                       ))}
@@ -488,7 +488,7 @@ export default function SecretariatDashboardPage() {
                           {amendmentItems.map((item, idx) => (
                             <div key={idx} className="bg-bg-primary rounded-lg p-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-medium text-text-muted">Item {idx + 1}</span>
+                                <span className="text-xs font-medium text-text-muted">Item {idx + 1}</span>
                                 {amendmentItems.length > 1 && (
                                   <button onClick={() => removeAmendmentItem(idx)} className="text-text-muted hover:text-danger">
                                     <Trash2 className="h-3 w-3" />
@@ -514,7 +514,7 @@ export default function SecretariatDashboardPage() {
                           <textarea className="w-full h-14 px-3 py-2 rounded-lg bg-bg-primary border border-border text-xs focus:outline-none focus:ring-2 focus:ring-accent resize-none" value={amendmentSummary} onChange={e => setAmendmentSummary(e.target.value)} placeholder="Overall summary of required amendments..." />
 
                           <div>
-                            <label className="text-[10px] text-text-muted font-medium">Response Deadline</label>
+                            <label className="text-xs text-text-muted font-medium">Response Deadline</label>
                             <Input type="date" value={amendmentDeadline} onChange={e => setAmendmentDeadline(e.target.value)} className="text-xs mt-1" />
                           </div>
 
@@ -539,10 +539,10 @@ export default function SecretariatDashboardPage() {
                           <Card key={a.id} className={cn(a.status === "pending" ? "border-warning/30" : a.status === "resolved" ? "border-success/30" : "")}>
                             <CardContent className="p-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <Badge variant={a.status === "pending" ? "warning" : a.status === "resolved" ? "success" : "default"} className="text-[10px]">
+                                <Badge variant={a.status === "pending" ? "warning" : a.status === "resolved" ? "success" : "default"} className="text-xs">
                                   {a.status}
                                 </Badge>
-                                <div className="flex items-center gap-1 text-[10px] text-text-muted">
+                                <div className="flex items-center gap-1 text-xs text-text-muted">
                                   <Clock className="h-3 w-3" />
                                   {a.responseDeadline ? `Due ${new Date(a.responseDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No deadline"}
                                 </div>
@@ -550,8 +550,8 @@ export default function SecretariatDashboardPage() {
                               <p className="text-xs text-text-secondary">{a.summary}</p>
                               <div className="space-y-1">
                                 {items.map((item, idx) => (
-                                  <div key={idx} className="flex items-start gap-2 text-[11px]">
-                                    <Badge variant={item.severity === "critical" ? "danger" : item.severity === "major" ? "warning" : "default"} className="text-[9px] shrink-0 mt-0.5">
+                                  <div key={idx} className="flex items-start gap-2 text-sm">
+                                    <Badge variant={item.severity === "critical" ? "danger" : item.severity === "major" ? "warning" : "default"} className="text-xs shrink-0 mt-0.5">
                                       {item.severity}
                                     </Badge>
                                     <div>
@@ -562,7 +562,7 @@ export default function SecretariatDashboardPage() {
                                 ))}
                               </div>
                               {a.createdAt && (
-                                <p className="text-[9px] text-text-muted">
+                                <p className="text-xs text-text-muted">
                                   Requested {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                   {a.respondedAt && ` · Responded ${new Date(a.respondedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                                 </p>

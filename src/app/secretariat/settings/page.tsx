@@ -97,7 +97,7 @@ export default function SecretariatSettingsPage() {
             <div>
               <label className="text-xs text-text-muted font-medium">Submission Email</label>
               <Input defaultValue="localcontent@nre.gov.gy" className="mt-1" disabled />
-              <p className="text-[10px] text-text-muted mt-1">Contact the platform administrator to change this.</p>
+              <p className="text-xs text-text-muted mt-1">Contact the platform administrator to change this.</p>
             </div>
             <div>
               <label className="text-xs text-text-muted font-medium">Office Name</label>

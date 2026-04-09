@@ -144,7 +144,7 @@ export function FloatingChatWidget({
           <IconComponent className="h-4 w-4" />
           <div>
             <p className="text-sm font-semibold">{title}</p>
-            <p className="text-[10px] text-white/70">{subtitle}</p>
+            <p className="text-xs text-white/70">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -163,7 +163,7 @@ export function FloatingChatWidget({
           <div className="text-center py-6">
             <IconComponent className="h-8 w-8 text-accent mx-auto mb-3 opacity-50" />
             <p className="text-sm font-medium text-text-primary mb-1">Ask anything</p>
-            <p className="text-[11px] text-text-muted mb-4">{subtitle}</p>
+            <p className="text-sm text-text-muted mb-4">{subtitle}</p>
             <div className="space-y-1.5">
               {quickQuestions.map(q => (
                 <button key={q} onClick={() => sendMessage(q)}

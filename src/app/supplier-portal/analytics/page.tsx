@@ -55,22 +55,22 @@ export default function SupplierAnalyticsPage() {
         <Card className="p-4 text-center">
           <Eye className="h-5 w-5 text-accent mx-auto mb-1" />
           <p className="text-2xl font-bold">{data.profileViews}</p>
-          <p className="text-[10px] text-text-muted">Profile Views</p>
+          <p className="text-xs text-text-muted">Profile Views</p>
         </Card>
         <Card className="p-4 text-center">
           <FileText className="h-5 w-5 text-gold mx-auto mb-1" />
           <p className="text-2xl font-bold">{data.totalResponses}</p>
-          <p className="text-[10px] text-text-muted">Total Responses</p>
+          <p className="text-xs text-text-muted">Total Responses</p>
         </Card>
         <Card className="p-4 text-center">
           <TrendingUp className="h-5 w-5 text-success mx-auto mb-1" />
           <p className="text-2xl font-bold text-success">{data.awardRate}%</p>
-          <p className="text-[10px] text-text-muted">Award Rate</p>
+          <p className="text-xs text-text-muted">Award Rate</p>
         </Card>
         <Card className="p-4 text-center">
           <BarChart3 className="h-5 w-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-bold">{data.byMonth.length}</p>
-          <p className="text-[10px] text-text-muted">Active Months</p>
+          <p className="text-xs text-text-muted">Active Months</p>
         </Card>
       </div>
 
@@ -108,7 +108,7 @@ export default function SupplierAnalyticsPage() {
                 const height = Math.max((count / maxCount) * 100, 8);
                 return (
                   <div key={month} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-accent">{count}</span>
+                    <span className="text-xs font-bold text-accent">{count}</span>
                     <div className="w-full rounded-t bg-accent/60" style={{ height: `${height}%` }} />
                     <span className="text-[7px] text-text-muted">{month.slice(5)}</span>
                   </div>

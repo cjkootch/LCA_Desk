@@ -134,7 +134,7 @@ export default function AdminPage() {
               <div className="flex justify-between"><span className="text-text-muted">Job Postings</span><span className="font-medium">{data.content.jobs}</span></div>
               <div className="flex justify-between"><span className="text-text-muted">Applications</span><span className="font-medium">{data.content.applications}</span></div>
               <div className="border-t border-border-light pt-2 mt-2">
-                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Scraped Data</p>
+                <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Scraped Data</p>
                 <div className="flex justify-between"><span className="text-text-muted">LCS Register</span><span className="font-medium">{data.scraped.register}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">Opportunities</span><span className="font-medium">{data.scraped.opportunities}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">LCS Jobs</span><span className="font-medium">{data.scraped.lcsJobs}</span></div>
@@ -154,10 +154,10 @@ export default function AdminPage() {
               <div className="flex items-end gap-1" style={{ height: "120px" }}>
                 {signupDays.map(([day, count]) => (
                   <div key={day} className="flex-1 flex flex-col items-center justify-end gap-0.5">
-                    <span className="text-[9px] text-text-muted">{count}</span>
+                    <span className="text-xs text-text-muted">{count}</span>
                     <div className="w-full bg-accent rounded-t min-h-[2px]"
                       style={{ height: `${(count / maxSignups) * 100}px` }} />
-                    <span className="text-[8px] text-text-muted">{day.slice(8)}</span>
+                    <span className="text-[11px] text-text-muted">{day.slice(8)}</span>
                   </div>
                 ))}
               </div>
@@ -180,10 +180,10 @@ export default function AdminPage() {
                       <p className="text-text-muted">{u.email}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant={u.userRole?.includes("filer") ? "accent" : u.userRole?.includes("job_seeker") ? "default" : "success"} className="text-[9px]">
+                      <Badge variant={u.userRole?.includes("filer") ? "accent" : u.userRole?.includes("job_seeker") ? "default" : "success"} className="text-xs">
                         {u.userRole?.includes("filer") ? "Filer" : u.userRole?.includes("job_seeker") ? "Seeker" : "Supplier"}
                       </Badge>
-                      <span className="text-text-muted text-[10px]">
+                      <span className="text-text-muted text-xs">
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                       </span>
                     </div>
@@ -206,12 +206,12 @@ export default function AdminPage() {
                       <p className="text-text-primary">
                         <span className="font-medium">{a.userName || "System"}</span>
                         {" "}
-                        <Badge variant={a.action === "submit" ? "success" : a.action === "delete" ? "danger" : "default"} className="text-[9px]">{a.action}</Badge>
+                        <Badge variant={a.action === "submit" ? "success" : a.action === "delete" ? "danger" : "default"} className="text-xs">{a.action}</Badge>
                         {" "}
                         <span className="text-text-muted">{a.entityType.replace(/_/g, " ")}</span>
                       </p>
                     </div>
-                    <span className="text-text-muted text-[10px] shrink-0">
+                    <span className="text-text-muted text-xs shrink-0">
                       {a.createdAt ? new Date(a.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
                     </span>
                   </div>
@@ -246,19 +246,19 @@ export default function AdminPage() {
                       <tr key={t.id} className="border-b border-border-light">
                         <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
                         <td className="py-2 px-3">
-                          <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-[10px]">
+                          <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
                             {t.plan || "lite"}
                           </Badge>
                         </td>
                         <td className="py-2 px-3">
-                          {trialActive && <Badge variant="accent" className="text-[10px]">Active</Badge>}
-                          {trialExpired && !t.stripeSubscriptionId && <Badge variant="danger" className="text-[10px]">Expired</Badge>}
-                          {!t.trialEndsAt && <span className="text-text-muted text-[10px]">—</span>}
+                          {trialActive && <Badge variant="accent" className="text-xs">Active</Badge>}
+                          {trialExpired && !t.stripeSubscriptionId && <Badge variant="danger" className="text-xs">Expired</Badge>}
+                          {!t.trialEndsAt && <span className="text-text-muted text-xs">—</span>}
                         </td>
                         <td className="py-2 px-3">
                           {t.stripeSubscriptionId
-                            ? <Badge variant="success" className="text-[10px]">Paying</Badge>
-                            : <span className="text-text-muted text-[10px]">Free</span>
+                            ? <Badge variant="success" className="text-xs">Paying</Badge>
+                            : <span className="text-text-muted text-xs">Free</span>
                           }
                         </td>
                         <td className="py-2 px-3 text-text-muted text-xs">

@@ -38,7 +38,7 @@ export function DemoBanner() {
       {/* Spacer to push page content below the fixed banner */}
       <div className="h-7" />
       <div
-        className="fixed top-0 left-0 right-0 z-[100] bg-gold text-white text-center py-1 text-[11px] font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
+        className="fixed top-0 left-0 right-0 z-[100] bg-gold text-white text-center py-1 text-sm font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
         onClick={() => setExpanded(!expanded)}
       >
         <span>DEMO MODE — {label}</span>
@@ -96,7 +96,7 @@ export function DemoBanner() {
             )}
           </div>
 
-          <div className="px-4 py-2 bg-bg-primary border-t border-border text-[10px] text-text-muted">
+          <div className="px-4 py-2 bg-bg-primary border-t border-border text-xs text-text-muted">
             This panel reads from plans.ts — updates automatically when rules change.
           </div>
         </div>

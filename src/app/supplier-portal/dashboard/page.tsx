@@ -69,32 +69,32 @@ export default function SupplierDashboard() {
         <Card className="p-4 text-center">
           <Shield className={cn("h-5 w-5 mx-auto mb-1", isExpired ? "text-danger" : isExpiring ? "text-warning" : "text-success")} />
           <p className="text-lg font-bold font-mono">{profile.lcsCertId || "—"}</p>
-          <Badge variant={isExpired ? "danger" : profile.lcsVerified ? "success" : "warning"} className="text-[9px]">
+          <Badge variant={isExpired ? "danger" : profile.lcsVerified ? "success" : "warning"} className="text-xs">
             {isExpired ? "Expired" : profile.lcsVerified ? "LCS Verified" : profile.lcsCertId ? "Pending" : "Not Registered"}
           </Badge>
         </Card>
         <Card className="p-4 text-center">
           <Briefcase className="h-5 w-5 text-accent mx-auto mb-1" />
           <p className="text-2xl font-bold">{matchingOpportunities.length}</p>
-          <p className="text-[10px] text-text-muted">Matching Opportunities</p>
+          <p className="text-xs text-text-muted">Matching Opportunities</p>
         </Card>
         <Card className="p-4 text-center">
           <FileText className="h-5 w-5 text-gold mx-auto mb-1" />
           <p className="text-2xl font-bold">{stats.totalResponses}</p>
-          <p className="text-[10px] text-text-muted">Total Responses</p>
+          <p className="text-xs text-text-muted">Total Responses</p>
         </Card>
         <Card className="p-4 text-center">
           {isPro ? (
             <>
               <Eye className="h-5 w-5 text-accent mx-auto mb-1" />
               <p className="text-2xl font-bold">{profile.profileViews}</p>
-              <p className="text-[10px] text-text-muted">Profile Views</p>
+              <p className="text-xs text-text-muted">Profile Views</p>
             </>
           ) : (
             <>
               <Lock className="h-5 w-5 text-text-muted mx-auto mb-1" />
               <p className="text-lg font-bold text-text-muted">Upgrade</p>
-              <p className="text-[10px] text-text-muted">Profile Analytics</p>
+              <p className="text-xs text-text-muted">Profile Analytics</p>
             </>
           )}
         </Card>
@@ -116,10 +116,10 @@ export default function SupplierDashboard() {
                   <div key={opp.id} className="flex items-center justify-between p-2 rounded-lg bg-bg-primary">
                     <div className="min-w-0 flex-1 mr-2">
                       <p className="text-xs font-medium text-text-primary truncate">{opp.title}</p>
-                      <p className="text-[10px] text-text-muted">{opp.company} · {opp.deadline ? `Due ${opp.deadline}` : "No deadline"}</p>
+                      <p className="text-xs text-text-muted">{opp.company} · {opp.deadline ? `Due ${opp.deadline}` : "No deadline"}</p>
                     </div>
                     {opp.responded ? (
-                      <Badge variant="success" className="text-[9px] shrink-0">Responded</Badge>
+                      <Badge variant="success" className="text-xs shrink-0">Responded</Badge>
                     ) : (
                       <Link href="/supplier-portal/opportunities"><ArrowRight className="h-3.5 w-3.5 text-accent shrink-0" /></Link>
                     )}
@@ -146,14 +146,14 @@ export default function SupplierDashboard() {
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <p className={cn("text-xl font-bold", s.color)}>{s.count}</p>
-                  <p className="text-[9px] text-text-muted">{s.label}</p>
+                  <p className="text-xs text-text-muted">{s.label}</p>
                 </div>
               ))}
             </div>
             {!isPro && recentResponses.length > 0 && (
               <div className="bg-bg-primary rounded-lg p-3 text-center">
                 <Lock className="h-4 w-4 text-text-muted mx-auto mb-1" />
-                <p className="text-[10px] text-text-muted">Upgrade to Pro to track individual responses</p>
+                <p className="text-xs text-text-muted">Upgrade to Pro to track individual responses</p>
               </div>
             )}
             {isPro && recentResponses.length > 0 && (
@@ -161,7 +161,7 @@ export default function SupplierDashboard() {
                 {recentResponses.map(r => (
                   <div key={r.id} className="flex items-center justify-between text-xs">
                     <span className="text-text-secondary truncate mr-2">{r.opportunityTitle}</span>
-                    <Badge variant={r.status === "awarded" ? "success" : r.status === "shortlisted" ? "gold" : "default"} className="text-[9px] shrink-0">{r.status}</Badge>
+                    <Badge variant={r.status === "awarded" ? "success" : r.status === "shortlisted" ? "gold" : "default"} className="text-xs shrink-0">{r.status}</Badge>
                   </div>
                 ))}
               </div>

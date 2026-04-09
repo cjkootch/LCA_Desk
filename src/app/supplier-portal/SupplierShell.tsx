@@ -46,7 +46,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="px-5 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Briefcase className="h-3.5 w-3.5 text-accent" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">Supplier Portal</span>
+            <span className="text-sm font-medium uppercase tracking-wider text-white/50">Supplier Portal</span>
           </div>
         </div>
 

@@ -47,7 +47,7 @@ export function SeekerSidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavi
 
       {/* Portal badge */}
       <div className="px-5 py-3 border-b border-white/10">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-text-muted">
+        <span className="text-sm font-medium uppercase tracking-wider text-sidebar-text-muted">
           Job Seeker Portal
         </span>
       </div>

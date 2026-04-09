@@ -285,7 +285,7 @@ export default function JobsPage() {
                           {posting.isPublic ? (
                             <Eye className="h-3.5 w-3.5 text-text-muted" />
                           ) : (
-                            <span className="flex items-center gap-1 text-[11px] text-text-muted">
+                            <span className="flex items-center gap-1 text-sm text-text-muted">
                               <EyeOff className="h-3.5 w-3.5" /> Private
                             </span>
                           )}
@@ -314,7 +314,7 @@ export default function JobsPage() {
 
                         <div className="flex items-center gap-4 mt-2">
                           {posting.applicationDeadline && (
-                            <span className={`flex items-center gap-1 text-[11px] ${
+                            <span className={`flex items-center gap-1 text-sm ${
                               deadlinePassed && isOpen ? "text-danger font-medium" : "text-text-muted"
                             }`}>
                               <Calendar className="h-3 w-3" />
@@ -323,7 +323,7 @@ export default function JobsPage() {
                             </span>
                           )}
                           {posting.createdAt && (
-                            <span className="text-[11px] text-text-muted">
+                            <span className="text-sm text-text-muted">
                               Posted {new Date(posting.createdAt).toLocaleDateString()}
                             </span>
                           )}
@@ -432,7 +432,7 @@ export default function JobsPage() {
                       <option key={e.id} value={e.id}>{e.legalName}</option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-text-muted mt-1">Link to an entity for employment reporting</p>
+                  <p className="text-sm text-text-muted mt-1">Link to an entity for employment reporting</p>
                 </div>
               )}
 
@@ -529,7 +529,7 @@ export default function JobsPage() {
                   value={form.guyanese_first_statement}
                   onChange={(e) => onFieldChange("guyanese_first_statement", e.target.value)}
                 />
-                <p className="text-[11px] text-text-muted mt-1">Required by Section 12 of the Local Content Act 2021</p>
+                <p className="text-sm text-text-muted mt-1">Required by Section 12 of the Local Content Act 2021</p>
               </div>
 
               <div className="flex items-center gap-2">

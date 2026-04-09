@@ -111,7 +111,7 @@ export default function AdminTicketsPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-                            <span className="text-[10px] text-text-muted capitalize">{ticket.priority} · {ticket.category}</span>
+                            <span className="text-xs text-text-muted capitalize">{ticket.priority} · {ticket.category}</span>
                           </div>
                           <h3 className="text-sm font-medium text-text-primary">{ticket.subject}</h3>
                           <p className="text-xs text-text-muted mt-0.5">
@@ -147,8 +147,8 @@ export default function AdminTicketsPage() {
                               <div key={r.id} className={cn("rounded-lg p-3", r.isAdmin ? "bg-accent-light border border-accent/20" : "bg-bg-primary")}>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-xs font-medium">{r.userName || "User"}</span>
-                                  {r.isAdmin && <Badge variant="accent" className="text-[9px]">Admin</Badge>}
-                                  <span className="text-[10px] text-text-muted">
+                                  {r.isAdmin && <Badge variant="accent" className="text-xs">Admin</Badge>}
+                                  <span className="text-xs text-text-muted">
                                     {r.createdAt ? new Date(r.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
                                   </span>
                                 </div>

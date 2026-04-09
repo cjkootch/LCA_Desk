@@ -212,13 +212,13 @@ function DemoContent() {
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-text-primary">{user.label}</h3>
                       {user.plan && (
-                        <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-[9px]">
+                        <Badge variant={user.plan === "pro" ? "accent" : user.plan === "enterprise" ? "danger" : "default"} className="text-xs">
                           {user.plan}
                         </Badge>
                       )}
                     </div>
                     <p className="text-xs text-text-secondary mt-0.5">{user.description}</p>
-                    <p className="text-[10px] text-text-muted mt-1 font-mono">{user.email}</p>
+                    <p className="text-xs text-text-muted mt-1 font-mono">{user.email}</p>
                   </div>
                   {signingIn === user.id && (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0" />

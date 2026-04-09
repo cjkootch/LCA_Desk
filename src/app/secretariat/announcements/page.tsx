@@ -233,7 +233,7 @@ export default function AnnouncementsPage() {
                       {statusBadge(isExpired && a.status !== "draft" ? "expired" : a.status)}
                     </div>
                     <p className="text-xs text-text-secondary line-clamp-2 mb-2">{a.body}</p>
-                    <div className="flex items-center gap-4 text-[10px] text-text-muted">
+                    <div className="flex items-center gap-4 text-xs text-text-muted">
                       <span className="flex items-center gap-1">
                         <Eye className="h-3 w-3" /> {formatTargetRoles(a.targetRoles)}
                       </span>
@@ -344,12 +344,12 @@ export default function AnnouncementsPage() {
               <div>
                 <label className="text-xs font-medium text-text-muted">Publish Date (optional)</label>
                 <Input type="datetime-local" value={publishAt} onChange={e => setPublishAt(e.target.value)} className="mt-1" />
-                <p className="text-[10px] text-text-muted mt-0.5">Leave empty to publish immediately</p>
+                <p className="text-xs text-text-muted mt-0.5">Leave empty to publish immediately</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-text-muted">Expiration Date (optional)</label>
                 <Input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className="mt-1" />
-                <p className="text-[10px] text-text-muted mt-0.5">Leave empty for no expiration</p>
+                <p className="text-xs text-text-muted mt-0.5">Leave empty for no expiration</p>
               </div>
             </div>
 

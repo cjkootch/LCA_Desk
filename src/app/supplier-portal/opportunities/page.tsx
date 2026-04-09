@@ -93,11 +93,11 @@ export default function SupplierOpportunities() {
                     </div>
                     <div className="flex items-center gap-3 text-xs text-text-muted">
                       <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{opp.company}</span>
-                      {opp.type && <Badge variant="default" className="text-[9px]">{opp.type}</Badge>}
-                      {opp.category && <Badge variant="accent" className="text-[9px]">{opp.category}</Badge>}
+                      {opp.type && <Badge variant="default" className="text-xs">{opp.type}</Badge>}
+                      {opp.category && <Badge variant="accent" className="text-xs">{opp.category}</Badge>}
                     </div>
                     {opp.deadline && (
-                      <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                      <p className="text-xs text-text-muted mt-1 flex items-center gap-1">
                         <Calendar className="h-3 w-3" /> Deadline: {opp.deadline}
                       </p>
                     )}

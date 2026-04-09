@@ -86,7 +86,7 @@ export default function ApplicationStatusPage() {
                             <div key={s} className={cn("flex-1 h-1.5 rounded-full", i <= currentIdx ? "bg-accent" : "bg-border")} />
                           ))}
                         </div>
-                        <div className="flex justify-between text-[9px] text-text-muted">
+                        <div className="flex justify-between text-xs text-text-muted">
                           <span>Submitted</span><span>Review</span><span>Sent to LCS</span><span>Approved</span>
                         </div>
                       </>

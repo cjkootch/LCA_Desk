@@ -242,7 +242,7 @@ export default function CompanyProfilePage() {
               {profile.procurementCategories?.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {profile.procurementCategories.map((c: string) => (
-                    <Badge key={c} variant="default" className="text-[10px]">{c}</Badge>
+                    <Badge key={c} variant="default" className="text-xs">{c}</Badge>
                   ))}
                 </div>
               ) : (
@@ -250,10 +250,10 @@ export default function CompanyProfilePage() {
               )}
               {profile.employmentCategories?.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border-light">
-                  <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Employment</p>
+                  <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Employment</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.employmentCategories.map((c: string) => (
-                      <Badge key={c} variant="accent" className="text-[10px]">{c}</Badge>
+                      <Badge key={c} variant="accent" className="text-xs">{c}</Badge>
                     ))}
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export default function CompanyProfilePage() {
                   <div className="flex justify-between"><span className="text-text-muted">Certificate</span><span className="font-mono text-text-primary">{profile.lcsCertId}</span></div>
                 )}
                 {profile.lcsStatus && (
-                  <div className="flex justify-between"><span className="text-text-muted">Status</span><Badge variant={profile.lcsStatus === "Active" ? "success" : "danger"} className="text-[9px]">{profile.lcsStatus}</Badge></div>
+                  <div className="flex justify-between"><span className="text-text-muted">Status</span><Badge variant={profile.lcsStatus === "Active" ? "success" : "danger"} className="text-xs">{profile.lcsStatus}</Badge></div>
                 )}
                 {profile.lcsExpirationDate && (
                   <div className="flex justify-between"><span className="text-text-muted">Expires</span><span className="text-text-primary">{profile.lcsExpirationDate}</span></div>
@@ -282,10 +282,10 @@ export default function CompanyProfilePage() {
                 )}
                 {profile.lcsServiceCategories?.length > 0 && (
                   <div className="pt-2 border-t border-border-light">
-                    <p className="text-[10px] text-text-muted mb-1">Service Categories</p>
+                    <p className="text-xs text-text-muted mb-1">Service Categories</p>
                     <div className="flex flex-wrap gap-1">
                       {profile.lcsServiceCategories.map((c: string) => (
-                        <Badge key={c} variant="default" className="text-[9px]">{c}</Badge>
+                        <Badge key={c} variant="default" className="text-xs">{c}</Badge>
                       ))}
                     </div>
                   </div>
@@ -332,8 +332,8 @@ export default function CompanyProfilePage() {
                     <a key={o.id} href={o.sourceUrl || "#"} target="_blank" rel="noopener noreferrer"
                       className={cn("block border border-border-light rounded-lg p-3 hover:border-accent/30 hover:bg-accent-light/30 transition-colors cursor-pointer", isExpired && "opacity-50")}>
                       <div className="flex items-center gap-2 mb-1">
-                        {o.noticeType && <Badge variant="accent" className="text-[10px]">{o.noticeType}</Badge>}
-                        <Badge variant={isExpired ? "default" : "success"} className="text-[10px]">{isExpired ? "Closed" : "Active"}</Badge>
+                        {o.noticeType && <Badge variant="accent" className="text-xs">{o.noticeType}</Badge>}
+                        <Badge variant={isExpired ? "default" : "success"} className="text-xs">{isExpired ? "Closed" : "Active"}</Badge>
                         {summary && <Sparkles className="h-3 w-3 text-accent" />}
                       </div>
                       <p className="text-sm font-medium text-text-primary line-clamp-1">
@@ -342,7 +342,7 @@ export default function CompanyProfilePage() {
                       {summary?.scope_of_work && (
                         <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{summary.scope_of_work}</p>
                       )}
-                      <div className="flex gap-3 mt-1 text-[11px] text-text-muted">
+                      <div className="flex gap-3 mt-1 text-sm text-text-muted">
                         {o.deadline && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{o.deadline}</span>}
                         <span className="text-accent flex items-center gap-1">
                           <ExternalLink className="h-3 w-3" /> View Details
@@ -373,11 +373,11 @@ export default function CompanyProfilePage() {
                     <a key={j.id} href={j.sourceUrl || "#"} target="_blank" rel="noopener noreferrer"
                       className={cn("block border border-border-light rounded-lg p-3 hover:border-accent/30 hover:bg-accent-light/30 transition-colors cursor-pointer", isClosed && "opacity-50")}>
                       <div className="flex items-center gap-2 mb-1">
-                        {j.employmentCategory && <Badge variant="default" className="text-[10px]">{j.employmentCategory}</Badge>}
-                        <Badge variant={isClosed ? "default" : "success"} className="text-[10px]">{isClosed ? "Closed" : "Open"}</Badge>
+                        {j.employmentCategory && <Badge variant="default" className="text-xs">{j.employmentCategory}</Badge>}
+                        <Badge variant={isClosed ? "default" : "success"} className="text-xs">{isClosed ? "Closed" : "Open"}</Badge>
                       </div>
                       <p className="text-sm font-medium text-text-primary">{j.jobTitle}</p>
-                      <div className="flex gap-3 mt-1 text-[11px] text-text-muted">
+                      <div className="flex gap-3 mt-1 text-sm text-text-muted">
                         {j.location && <span>{j.location}</span>}
                         {j.closingDate && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{j.closingDate}</span>}
                         <span className="text-accent flex items-center gap-1">

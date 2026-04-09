@@ -77,7 +77,7 @@ export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
               </p>
               <p className="text-xs text-text-secondary mt-0.5 whitespace-pre-line">{a.body}</p>
               {a.authorName && (
-                <p className="text-[10px] text-text-muted mt-1">
+                <p className="text-xs text-text-muted mt-1">
                   — {a.authorName}, Local Content Secretariat
                 </p>
               )}

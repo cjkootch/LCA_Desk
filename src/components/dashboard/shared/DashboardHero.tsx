@@ -32,7 +32,7 @@ export function DashboardHero({
     <div className={cn("rounded-2xl bg-gradient-to-r p-6 sm:p-8 mb-6 text-white", gradient)}>
       {badge && (
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-semibold text-gold uppercase tracking-widest">{badge}</span>
+          <span className="text-xs font-semibold text-gold uppercase tracking-widest">{badge}</span>
         </div>
       )}
       <h1 className="text-2xl sm:text-3xl font-heading font-bold mb-1">{title}</h1>
@@ -45,9 +45,9 @@ export function DashboardHero({
         <div className={cn("grid gap-4 mt-6", kpis.length <= 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 lg:grid-cols-4")}>
           {kpis.map(kpi => (
             <div key={kpi.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className={cn("text-[10px] font-semibold uppercase tracking-wider mb-1", kpi.color || "text-white/70")}>{kpi.label}</p>
+              <p className={cn("text-xs font-semibold uppercase tracking-wider mb-1", kpi.color || "text-white/70")}>{kpi.label}</p>
               <p className="text-3xl font-bold">{kpi.value}</p>
-              {kpi.sublabel && <p className="text-[11px] text-white/50 mt-1">{kpi.sublabel}</p>}
+              {kpi.sublabel && <p className="text-sm text-white/50 mt-1">{kpi.sublabel}</p>}
             </div>
           ))}
         </div>

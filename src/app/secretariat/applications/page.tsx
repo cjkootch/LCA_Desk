@@ -90,12 +90,12 @@ export default function SecretariatApplicationsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 mb-6">
-        <Card className="p-3 text-center"><p className="text-xl font-bold">{apps.length}</p><p className="text-[10px] text-text-muted">Total</p></Card>
-        <Card className="p-3 text-center"><p className="text-xl font-bold text-warning">{pending.length}</p><p className="text-[10px] text-text-muted">Pending Review</p></Card>
-        <Card className="p-3 text-center"><p className="text-xl font-bold text-success">{apps.filter(a => a.status === "approved").length}</p><p className="text-[10px] text-text-muted">Approved</p></Card>
+        <Card className="p-3 text-center"><p className="text-xl font-bold">{apps.length}</p><p className="text-xs text-text-muted">Total</p></Card>
+        <Card className="p-3 text-center"><p className="text-xl font-bold text-warning">{pending.length}</p><p className="text-xs text-text-muted">Pending Review</p></Card>
+        <Card className="p-3 text-center"><p className="text-xl font-bold text-success">{apps.filter(a => a.status === "approved").length}</p><p className="text-xs text-text-muted">Approved</p></Card>
         <Card className="p-3 text-center">
           <p className="text-xl font-bold text-accent">${apps.reduce((s, a) => s + ((a.amountPaid || 0) / 100), 0).toLocaleString()}</p>
-          <p className="text-[10px] text-text-muted">Revenue</p>
+          <p className="text-xs text-text-muted">Revenue</p>
         </Card>
       </div>
 
@@ -169,7 +169,7 @@ export default function SecretariatApplicationsPage() {
 
                 {detail.applicationType === "business" && (
                   <div className="bg-bg-primary rounded-lg p-3 space-y-1.5">
-                    <p className="text-[10px] font-semibold text-text-muted uppercase">Business Details</p>
+                    <p className="text-xs font-semibold text-text-muted uppercase">Business Details</p>
                     {detail.businessRegistrationNumber && <div className="flex justify-between"><span className="text-text-muted">Reg #</span><span className="font-mono">{detail.businessRegistrationNumber}</span></div>}
                     {detail.businessAddress && <div className="flex justify-between"><span className="text-text-muted">Address</span><span>{detail.businessAddress}</span></div>}
                     {detail.businessEmail && <div className="flex justify-between"><span className="text-text-muted">Email</span><span>{detail.businessEmail}</span></div>}
@@ -178,7 +178,7 @@ export default function SecretariatApplicationsPage() {
                       <div>
                         <span className="text-text-muted">Categories:</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {detail.serviceCategories.map((c: string) => <Badge key={c} variant="default" className="text-[9px]">{c}</Badge>)}
+                          {detail.serviceCategories.map((c: string) => <Badge key={c} variant="default" className="text-xs">{c}</Badge>)}
                         </div>
                       </div>
                     )}
@@ -188,7 +188,7 @@ export default function SecretariatApplicationsPage() {
                 {/* Documents */}
                 {detail.documents && (
                   <div className="bg-bg-primary rounded-lg p-3">
-                    <p className="text-[10px] font-semibold text-text-muted uppercase mb-2">Documents</p>
+                    <p className="text-xs font-semibold text-text-muted uppercase mb-2">Documents</p>
                     {Object.entries(JSON.parse(detail.documents)).map(([key, val]: [string, unknown]) => {
                       const doc = val as { name: string; key: string };
                       return (
@@ -217,7 +217,7 @@ export default function SecretariatApplicationsPage() {
                     )}
 
                     <div>
-                      <label className="text-[10px] text-text-muted font-medium">LCS Certificate ID (required to approve)</label>
+                      <label className="text-xs text-text-muted font-medium">LCS Certificate ID (required to approve)</label>
                       <Input value={lcsCertId} onChange={e => setLcsCertId(e.target.value)} placeholder="LCSR-XXXXXXXX" className="mt-1 font-mono text-xs" />
                     </div>
 

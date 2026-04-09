@@ -63,7 +63,7 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-text-muted">LC Rate</p>
                     {lcTrend !== 0 && (
-                      <span className={cn("flex items-center text-[10px] font-medium", lcTrend > 0 ? "text-success" : "text-danger")}>
+                      <span className={cn("flex items-center text-xs font-medium", lcTrend > 0 ? "text-success" : "text-danger")}>
                         {lcTrend > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                         {Math.abs(lcTrend).toFixed(1)}%
                       </span>
@@ -134,7 +134,7 @@ export default function ReportsPage() {
                         <span className="text-text-secondary">{p.period}</span>
                         <div className="flex items-center gap-2">
                           <span className={cn("font-bold", p.lcRate >= 50 ? "text-success" : "text-warning")}>{p.lcRate}%</span>
-                          <Badge variant={p.status === "submitted" ? "success" : "default"} className="text-[9px]">
+                          <Badge variant={p.status === "submitted" ? "success" : "default"} className="text-xs">
                             {p.status || "draft"}
                           </Badge>
                         </div>
@@ -143,7 +143,7 @@ export default function ReportsPage() {
                         <div className={cn("rounded-full h-2", p.lcRate >= 50 ? "bg-success" : "bg-warning")}
                           style={{ width: `${Math.min(p.lcRate, 100)}%` }} />
                       </div>
-                      <p className="text-[10px] text-text-muted mt-0.5">{formatCurrency(p.totalExpenditure)} total</p>
+                      <p className="text-xs text-text-muted mt-0.5">{formatCurrency(p.totalExpenditure)} total</p>
                     </div>
                   ))}
                 </div>
@@ -174,7 +174,7 @@ export default function ReportsPage() {
                           <span className="text-text-secondary">{cat.category}</span>
                           <div className="flex items-center gap-2">
                             <span className={cn("font-bold", passing ? "text-success" : "text-danger")}>{cat.pct}%</span>
-                            <span className="text-[10px] text-text-muted">(min {min}%)</span>
+                            <span className="text-xs text-text-muted">(min {min}%)</span>
                             {passing ? <CheckCircle className="h-3.5 w-3.5 text-success" /> : <AlertTriangle className="h-3.5 w-3.5 text-danger" />}
                           </div>
                         </div>
@@ -183,7 +183,7 @@ export default function ReportsPage() {
                             style={{ width: `${Math.min(cat.pct, 100)}%` }} />
                           <div className="absolute top-0 h-3 w-0.5 bg-text-muted" style={{ left: `${min}%` }} />
                         </div>
-                        <p className="text-[10px] text-text-muted mt-0.5">{cat.guyanese} of {cat.total} employees</p>
+                        <p className="text-xs text-text-muted mt-0.5">{cat.guyanese} of {cat.total} employees</p>
                       </div>
                     );
                   })}
@@ -213,7 +213,7 @@ export default function ReportsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-text-primary truncate">{s.name}</p>
                       </div>
-                      {s.guyanese && <Badge variant="success" className="text-[9px] px-1">LCS</Badge>}
+                      {s.guyanese && <Badge variant="success" className="text-xs px-1">LCS</Badge>}
                       <span className="text-text-primary font-medium shrink-0">{formatCurrency(s.amount)}</span>
                     </div>
                   ))}

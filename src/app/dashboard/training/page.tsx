@@ -84,10 +84,10 @@ export default function TrainingPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-semibold text-text-primary">{course.title}</h3>
-                  {hasBadge && <Badge variant="success" className="text-[9px] gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Done</Badge>}
+                  {hasBadge && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Done</Badge>}
                 </div>
                 <p className="text-xs text-text-secondary mt-1 line-clamp-2">{course.description}</p>
-                <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-text-muted">
+                <div className="flex flex-wrap gap-2 mt-2 text-xs text-text-muted">
                   <span className="flex items-center gap-0.5"><BookOpen className="h-3 w-3" /> {course.moduleCount}</span>
                   {course.estimatedMinutes && <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {course.estimatedMinutes}m</span>}
                   <span className="flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +500 XP</span>
@@ -111,27 +111,27 @@ export default function TrainingPage() {
           <Card className="p-4 text-center bg-gradient-to-br from-accent/5 to-transparent border-accent/20">
             <Zap className="h-4 w-4 text-accent mx-auto mb-1" />
             <p className="text-2xl font-bold text-accent">{level}</p>
-            <p className="text-[10px] text-text-muted">Level</p>
+            <p className="text-xs text-text-muted">Level</p>
           </Card>
           <Card className="p-4 text-center">
             <BookOpen className="h-4 w-4 text-text-muted mx-auto mb-1" />
             <p className="text-2xl font-bold">{courseList.length}</p>
-            <p className="text-[10px] text-text-muted">Courses</p>
+            <p className="text-xs text-text-muted">Courses</p>
           </Card>
           <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent border-success/20">
             <CheckCircle className="h-4 w-4 text-success mx-auto mb-1" />
             <p className="text-2xl font-bold text-success">{completedCourses}</p>
-            <p className="text-[10px] text-text-muted">Completed</p>
+            <p className="text-xs text-text-muted">Completed</p>
           </Card>
           <Card className="p-4 text-center bg-gradient-to-br from-gold/5 to-transparent border-gold/20">
             <Trophy className="h-4 w-4 text-gold mx-auto mb-1" />
             <p className="text-2xl font-bold text-gold">{badges.length}</p>
-            <p className="text-[10px] text-text-muted">Badges</p>
+            <p className="text-xs text-text-muted">Badges</p>
           </Card>
           <Card className="p-4 text-center">
             <Users className="h-4 w-4 text-text-muted mx-auto mb-1" />
             <p className="text-2xl font-bold">{teamMembers.length}</p>
-            <p className="text-[10px] text-text-muted">Team</p>
+            <p className="text-xs text-text-muted">Team</p>
           </Card>
         </div>
 
@@ -170,7 +170,7 @@ export default function TrainingPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-text-primary">{b.badgeLabel}</p>
-                      <p className="text-[9px] text-text-muted">Certified</p>
+                      <p className="text-xs text-text-muted">Certified</p>
                     </div>
                   </div>
                 ))}
@@ -196,10 +196,10 @@ export default function TrainingPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-text-primary">{m.user.name || "Team Member"}</p>
-                        <p className="text-[10px] text-text-muted">{m.user.email}</p>
+                        <p className="text-xs text-text-muted">{m.user.email}</p>
                       </div>
                     </div>
-                    <Badge variant="default" className="text-[10px]">Not Started</Badge>
+                    <Badge variant="default" className="text-xs">Not Started</Badge>
                   </div>
                 ))}
               </div>

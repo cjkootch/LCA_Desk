@@ -101,10 +101,10 @@ function SupplierAutoSuggest({ value, onChange, onTypeChange, error }: {
             >
               <p className="text-sm font-medium text-text-primary">{s.legalName}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                {s.certId && <span className="text-[10px] font-mono text-accent">{s.certId}</span>}
-                {s.status && <Badge variant={s.status.toLowerCase() === "active" ? "success" : "default"} className="text-[9px]">{s.status}</Badge>}
+                {s.certId && <span className="text-xs font-mono text-accent">{s.certId}</span>}
+                {s.status && <Badge variant={s.status.toLowerCase() === "active" ? "success" : "default"} className="text-xs">{s.status}</Badge>}
                 {s.serviceCategories?.slice(0, 2).map((c: string) => (
-                  <span key={c} className="text-[10px] text-text-muted">{c}</span>
+                  <span key={c} className="text-xs text-text-muted">{c}</span>
                 ))}
               </div>
             </button>
@@ -302,7 +302,7 @@ export function ExpenditureForm({
       <Input label="Notes" id="notes" {...register("notes")} placeholder="Optional notes or context" />
 
       <div className="flex items-center justify-between pt-4">
-        <p className="text-[10px] text-text-muted">Enter to save · Escape to cancel</p>
+        <p className="text-xs text-text-muted">Enter to save · Escape to cancel</p>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
           {batchMode && onSaveAndNext && (

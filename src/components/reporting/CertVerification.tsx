@@ -127,10 +127,10 @@ export function CertVerification({ certId, onCompanyFound }: CertVerificationPro
           {company.serviceCategories && company.serviceCategories.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {company.serviceCategories.slice(0, 3).map((cat, i) => (
-                <Badge key={i} variant="default" className="text-[10px]">{cat}</Badge>
+                <Badge key={i} variant="default" className="text-xs">{cat}</Badge>
               ))}
               {company.serviceCategories.length > 3 && (
-                <span className="text-[10px] text-text-muted">+{company.serviceCategories.length - 3} more</span>
+                <span className="text-xs text-text-muted">+{company.serviceCategories.length - 3} more</span>
               )}
             </div>
           )}

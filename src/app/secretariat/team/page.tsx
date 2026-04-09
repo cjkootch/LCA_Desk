@@ -68,7 +68,7 @@ export default function SecretariatTeamPage() {
             ]} className="w-32" />
             <Button onClick={handleInvite} loading={inviting}><Plus className="h-4 w-4 mr-1" /> Add</Button>
           </div>
-          <p className="text-[11px] text-text-muted mt-2">
+          <p className="text-sm text-text-muted mt-2">
             User must have an LCA Desk account. Viewers can see submissions. Reviewers can acknowledge. Admins can manage the team.
           </p>
         </CardContent>
@@ -90,7 +90,7 @@ export default function SecretariatTeamPage() {
                     <p className="text-xs text-text-muted">{m.userEmail}</p>
                   </div>
                 </div>
-                <Badge variant={m.role === "admin" ? "accent" : m.role === "reviewer" ? "default" : "default"} className="text-[10px]">
+                <Badge variant={m.role === "admin" ? "accent" : m.role === "reviewer" ? "default" : "default"} className="text-xs">
                   {m.role}
                 </Badge>
               </div>

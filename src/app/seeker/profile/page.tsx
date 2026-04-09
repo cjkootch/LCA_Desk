@@ -237,7 +237,7 @@ export default function SeekerProfilePage() {
                 ) : (
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-sm font-medium text-text-primary">{nationality || "—"}</p>
-                    {isGuyanese && <Badge variant="success" className="text-[10px]">Guyanese</Badge>}
+                    {isGuyanese && <Badge variant="success" className="text-xs">Guyanese</Badge>}
                   </div>
                 )}
               </div>
@@ -366,12 +366,12 @@ export default function SeekerProfilePage() {
                       <Trophy className={`h-4 w-4 ${b.badgeColor === "gold" ? "text-gold" : b.badgeColor === "success" ? "text-success" : "text-accent"}`} />
                       <div>
                         <p className="text-xs font-medium text-text-primary">{b.badgeLabel}</p>
-                        <p className="text-[9px] text-text-muted">Earned {new Date(b.earnedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
+                        <p className="text-xs text-text-muted">Earned {new Date(b.earnedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-text-muted mt-2">Badges are visible to employers browsing the Talent Pool.</p>
+                <p className="text-xs text-text-muted mt-2">Badges are visible to employers browsing the Talent Pool.</p>
               </CardContent>
             </Card>
           )}

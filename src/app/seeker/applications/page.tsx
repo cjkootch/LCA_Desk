@@ -117,7 +117,7 @@ export default function SeekerApplicationsPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-text-primary">{app.jobTitle}</p>
                             <p className="text-xs text-text-secondary">{app.companyName}</p>
-                            <p className="text-[11px] text-text-muted mt-1">
+                            <p className="text-sm text-text-muted mt-1">
                               Applied {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("en-US", {
                                 month: "short", day: "numeric", year: "numeric",
                               }) : ""}
@@ -152,8 +152,8 @@ export default function SeekerApplicationsPage() {
                         })}
                       </div>
                       <div className="flex justify-between mt-1">
-                        <span className="text-[10px] text-text-muted">Received</span>
-                        <span className="text-[10px] text-text-muted">Selected</span>
+                        <span className="text-xs text-text-muted">Received</span>
+                        <span className="text-xs text-text-muted">Selected</span>
                       </div>
                     </CardContent>
                   </Card>

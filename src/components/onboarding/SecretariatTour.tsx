@@ -23,7 +23,7 @@ const STEPS: TourStep[] = [
         ].map(a => (
           <div key={a.label} className="rounded-lg bg-bg-primary p-2 text-center">
             <p className="text-xs font-semibold text-gold">{a.label}</p>
-            <p className="text-[9px] text-text-muted">{a.desc}</p>
+            <p className="text-xs text-text-muted">{a.desc}</p>
           </div>
         ))}
       </div>

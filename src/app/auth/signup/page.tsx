@@ -221,7 +221,7 @@ function SignupContent() {
               </form>
 
               {role === "filer" && (
-                <p className="text-[10px] text-text-muted text-center mt-3">
+                <p className="text-xs text-text-muted text-center mt-3">
                   30-day Professional trial. Cancel anytime — you won't be charged during the trial.
                 </p>
               )}

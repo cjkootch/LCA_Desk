@@ -75,7 +75,7 @@ export function CapacityTable({ records, onDelete, onEdit, onInlineUpdate, onPas
   return (
     <div ref={tableRef} tabIndex={0} className="outline-none">
       {onPasteRows && !locked && (
-        <div className="flex items-center gap-1.5 text-[10px] text-text-muted mb-2 px-1">
+        <div className="flex items-center gap-1.5 text-xs text-text-muted mb-2 px-1">
           <ClipboardPaste className="h-3 w-3" />
           <span>Tip: Copy rows from Excel and paste here to bulk-add records</span>
         </div>
@@ -108,7 +108,7 @@ export function CapacityTable({ records, onDelete, onEdit, onInlineUpdate, onPas
               </TableCell>
               <TableCell className="text-xs">{r.category || "—"}</TableCell>
               <TableCell>
-                {r.participant_type ? <Badge variant="default" className="text-[9px]">{r.participant_type}</Badge> : "—"}
+                {r.participant_type ? <Badge variant="default" className="text-xs">{r.participant_type}</Badge> : "—"}
               </TableCell>
               <TableCell className="text-right">
                 {onInlineUpdate ? (

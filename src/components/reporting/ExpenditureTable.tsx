@@ -207,7 +207,7 @@ export function ExpenditureTable({ records, onDelete, onEdit, onInlineUpdate, on
   return (
     <div ref={tableRef} tabIndex={0} className="outline-none">
       {onPasteRows && !locked && (
-        <div className="flex items-center gap-1.5 text-[10px] text-text-muted mb-2 px-1">
+        <div className="flex items-center gap-1.5 text-xs text-text-muted mb-2 px-1">
           <ClipboardPaste className="h-3 w-3" />
           <span>Tip: Copy rows from Excel and paste here to bulk-add records</span>
         </div>
@@ -240,16 +240,16 @@ export function ExpenditureTable({ records, onDelete, onEdit, onInlineUpdate, on
                   <span className="text-sm">{r.supplier_name}</span>
                 )}
                 {!r.supplier_certificate_id && (r as unknown as Record<string, string>).supplier_type === "Non-Guyanese" && !r.sole_source_code && (
-                  <Badge variant="warning" className="text-[8px] ml-1">Sole Source?</Badge>
+                  <Badge variant="warning" className="text-[11px] ml-1">Sole Source?</Badge>
                 )}
               </TableCell>
               <TableCell>
                 {(r as unknown as Record<string, string>).supplier_type === "Guyanese" || r.supplier_certificate_id ? (
-                  <Badge variant="success" className="text-[9px]">GY</Badge>
+                  <Badge variant="success" className="text-xs">GY</Badge>
                 ) : (r as unknown as Record<string, string>).supplier_type === "Non-Guyanese" ? (
-                  <Badge variant="default" className="text-[9px]">Intl</Badge>
+                  <Badge variant="default" className="text-xs">Intl</Badge>
                 ) : (
-                  <span className="text-text-muted text-[10px]">—</span>
+                  <span className="text-text-muted text-xs">—</span>
                 )}
               </TableCell>
               <TableCell>

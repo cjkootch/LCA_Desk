@@ -60,19 +60,19 @@ export default function CompliancePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-text-primary">{data.stats.total}</p>
-            <p className="text-[10px] text-text-muted">Expected Filers</p>
+            <p className="text-xs text-text-muted">Expected Filers</p>
           </Card>
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-success">{data.stats.submitted}</p>
-            <p className="text-[10px] text-text-muted">Submitted</p>
+            <p className="text-xs text-text-muted">Submitted</p>
           </Card>
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-danger">{data.stats.overdue}</p>
-            <p className="text-[10px] text-text-muted">Overdue</p>
+            <p className="text-xs text-text-muted">Overdue</p>
           </Card>
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-warning">{data.stats.notStarted}</p>
-            <p className="text-[10px] text-text-muted">Not Filed</p>
+            <p className="text-xs text-text-muted">Not Filed</p>
           </Card>
         </div>
       )}
@@ -103,7 +103,7 @@ export default function CompliancePage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {f.submittedAt && (
-                      <span className="text-[10px] text-text-muted">
+                      <span className="text-xs text-text-muted">
                         {new Date(f.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}

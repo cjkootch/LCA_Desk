@@ -105,15 +105,15 @@ export default function ContractorProfilePage() {
             <CardContent>
               <div className="flex flex-wrap gap-1.5">
                 {profile.categories.length > 0 ? profile.categories.map((c: string) => (
-                  <Badge key={c} variant="default" className="text-[10px]">{c}</Badge>
+                  <Badge key={c} variant="default" className="text-xs">{c}</Badge>
                 )) : <p className="text-xs text-text-muted">No categories identified</p>}
               </div>
               {profile.noticeTypes.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border-light">
-                  <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Notice Types</p>
+                  <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Notice Types</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.noticeTypes.map((t: string) => (
-                      <Badge key={t} variant="accent" className="text-[10px]">{t}</Badge>
+                      <Badge key={t} variant="accent" className="text-xs">{t}</Badge>
                     ))}
                   </div>
                 </div>
@@ -173,8 +173,8 @@ export default function ContractorProfilePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 mb-1">
-                          {n.noticeType && <Badge variant="accent" className="text-[10px]">{n.noticeType}</Badge>}
-                          <Badge variant={n.status === "active" ? "success" : "default"} className="text-[10px]">
+                          {n.noticeType && <Badge variant="accent" className="text-xs">{n.noticeType}</Badge>}
+                          <Badge variant={n.status === "active" ? "success" : "default"} className="text-xs">
                             {n.status || "active"}
                           </Badge>
                           {summary && <Sparkles className="h-3 w-3 text-accent" />}
@@ -187,12 +187,12 @@ export default function ContractorProfilePage() {
                         )}
                         <div className="flex gap-3 mt-1">
                           {n.postedDate && (
-                            <span className="text-[11px] text-text-muted flex items-center gap-1">
+                            <span className="text-sm text-text-muted flex items-center gap-1">
                               <Calendar className="h-3 w-3" /> {n.postedDate}
                             </span>
                           )}
                           {n.deadline && (
-                            <span className="text-[11px] text-text-muted flex items-center gap-1">
+                            <span className="text-sm text-text-muted flex items-center gap-1">
                               <Clock className="h-3 w-3" /> Due: {n.deadline}
                             </span>
                           )}
