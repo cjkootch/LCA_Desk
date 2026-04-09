@@ -92,13 +92,15 @@ function SignupContent() {
   const config = role ? roleConfig[role] : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-      <div className="w-full max-w-md p-8">
-        <div className="flex justify-center mb-8">
-          <Image src="/logo-full.png" alt="LCA Desk" width={200} height={60} priority />
+    <div className="min-h-screen flex">
+      {/* Left — Form */}
+      <div className="flex-1 flex flex-col bg-[#FAF8F5] min-h-screen">
+        <div className="p-6">
+          <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} priority />
         </div>
 
-        <div className="rounded-xl border border-border bg-bg-card p-8 shadow-sm">
+        <div className="flex-1 flex items-center justify-center px-6 pb-12">
+          <div className="w-full max-w-md">
           {/* Step 0: Choose role */}
           {step === 0 && (
             <>
@@ -233,6 +235,19 @@ function SignupContent() {
             <Link href="/auth/login" className="text-accent hover:underline font-medium">
               Sign in
             </Link>
+          </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right — Brand panel */}
+      <div className="hidden lg:flex flex-1 bg-[var(--slate-dark)] items-center justify-center relative overflow-hidden">
+        <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-accent/5" />
+        <div className="absolute bottom-32 left-16 w-40 h-40 rounded-full bg-gold/5" />
+        <div className="text-center z-10 px-12">
+          <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
+          <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
+            AI-powered local content compliance for Guyana&apos;s petroleum sector
           </p>
         </div>
       </div>

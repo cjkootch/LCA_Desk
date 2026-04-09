@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,14 +16,12 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const role = searchParams.get("role");
   const redirect = searchParams.get("redirect");
   const registered = searchParams.get("registered");
 
-  // Determine where to send user after login based on role
   const getPostLoginPath = () => {
     if (redirect) return redirect;
     if (role === "job_seeker") return "/seeker/dashboard";
@@ -59,76 +57,86 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-      <div className="w-full max-w-md p-8">
-        <div className="flex justify-center mb-8">
-          <Image src="/logo-full.png" alt="LCA Desk" width={200} height={60} priority />
+    <div className="min-h-screen flex">
+      {/* Left — Form */}
+      <div className="flex-1 flex flex-col bg-[#FAF8F5] min-h-screen">
+        <div className="p-6">
+          <Image src="/logo-full.png" alt="LCA Desk" width={140} height={42} priority />
         </div>
 
-        {registered && (
-          <div className="rounded-lg border border-success/30 bg-success-light p-4 mb-4 text-center">
-            <p className="text-sm font-medium text-success">Account created successfully!</p>
-            <p className="text-xs text-text-secondary mt-1">Sign in to get started.</p>
-          </div>
-        )}
+        <div className="flex-1 flex items-center justify-center px-6 pb-12">
+          <div className="w-full max-w-sm">
+            {registered && (
+              <div className="rounded-lg border border-success/30 bg-success-light p-4 mb-6 text-center">
+                <p className="text-sm font-medium text-success">Account created successfully!</p>
+                <p className="text-xs text-text-secondary mt-1">Sign in to get started.</p>
+              </div>
+            )}
 
-        <div className="rounded-xl border border-border bg-bg-card p-8 shadow-sm">
-          <h1 className="text-2xl font-heading font-bold text-text-primary text-center mb-2">
-            Welcome{registered ? "" : " back"}
-          </h1>
-          <p className="text-sm text-text-secondary text-center mb-4">
-            {role && roleLabels[role]
-              ? `Sign in to your ${roleLabels[role]} portal`
-              : "Sign in to your compliance dashboard"}
-          </p>
-          {role && roleLabels[role] && (
-            <div className="flex justify-center mb-4">
-              <Badge variant="accent">{roleLabels[role]}</Badge>
+            <h1 className="text-3xl font-heading font-bold text-text-primary mb-8">
+              Sign in
+            </h1>
+
+            {role && roleLabels[role] && (
+              <div className="mb-6">
+                <Badge variant="accent">{roleLabels[role]} Portal</Badge>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="text-sm text-text-secondary font-medium mb-1.5 block">Email</label>
+                <Input
+                  type="email"
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12 bg-white border-border"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-text-secondary font-medium mb-1.5 block">Password</label>
+                <PasswordInput
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 bg-white border-border"
+                />
+              </div>
+              <Button type="submit" className="w-full h-12 text-base font-semibold" loading={loading}>
+                Sign in
+              </Button>
+            </form>
+
+            <div className="flex items-center justify-center gap-3 mt-6 text-sm">
+              <Link href="/auth/forgot-password" className="text-accent hover:text-accent-hover font-medium">
+                Forgot password
+              </Link>
+              <span className="text-text-muted">|</span>
+              <Link href="/auth/signup" className="text-accent hover:text-accent-hover font-medium">
+                Create account
+              </Link>
             </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              placeholder="you@company.com"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <PasswordInput
-              id="password"
-              label="Password"
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <Button type="submit" className="w-full" loading={loading}>
-              Sign In
-            </Button>
-          </form>
-
-          <p className="text-sm text-text-secondary text-center mt-6">
-            Don&apos;t have an account?{" "}
-            <Link href="/auth/signup" className="text-accent hover:text-accent-hover font-medium">
-              Sign up
-            </Link>
-          </p>
+          </div>
         </div>
+      </div>
 
-        <div className="text-center mt-6 space-y-2">
-          <p className="text-xs text-text-muted">
-            <a href="https://lcadesk.com" className="hover:text-text-secondary transition-colors">
-              Learn more about LCA Desk →
-            </a>
+      {/* Right — Brand panel */}
+      <div className="hidden lg:flex flex-1 bg-[var(--slate-dark)] items-center justify-center relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-accent/5" />
+        <div className="absolute bottom-32 left-16 w-40 h-40 rounded-full bg-gold/5" />
+        <div className="absolute top-1/4 left-1/3 w-24 h-24 rounded-full bg-white/5" />
+
+        <div className="text-center z-10 px-12">
+          <Image src="/logo-white-lca.png" alt="LCA Desk" width={240} height={72} priority className="mx-auto mb-8 opacity-90" />
+          <p className="text-white/50 text-lg font-light max-w-xs mx-auto leading-relaxed">
+            AI-powered local content compliance for Guyana&apos;s petroleum sector
           </p>
-          <a href="/demo" className="text-xs text-border hover:text-text-muted transition-colors">
-            ·
-          </a>
         </div>
       </div>
     </div>
