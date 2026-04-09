@@ -82,7 +82,7 @@ export function SeekerSidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavi
       {/* User menu */}
       <div className="border-t border-white/10 px-3 py-4">
         <div className="flex items-center gap-3 px-3 py-2">
-          <Link href="/seeker/profile" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+          <Link href="/seeker/settings" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-sidebar-text text-sm font-bold shrink-0">
               {profile?.full_name?.charAt(0) || "U"}
             </div>

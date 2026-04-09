@@ -82,13 +82,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (token as any).isSuperAdmin = user.isSuperAdmin ?? false;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (token as any).userRole = (user as any).userRole ?? "filer";
+      }
+      // Handle session updates (e.g. name change from profile settings)
+      if (trigger === "update" && session?.name) {
+        token.name = session.name;
       }
       return token;
     },

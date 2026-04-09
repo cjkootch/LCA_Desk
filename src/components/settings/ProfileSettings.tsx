@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ProfileSettings() {
+  const { update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -56,6 +58,8 @@ export function ProfileSettings() {
     setSaving(true);
     try {
       await updateUserSettings({ name, phone, linkedinUrl, twitterUrl, websiteUrl });
+      // Update the session so sidebar reflects new name immediately
+      await updateSession({ name });
       toast.success("Profile updated");
     } catch { toast.error("Failed to save"); }
     setSaving(false);

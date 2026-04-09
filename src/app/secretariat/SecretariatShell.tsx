@@ -71,13 +71,15 @@ function Shell({ children }: { children: React.ReactNode }) {
 
         <div className="border-t border-white/10 px-3 py-4">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold shrink-0">
-              {profile?.full_name?.charAt(0) || "S"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{profile?.full_name || "User"}</p>
-              <p className="text-xs text-white/50 truncate">{profile?.email || ""}</p>
-            </div>
+            <Link href="/secretariat/settings" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                {profile?.full_name?.charAt(0) || "S"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{profile?.full_name || "User"}</p>
+                <p className="text-xs text-white/50 truncate">{profile?.email || ""}</p>
+              </div>
+            </Link>
             <button onClick={signOut} className="text-white/50 hover:text-red-300 transition-colors shrink-0">
               <LogOut className="h-4 w-4" />
             </button>
