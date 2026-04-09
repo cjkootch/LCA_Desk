@@ -38,6 +38,7 @@ import {
   courseModules,
   userCourseProgress,
   secretariatMembers,
+  secretariatOffices,
   submissionAcknowledgments,
   amendmentRequests,
   supplierResponses,
