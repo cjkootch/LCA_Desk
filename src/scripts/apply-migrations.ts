@@ -39,6 +39,7 @@ async function run() {
     `ALTER TABLE supplier_profiles ADD COLUMN IF NOT EXISTS profile_views integer DEFAULT 0`,
     `ALTER TABLE supplier_profiles ADD COLUMN IF NOT EXISTS responses_this_month integer DEFAULT 0`,
     `ALTER TABLE supplier_profiles ADD COLUMN IF NOT EXISTS responses_reset_at timestamp`,
+    `ALTER TABLE supplier_profiles ADD COLUMN IF NOT EXISTS logo_url text`,
   ];
 
   for (const q of migrations) {

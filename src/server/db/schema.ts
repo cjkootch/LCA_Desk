@@ -830,6 +830,7 @@ export const supplierProfiles = pgTable(
     responsesThisMonth: integer("responses_this_month").default(0),
     responsesResetAt: timestamp("responses_reset_at"),
     featuredUntil: timestamp("featured_until"),
+    logoUrl: text("logo_url"),
     profileVisible: boolean("profile_visible").default(true),
     country: text("country").default("GY"),
     createdAt: timestamp("created_at").defaultNow(),

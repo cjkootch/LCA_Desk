@@ -70,32 +70,42 @@ export default function SupplierDirectoryPage() {
       ) : !data || data.suppliers.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-sm text-text-muted">No suppliers found.</CardContent></Card>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {data.suppliers.map((s: any) => {
             const expired = isExpired(s.expirationDate);
+            const initial = (s.legalName || "?").charAt(0).toUpperCase();
             return (
-              <Card key={s.id} className={cn("hover:border-accent/20 transition-colors cursor-pointer", expired && "opacity-70")} onClick={() => setSelected(s)}>
-                <CardContent className="p-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-semibold text-text-primary truncate">{s.legalName}</p>
-                      {s.tradingName && <span className="text-xs text-text-muted shrink-0">t/a {s.tradingName}</span>}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-text-muted">
-                      {s.certId && <span className="font-mono">{s.certId}</span>}
-                      {s.serviceCategories?.slice(0, 2).map((c: string) => <Badge key={c} variant="default" className="text-xs">{c}</Badge>)}
-                      {(s.serviceCategories?.length || 0) > 2 && <span>+{s.serviceCategories.length - 2}</span>}
-                    </div>
+              <Card key={s.id} className={cn("hover:shadow-lg transition-all cursor-pointer overflow-hidden group", expired && "opacity-60")} onClick={() => setSelected(s)}>
+                {/* Cover */}
+                <div className={cn("h-14 relative",
+                  expired ? "bg-gradient-to-r from-danger/10 via-danger/5 to-bg-primary"
+                  : "bg-gradient-to-r from-gold/15 via-gold/5 to-accent/5"
+                )} />
+                {/* Logo / Initial */}
+                <div className="px-4 -mt-7 relative">
+                  <div className={cn("h-14 w-14 rounded-lg flex items-center justify-center border-4 border-white shadow-sm mx-auto overflow-hidden",
+                    expired ? "bg-bg-primary" : "bg-gold/10"
+                  )}>
+                    <span className={cn("text-lg font-bold", expired ? "text-text-muted" : "text-gold")}>{initial}</span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                </div>
+                <CardContent className="pt-2 pb-4 px-4 text-center">
+                  <p className="text-sm font-semibold text-text-primary truncate">{s.legalName}</p>
+                  {s.tradingName && <p className="text-xs text-text-muted truncate">t/a {s.tradingName}</p>}
+                  <p className="text-xs text-accent font-mono mt-0.5">{s.certId || "—"}</p>
+                  <div className="flex justify-center gap-1 mt-2 min-h-[1.5rem]">
                     {expired ? (
-                      <Badge variant="danger" className="text-xs"><AlertTriangle className="h-3 w-3 mr-0.5" />Expired</Badge>
-                    ) : s.status === "Active" ? (
-                      <Badge variant="success" className="text-xs"><CheckCircle className="h-3 w-3 mr-0.5" />Active</Badge>
+                      <Badge variant="danger" className="text-xs"><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />Expired</Badge>
                     ) : (
-                      <Badge variant="default" className="text-xs">{s.status || "Unknown"}</Badge>
+                      <Badge variant="success" className="text-xs"><CheckCircle className="h-2.5 w-2.5 mr-0.5" />{s.status || "Active"}</Badge>
                     )}
                   </div>
+                  {s.serviceCategories?.length > 0 && (
+                    <p className="text-xs text-text-muted mt-1.5 line-clamp-1">{s.serviceCategories.slice(0, 2).join(", ")}</p>
+                  )}
+                  <Button variant="outline" size="sm" className="w-full text-xs mt-3 group-hover:border-gold group-hover:text-gold transition-colors">
+                    View Details
+                  </Button>
                 </CardContent>
               </Card>
             );

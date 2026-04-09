@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserCog, Save, Lock, Plus, X } from "lucide-react";
+import { UserCog, Save, Lock, Plus, X, Camera, Building2 } from "lucide-react";
 import { fetchMySupplierProfile, updateSupplierProfile } from "@/server/actions";
+import { useRef } from "react";
 import { toast } from "sonner";
 
 export default function SupplierProfilePage() {
@@ -27,6 +28,9 @@ export default function SupplierProfilePage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [capabilityStatement, setCapabilityStatement] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMySupplierProfile()
@@ -43,6 +47,7 @@ export default function SupplierProfilePage() {
         setIsGuyaneseOwned(p.isGuyaneseOwned ?? true);
         setCategories(p.serviceCategories || []);
         setCapabilityStatement(p.capabilityStatement || "");
+        setLogoUrl(p.logoUrl || "");
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -65,6 +70,23 @@ export default function SupplierProfilePage() {
     setSaving(false);
   };
 
+  const handleLogoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/submission/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setLogoUrl(data.fileKey);
+      await updateSupplierProfile({ logoUrl: data.fileKey });
+      toast.success("Logo uploaded");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to upload"); }
+    setUploadingLogo(false);
+  };
+
   const addCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       setCategories([...categories, newCategory.trim()]);
@@ -82,6 +104,34 @@ export default function SupplierProfilePage() {
       <p className="text-sm text-text-secondary mb-6">Manage your supplier information visible to contractors</p>
 
       <div className="space-y-6">
+        {/* Company logo */}
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Company Logo</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-lg object-contain border-2 border-border bg-white" />
+                ) : (
+                  <div className="h-16 w-16 rounded-lg bg-gold/10 flex items-center justify-center border-2 border-border">
+                    <Building2 className="h-7 w-7 text-gold" />
+                  </div>
+                )}
+                <button onClick={() => logoRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-accent text-white flex items-center justify-center shadow-sm hover:bg-accent-hover transition-colors">
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+                <input ref={logoRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-primary">{legalName || "Your Company"}</p>
+                <p className="text-xs text-text-muted">{uploadingLogo ? "Uploading..." : "Click the camera icon to upload your company logo"}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Company info */}
         <Card>
           <CardHeader><CardTitle className="text-sm">Company Information</CardTitle></CardHeader>

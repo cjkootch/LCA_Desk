@@ -5793,7 +5793,7 @@ export async function fetchSupplierResponses() {
 export async function updateSupplierProfile(data: {
   legalName?: string; tradingName?: string; contactEmail?: string; contactPhone?: string;
   serviceCategories?: string[]; capabilityStatement?: string; employeeCount?: number;
-  yearEstablished?: number; isGuyaneseOwned?: boolean; website?: string;
+  yearEstablished?: number; isGuyaneseOwned?: boolean; website?: string; logoUrl?: string;
 }) {
   const { profile } = await getSupplierContext();
   // Capability statement requires Pro
