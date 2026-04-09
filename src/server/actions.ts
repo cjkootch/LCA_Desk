@@ -497,6 +497,9 @@ export async function attestAndSubmit(periodId: string, attestationText: string,
     } catch {}
   }
 
+  // Qualify referral on first submission
+  try { qualifyReferral(userId); } catch {}
+
   return updated;
 }
 
@@ -580,6 +583,9 @@ export async function submitWithUpload(periodId: string, attestationText: string
     periodLabel: `${current.periodStart} to ${current.periodEnd}`,
     recordCounts: { expenditures: 0, employment: 0, capacity: 0 },
   });
+
+  // Qualify referral on first submission
+  try { qualifyReferral(userId); } catch {}
 
   return updated;
 }
@@ -1009,6 +1015,62 @@ export async function fetchMyReferralInfo() {
     // referral_code column may not exist yet (migration pending)
     return null;
   }
+}
+
+export async function updateMyReferralCode(code: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Validate: alphanumeric + hyphens, 3-20 chars
+  const clean = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  if (clean.length < 3 || clean.length > 20) throw new Error("Code must be 3-20 characters (letters, numbers, hyphens)");
+
+  // Check uniqueness
+  const [existing] = await db.select({ id: users.id }).from(users)
+    .where(and(eq(users.referralCode, clean), sql`${users.id} != ${session.user.id}`)).limit(1);
+  if (existing) throw new Error("This code is already taken. Try another.");
+
+  await db.update(users).set({ referralCode: clean }).where(eq(users.id, session.user.id));
+  return { code: clean };
+}
+
+/** Called when a referred user completes a qualifying action (first report filed, paid subscription) */
+export async function qualifyReferral(referredUserId: string) {
+  try {
+    const [ref] = await db.select().from(referrals)
+      .where(and(eq(referrals.referredUserId, referredUserId), eq(referrals.status, "signed_up")))
+      .limit(1);
+    if (!ref) return; // No pending referral
+
+    // Mark as qualified
+    await db.update(referrals).set({
+      status: "qualified",
+      qualifiedAt: new Date(),
+    }).where(eq(referrals.id, ref.id));
+
+    // Auto-reward: extend referrer's trial by 14 days
+    const [referrerMembership] = await db.select({ tenantId: tenantMembers.tenantId })
+      .from(tenantMembers).where(eq(tenantMembers.userId, ref.referrerUserId)).limit(1);
+
+    if (referrerMembership) {
+      const [tenant] = await db.select({ trialEndsAt: tenants.trialEndsAt })
+        .from(tenants).where(eq(tenants.id, referrerMembership.tenantId)).limit(1);
+
+      if (tenant?.trialEndsAt) {
+        const currentEnd = new Date(tenant.trialEndsAt);
+        const newEnd = new Date(currentEnd.getTime() + 14 * 24 * 60 * 60 * 1000);
+        await db.update(tenants).set({ trialEndsAt: newEnd }).where(eq(tenants.id, referrerMembership.tenantId));
+      }
+    }
+
+    // Mark as rewarded
+    await db.update(referrals).set({
+      status: "rewarded",
+      rewardedAt: new Date(),
+      rewardType: "trial_extension",
+      rewardAmount: "+14 days",
+    }).where(eq(referrals.id, ref.id));
+  } catch {} // Don't break the calling workflow
 }
 
 // ─── PROFILE ──────────────────────────────────────────────────────
@@ -5017,6 +5079,18 @@ export async function fetchAdminStats() {
   // Support tickets
   const openTickets = (await db.select({ id: supportTickets.id }).from(supportTickets).where(eq(supportTickets.status, "open")).limit(100)).length;
 
+  // Referrals
+  let referralStats = { total: 0, signedUp: 0, qualified: 0, rewarded: 0 };
+  try {
+    const allReferrals = await db.select({ status: referrals.status }).from(referrals).limit(500);
+    referralStats = {
+      total: allReferrals.length,
+      signedUp: allReferrals.filter(r => r.status !== "pending").length,
+      qualified: allReferrals.filter(r => r.status === "qualified" || r.status === "rewarded").length,
+      rewarded: allReferrals.filter(r => r.status === "rewarded").length,
+    };
+  } catch {} // table may not exist yet
+
   // Recent audit log
   const recentAudit = await db.select({
     id: auditLogs.id, userName: auditLogs.userName, action: auditLogs.action,
@@ -5062,6 +5136,7 @@ export async function fetchAdminStats() {
       companyProfiles: profileCount,
     },
     support: { openTickets },
+    referralStats,
     signupsByDay,
     recentAudit,
   };

@@ -22,5 +22,5 @@ export {
   // Support tickets
   createSupportTicket, fetchMyTickets, fetchTicketWithReplies, addTicketReply,
   // Referrals
-  fetchMyReferralInfo,
+  fetchMyReferralInfo, updateMyReferralCode, qualifyReferral,
 } from "./_all";
