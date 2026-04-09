@@ -47,7 +47,7 @@ export function AnnouncementBanner({ userRole }: AnnouncementBannerProps) {
   if (visible.length === 0) return null;
 
   return (
-    <div className="space-y-3 mb-4">
+    <div className="space-y-3 mb-3">
       {visible.map((a: Announcement) => {
         const isUrgent = a.priority === "urgent";
         const isImportant = a.priority === "important";

@@ -132,7 +132,7 @@ export default function DashboardPage() {
 
           {/* Start Filing CTA */}
           {upcomingDeadlines.length > 0 && entities.length > 0 && (
-            <div className="mb-4">
+            <div className="mb-3">
               <Link href={`/dashboard/entities/${upcomingDeadlines[0].entity_id}`}>
                 <Card className="border-accent/20 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer bg-accent-light/30">
                   <CardContent className="p-4 flex items-center justify-between">
@@ -160,9 +160,9 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Main content */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-3">
               <DashboardSection title="Your Entities" action={
                 <Link href="/dashboard/entities/new">
                   <Button size="sm" variant="outline" className="gap-1"><Plus className="h-3.5 w-3.5" /> Add Entity</Button>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <ComplianceHealthWidget />
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />
@@ -225,7 +225,7 @@ export default function DashboardPage() {
           </div>
 
           {/* CTA tiles */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
             {!isPro && (
               <PromoCTA
                 variant="accent"
@@ -247,7 +247,7 @@ export default function DashboardPage() {
           </div>
 
           {/* News */}
-          <div className="mt-5">
+          <div className="mt-4">
             <IndustryNewsFeed userType="filer" />
           </div>
         </>
