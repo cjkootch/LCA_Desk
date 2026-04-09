@@ -70,7 +70,15 @@ export async function upsertHubspotContact(data: HubSpotContactData) {
 
   // LCS register fields
   if (data.expiryDate) properties.registration_expiration_date = data.expiryDate;
-  if (data.phone) properties.phone = data.phone;
+  if (data.phone) {
+    let phone = data.phone.replace(/\s+/g, "").replace(/[()]/g, "");
+    // Add Guyana country code if missing
+    if (!phone.startsWith("+")) {
+      phone = phone.replace(/^0+/, ""); // strip leading zeros
+      phone = `+592${phone.replace(/-/g, "")}`;
+    }
+    properties.phone = phone;
+  }
   if (data.address) properties.address = data.address;
   if (data.website) properties.website = data.website;
   if (data.lcsCertId) properties.lcs_cert_id = data.lcsCertId;
