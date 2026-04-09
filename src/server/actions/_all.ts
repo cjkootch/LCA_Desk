@@ -969,6 +969,7 @@ export async function checkSuperAdmin(): Promise<boolean> {
 
 // ─── REFERRALS ───────────────────────────────────────────────────
 export async function fetchMyReferralInfo() {
+  try {
   const session = await auth();
   if (!session?.user?.id) return null;
 
@@ -1004,6 +1005,10 @@ export async function fetchMyReferralInfo() {
     totalSignedUp: myReferrals.filter(r => r.status !== "pending").length,
     totalQualified: myReferrals.filter(r => r.status === "qualified" || r.status === "rewarded").length,
   };
+  } catch {
+    // referral_code column may not exist yet (migration pending)
+    return null;
+  }
 }
 
 // ─── PROFILE ──────────────────────────────────────────────────────
