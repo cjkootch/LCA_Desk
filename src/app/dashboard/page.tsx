@@ -123,9 +123,8 @@ export default function DashboardPage() {
             status={lcRate >= 50 ? "Compliant" : overdueCount > 0 ? "Action Required" : "Below Target"}
             statusVariant={lcRate >= 50 && overdueCount === 0 ? "success" : overdueCount > 0 ? "danger" : "warning"}
             details={[
-              { label: "Local Content Rate", value: `${lcRate.toFixed(1)}%` },
-              { label: "Target", value: "50% minimum" },
-              { label: "Overdue Reports", value: String(overdueCount) },
+              { label: "Local Content Rate", value: `${lcRate.toFixed(1)}%`, benchmark: "50% min", met: lcRate >= 50 },
+              { label: "Overdue Reports", value: String(overdueCount), met: overdueCount === 0 },
               { label: "Next Deadline", value: upcomingDeadlines[0] ? `${upcomingDeadlines[0].days_remaining}d` : "None" },
             ]}
             footer={health ? `Based on ${formatCurrency(health.totalExpenditure || 0)} total expenditure across ${entities.length} entit${entities.length === 1 ? "y" : "ies"}` : undefined}

@@ -179,11 +179,11 @@ export default function SecretariatDashboardPage() {
           status={analytics.overallLcRate >= 50 ? "Meeting Target" : "Below Target"}
           statusVariant={analytics.overallLcRate >= 50 ? "success" : "warning"}
           details={[
-            { label: "Overall LC Rate", value: `${analytics.overallLcRate}%` },
+            { label: "Overall LC Rate", value: `${analytics.overallLcRate}%`, benchmark: "50% min", met: analytics.overallLcRate >= 50 },
+            { label: "GY Employment (Mgmt)", value: `${analytics.employmentPct}%`, benchmark: "75% min", met: analytics.employmentPct >= 75 },
             { label: "Companies Filing", value: String(analytics.uniqueFilers) },
             { label: "Pending Reviews", value: String(data.stats.pending) },
             { label: "GY Suppliers", value: String(analytics.guyaneseSupplierCount) },
-            { label: "Training Participants", value: analytics.totalTrainingParticipants.toLocaleString() },
             { label: "Capacity Investment", value: formatCurrency(analytics.totalCapacitySpend) },
           ]}
         />

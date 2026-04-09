@@ -87,7 +87,7 @@ interface StatusCardProps {
   title: string;
   status: string;
   statusVariant: "success" | "warning" | "danger";
-  details?: { label: string; value: string }[];
+  details?: { label: string; value: string; benchmark?: string; met?: boolean }[];
   footer?: string;
 }
 
@@ -108,7 +108,10 @@ export function StatusCard({ title, status, statusVariant, details, footer }: St
             {details.map(d => (
               <div key={d.label} className="flex justify-between text-sm">
                 <span className="text-text-muted">{d.label}</span>
-                <span className="text-text-primary font-medium">{d.value}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("font-medium", d.met === true ? "text-success" : d.met === false ? "text-danger" : "text-text-primary")}>{d.value}</span>
+                  {d.benchmark && <span className="text-xs text-text-muted">/ {d.benchmark}</span>}
+                </div>
               </div>
             ))}
           </div>
