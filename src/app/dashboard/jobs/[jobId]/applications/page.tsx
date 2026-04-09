@@ -179,7 +179,7 @@ export default function ApplicationsPage() {
     <div>
       <TopBar title="Applications" />
 
-      <div className="p-4 sm:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-5xl">
         {/* Back + header */}
         <div className="mb-6">
           <Link href="/dashboard/jobs" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-3">
@@ -192,7 +192,7 @@ export default function ApplicationsPage() {
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-text-primary">{applications.length}</p>
@@ -220,7 +220,7 @@ export default function ApplicationsPage() {
         </div>
 
         {/* Actions bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setStatusFilter("all")}

@@ -150,7 +150,7 @@ export default function SecretariatDashboardPage() {
   });
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl space-y-5">
+    <div className="p-4 sm:p-6 max-w-6xl space-y-5">
       <AnnouncementBanner userRole="secretariat" />
 
       {/* Identity */}

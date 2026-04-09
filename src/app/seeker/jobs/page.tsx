@@ -73,7 +73,7 @@ export default function SeekerJobsPage() {
     <>
       <SeekerTopBar title="Find Jobs" description="Browse open positions in Guyana's petroleum sector" />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-6">
         {/* Search & Filters */}
         <Card>
           <CardContent className="p-4 space-y-3">

@@ -64,7 +64,7 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         <div className="hidden lg:flex fixed top-3 right-4 z-20">
           <NotificationBell />
         </div>
-        <div className="px-4 sm:px-8 pt-4">
+        <div className="px-4 sm:px-6 pt-3">
           <UsageBanner billingAccess={billingAccess} />
         </div>
         {children}

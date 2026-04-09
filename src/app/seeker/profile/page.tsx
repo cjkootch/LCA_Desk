@@ -163,7 +163,7 @@ export default function SeekerProfilePage() {
         }
       />
 
-      <div className="p-4 sm:p-8 max-w-4xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-4xl space-y-6">
         {/* Profile completeness */}
         <Card>
           <CardContent className="p-4">

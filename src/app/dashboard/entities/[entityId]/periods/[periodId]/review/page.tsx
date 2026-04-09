@@ -96,7 +96,7 @@ export default function ReviewPage() {
   return (
     <div>
       <TopBar title={`${entityName} — Review & Validate`} />
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-6">
         <PageHeader title="Review & Validate" description="Pre-submission compliance checklist."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Review" }]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="review" completedSteps={completedSteps} />

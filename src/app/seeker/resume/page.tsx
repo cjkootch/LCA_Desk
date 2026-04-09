@@ -208,7 +208,7 @@ export default function ResumeBuilderPage() {
         }
       />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-6">
         {/* Quick profile info */}
         <Card>
           <CardContent className="p-4">

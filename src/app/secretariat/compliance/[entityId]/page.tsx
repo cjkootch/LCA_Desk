@@ -63,7 +63,7 @@ export default function EntityProfilePage() {
   const certExpired = entity.lcsCertificateExpiry && new Date(entity.lcsCertificateExpiry) < new Date();
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl">
       {/* Back link */}
       <Link href="/secretariat/compliance" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-4">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to Filing Compliance

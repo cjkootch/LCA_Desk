@@ -45,7 +45,7 @@ export default function SeekerApplicationsPage() {
     <>
       <SeekerTopBar title="My Applications" description={`${applications.length} total application${applications.length !== 1 ? "s" : ""}`} />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-6">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />

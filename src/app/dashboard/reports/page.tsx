@@ -49,7 +49,7 @@ export default function ReportsPage() {
   return (
     <div>
       <TopBar title="Reports" description="Compliance analytics and reporting" />
-      <div className="p-4 sm:p-8 max-w-7xl">
+      <div className="p-4 sm:p-6 max-w-7xl">
         {/* Top Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
           <Card>

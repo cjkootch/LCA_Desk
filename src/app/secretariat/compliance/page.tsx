@@ -83,7 +83,7 @@ export default function CompliancePage() {
   };
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl">
       <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Filing Compliance</h1>
       <p className="text-sm text-text-secondary mb-4">Track which companies have filed and who is overdue</p>
 

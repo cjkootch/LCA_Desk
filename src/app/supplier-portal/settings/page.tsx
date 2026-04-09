@@ -58,7 +58,7 @@ export default function SupplierSettingsPage() {
   const isPro = profile?.tier === "pro";
 
   return (
-    <div className="p-4 sm:p-8 max-w-3xl">
+    <div className="p-4 sm:p-6 max-w-3xl">
       <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Settings</h1>
       <p className="text-sm text-text-secondary mb-6">Manage your subscription and preferences</p>
 

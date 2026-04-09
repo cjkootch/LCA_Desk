@@ -79,8 +79,8 @@ export default function SecretariatApplicationsPage() {
   const processed = apps.filter(a => a.status !== "under_review" && a.status !== "documents_pending");
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="flex items-center gap-3 mb-4">
         <Shield className="h-6 w-6 text-gold" />
         <div>
           <h1 className="text-xl font-heading font-bold text-text-primary">LCS Applications</h1>
@@ -89,7 +89,7 @@ export default function SecretariatApplicationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         <Card className="p-3 text-center"><p className="text-xl font-bold">{apps.length}</p><p className="text-xs text-text-muted">Total</p></Card>
         <Card className="p-3 text-center"><p className="text-xl font-bold text-warning">{pending.length}</p><p className="text-xs text-text-muted">Pending Review</p></Card>
         <Card className="p-3 text-center"><p className="text-xl font-bold text-success">{apps.filter(a => a.status === "approved").length}</p><p className="text-xs text-text-muted">Approved</p></Card>

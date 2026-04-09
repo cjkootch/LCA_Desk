@@ -58,7 +58,7 @@ export default function ContractorProfilePage() {
   return (
     <div>
       <TopBar title={profile.contractorName} />
-      <div className="p-4 sm:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-5xl">
         <Link href="/dashboard/opportunities/analytics" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-4">
           <ArrowLeft className="h-4 w-4" /> Back to Analytics
         </Link>

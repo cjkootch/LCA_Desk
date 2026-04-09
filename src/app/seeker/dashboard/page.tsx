@@ -75,7 +75,7 @@ export default function SeekerDashboard() {
     <>
       <SeekerTopBar title="Dashboard" description="Your job search at a glance" />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-4">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-4">
         <AnnouncementBanner userRole="seeker" />
 
         {/* Identity */}

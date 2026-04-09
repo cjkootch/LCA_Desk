@@ -42,12 +42,12 @@ export default function SupplierTrainingPage() {
   const xp = completedCourses * 500;
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl">
       <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Training</h1>
       <p className="text-sm text-text-secondary mb-6">Build your knowledge and earn certifications</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <Card className="p-4 text-center">
           <Zap className="h-4 w-4 text-accent mx-auto mb-1" />
           <p className="text-2xl font-bold text-accent">{Math.floor(xp / 1000) + 1}</p>

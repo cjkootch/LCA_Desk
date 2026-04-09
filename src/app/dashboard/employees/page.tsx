@@ -154,7 +154,7 @@ export default function EmployeesPage() {
   return (
     <div>
       <TopBar title="Employee Roster" action={{ label: "Add Employee", onClick: openAdd }} />
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-6">
         <PageHeader
           title="Employee Roster"
           description="Maintain your employee directory. Data carries forward into each new report."

@@ -74,14 +74,14 @@ export default function LogPaymentPage() {
   return (
     <div>
       <TopBar title="Payment Log" action={{ label: "Log Payment", onClick: () => setShowForm(true) }} />
-      <div className="p-4 sm:p-8 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-4xl">
         <p className="text-sm text-text-secondary mb-6">
           Track supplier payments as they happen. These entries will be available to import into your next filing period.
         </p>
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <Card className="p-3">
               <p className="text-xs text-text-muted">Unimported</p>
               <p className="text-xl font-bold text-text-primary">{stats.unimportedCount}</p>

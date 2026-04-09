@@ -176,7 +176,7 @@ Write in formal government report style. Open with the headline metric (LC rate)
   if (!analytics) return <div className="p-8 text-center text-text-muted">Unable to load report data.</div>;
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <BarChart3 className="h-6 w-6 text-gold" />

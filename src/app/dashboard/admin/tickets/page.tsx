@@ -87,7 +87,7 @@ export default function AdminTicketsPage() {
   return (
     <div>
       <TopBar title="Support Tickets" description={`${openCount} open · ${tickets.length} total`} />
-      <div className="p-4 sm:p-8 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-4xl">
         <Link href="/dashboard/admin" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-4">
           <ArrowLeft className="h-4 w-4" /> Back to Admin
         </Link>

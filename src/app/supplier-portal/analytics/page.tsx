@@ -30,7 +30,7 @@ export default function SupplierAnalyticsPage() {
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" /></div>;
 
   if (proRequired) return (
-    <div className="p-4 sm:p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <Lock className="h-12 w-12 text-text-muted mb-4" />
         <h2 className="text-lg font-heading font-bold text-text-primary mb-2">Analytics — Pro Feature</h2>
@@ -47,11 +47,11 @@ export default function SupplierAnalyticsPage() {
   if (!data) return null;
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl">
       <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Analytics</h1>
       <p className="text-sm text-text-secondary mb-6">Track your visibility and response performance</p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Card className="p-4 text-center">
           <Eye className="h-5 w-5 text-accent mx-auto mb-1" />
           <p className="text-2xl font-bold">{data.profileViews}</p>

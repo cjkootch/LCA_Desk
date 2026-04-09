@@ -42,7 +42,7 @@ export default function PeriodOverviewPage() {
   return (
     <div>
       <TopBar title={`${entityName} — ${period.reportType.replace(/_/g, " ").toUpperCase()}`} />
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-6">
         <PageHeader title="Filing Workflow" breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Entities", href: "/dashboard/entities" },

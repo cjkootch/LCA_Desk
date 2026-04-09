@@ -145,7 +145,7 @@ export default function SuppliersPage() {
   return (
     <div>
       <TopBar title="Supplier Directory" action={{ label: "Add Supplier", onClick: openAdd }} />
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-6">
         <PageHeader
           title="Supplier Directory"
           description="Save supplier details for quick reuse across reports."

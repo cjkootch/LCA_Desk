@@ -81,7 +81,7 @@ export default function SettingsPage() {
     return (
       <div>
         <TopBar title="Settings" />
-        <div className="p-4 sm:p-8 max-w-4xl">
+        <div className="p-4 sm:p-6 max-w-4xl">
           <p className="text-text-muted text-sm">Loading settings...</p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function SettingsPage() {
   return (
     <div>
       <TopBar title="Settings" />
-      <div className="p-4 sm:p-8 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-4xl">
         <PageHeader
           title="Account Settings"
           description="Manage your account, organization, and team settings."

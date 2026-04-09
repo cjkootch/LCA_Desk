@@ -200,7 +200,7 @@ export default function CoursePage() {
         }
       />
 
-      <div className="p-4 sm:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-5xl">
         {/* Course progress bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">

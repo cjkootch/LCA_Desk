@@ -65,7 +65,7 @@ export default function LearnPage() {
     <>
       <SeekerTopBar title="Learn" description="Build your knowledge and earn certifications" />
 
-      <div className="p-4 sm:p-8 max-w-4xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-4xl space-y-6">
         {/* Benefits tip — dismissable */}
         {!tipDismissed && completedCourses < 2 && (
           <Card className="border-gold/20 bg-gradient-to-r from-gold/5 to-transparent overflow-hidden">

@@ -37,8 +37,8 @@ export default function SecretariatTalentPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="p-4 sm:p-6 max-w-6xl">
+      <div className="flex items-center gap-3 mb-4">
         <Users className="h-6 w-6 text-gold" />
         <div>
           <h1 className="text-xl font-heading font-bold text-text-primary">Talent Pool</h1>
@@ -47,7 +47,7 @@ export default function SecretariatTalentPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <Input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === "Enter" && load()} placeholder="Search name, title, skills..." className="pl-9" />

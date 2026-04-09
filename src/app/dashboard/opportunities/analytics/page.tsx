@@ -46,7 +46,7 @@ export default function OpportunityAnalyticsPage() {
   return (
     <div>
       <TopBar title="Market Intelligence" />
-      <div className="p-4 sm:p-8 max-w-6xl">
+      <div className="p-4 sm:p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <Link href="/dashboard/opportunities" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-2">

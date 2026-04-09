@@ -187,7 +187,7 @@ export default function ExportPage() {
   return (
     <div>
       <TopBar title={`${entityName} — Export & Submit`} />
-      <div className="p-4 sm:p-8 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-4xl">
         <PageHeader title="Export & Submit" description="Generate official reports and submit to the Local Content Secretariat."
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: entityName, href: `/dashboard/entities/${entityId}` }, { label: "Export" }]} />
         <PeriodChecklist entityId={entityId} periodId={periodId} currentStep="export" completedSteps={completedSteps} />

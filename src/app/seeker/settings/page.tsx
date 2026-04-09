@@ -79,7 +79,7 @@ export default function SeekerSettingsPage() {
     <>
       <SeekerTopBar title="Settings" description="Manage your account and preferences" />
 
-      <div className="p-4 sm:p-8 max-w-3xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-3xl space-y-6">
         {/* Profile Picture & Socials */}
         <ProfileSettings />
 

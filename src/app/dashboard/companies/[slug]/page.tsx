@@ -91,7 +91,7 @@ export default function CompanyProfilePage() {
   return (
     <div>
       <TopBar title={profile.companyName} />
-      <div className="p-4 sm:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-5xl">
         <Link href="/dashboard/companies" className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-hover mb-4">
           <ArrowLeft className="h-4 w-4" /> Back to Verified Companies
         </Link>
@@ -137,7 +137,7 @@ export default function CompanyProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold text-text-primary">{profile.totalOpportunities}</p>
             <p className="text-xs text-text-muted">Opportunities</p>

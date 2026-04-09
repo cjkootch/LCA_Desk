@@ -88,7 +88,7 @@ export default function JobDetailPage() {
         }
       />
 
-      <div className="p-4 sm:p-8 max-w-4xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-4xl space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{job.jobTitle}</h1>

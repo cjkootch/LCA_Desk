@@ -194,7 +194,7 @@ export default function ExpenditurePage() {
   return (
     <div>
       <TopBar title={`${entityName} — Expenditure`} />
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-6">
         {locked && (
           <div className="rounded-lg border border-warning/30 bg-warning-light p-3 mb-4 flex items-center gap-2 text-sm">
             <AlertTriangle className="h-4 w-4 text-warning shrink-0" />

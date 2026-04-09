@@ -130,9 +130,9 @@ export default function SupportPage() {
   return (
     <div>
       <TopBar title="Support" action={{ label: "New Ticket", onClick: () => setCreateOpen(true) }} />
-      <div className="p-4 sm:p-8 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-4xl">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           <Card className="p-4">
             <p className="text-xs text-text-muted">Total Tickets</p>
             <p className="text-2xl font-bold text-text-primary">{tickets.length}</p>

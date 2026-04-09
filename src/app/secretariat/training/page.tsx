@@ -92,7 +92,7 @@ export default function SecretariatTrainingPage() {
   };
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl space-y-5">
+    <div className="p-4 sm:p-6 max-w-5xl space-y-5">
       <div className="flex items-center gap-3">
         <GraduationCap className="h-6 w-6 text-gold" />
         <div>

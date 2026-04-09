@@ -179,7 +179,7 @@ export default function AnnouncementsPage() {
   const expired = items.filter((a: Announcement) => a.status === "expired" || (a.expiresAt && new Date(a.expiresAt) < new Date() && a.status !== "draft"));
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Megaphone className="h-6 w-6 text-gold" />

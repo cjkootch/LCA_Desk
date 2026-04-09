@@ -49,7 +49,7 @@ export default function CompaniesPage() {
   return (
     <div>
       <TopBar title="Verified Companies" />
-      <div className="p-4 sm:p-8 max-w-6xl">
+      <div className="p-4 sm:p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-heading font-bold text-text-primary">Verified Companies</h1>
@@ -71,7 +71,7 @@ export default function CompaniesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card className="p-4">
             <p className="text-xs text-text-muted">LCS Verified</p>
             <p className="text-2xl font-bold">{profiles.filter(p => p.lcsRegistered).length}</p>

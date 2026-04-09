@@ -55,7 +55,7 @@ export default function TalentPoolPage() {
   return (
     <div>
       <TopBar title="Talent Pool" description="Find Guyanese talent for your workforce" />
-      <div className="p-4 sm:p-8 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-5xl">
         {/* Value prop */}
         <div className="rounded-lg border border-accent/20 bg-accent-light p-4 mb-6">
           <div className="flex items-start gap-3">
@@ -71,7 +71,7 @@ export default function TalentPoolPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-text-primary">{candidates.length}</p>
             <p className="text-xs text-text-muted">Candidates</p>

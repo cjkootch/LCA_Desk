@@ -41,7 +41,7 @@ export default function AdminPage() {
   return (
     <div>
       <TopBar title="Admin Dashboard" description="Platform overview and management" />
-      <div className="p-4 sm:p-8 max-w-7xl">
+      <div className="p-4 sm:p-6 max-w-7xl">
 
         {/* Top stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">

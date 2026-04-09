@@ -70,7 +70,7 @@ export default function SeekerOpportunitiesPage() {
     <>
       <SeekerTopBar title="Opportunities" description="Procurement notices and employment opportunities from the petroleum sector" />
 
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-6">
         {/* Search & filters */}
         <Card>
           <CardContent className="p-4 space-y-3">
