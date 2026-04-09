@@ -140,18 +140,35 @@ export function Sidebar({ isOpen, onNavigate }: { isOpen?: boolean; onNavigate?:
         ))}
 
         {isSuperAdmin && (
-          <Link
-            href="/dashboard/admin"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              pathname.startsWith("/dashboard/admin")
-                ? "bg-sidebar-active text-sidebar-text"
-                : "text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover"
-            )}
-          >
-            <Shield className="h-4 w-4" />
-            Admin
-          </Link>
+          <div className="pt-3">
+            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gold/60">
+              Admin
+            </p>
+            {[
+              { label: "Admin Dashboard", href: "/dashboard/admin", icon: Shield },
+              { label: "Support Tickets", href: "/dashboard/admin/tickets", icon: LifeBuoy },
+              { label: "Secretariat", href: "/secretariat/dashboard", icon: Building2 },
+              { label: "Demo Panel", href: "/demo", icon: Crown },
+            ].map(item => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-gold/20 text-gold"
+                      : "text-sidebar-text-muted hover:text-gold hover:bg-gold/10"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         )}
       </nav>
 
