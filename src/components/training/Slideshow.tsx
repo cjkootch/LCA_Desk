@@ -86,7 +86,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean, voice: "nova" }),
+        body: JSON.stringify({ text: clean, voice: "shimmer" }),
       });
 
       if (!res.ok) {
