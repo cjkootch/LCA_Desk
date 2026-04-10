@@ -18,7 +18,7 @@ export default function AffiliateSettingsPage() {
       <div className="space-y-5">
         <ProfileSettings />
         <ReferralCard />
-        <CancelAccount hasPaidPlan={false} userType="affiliate" />
+        <CancelAccount hasPaidPlan={false} userType="filer" />
       </div>
     </div>
   );

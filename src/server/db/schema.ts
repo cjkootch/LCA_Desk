@@ -63,7 +63,7 @@ export const users = pgTable("users", {
   isSuperAdmin: boolean("is_super_admin").default(false),
   userRole: text("user_role").default("filer"),
   isDemo: boolean("is_demo").default(false),
-  referralCode: text("referral_code").unique(),
+  referralCode: text("referral_code"),
   affiliatePayoutEmail: text("affiliate_payout_email"),
   affiliateCommissionRate: integer("affiliate_commission_rate"), // percentage, e.g. 20 = 20%
   notificationPreferences: text("notification_preferences"),
