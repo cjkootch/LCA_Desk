@@ -194,7 +194,7 @@ export default function CoursePage() {
         onClose={() => setShowCelebration(false)}
       />
 
-      <div className="sticky top-0 z-20 flex items-center justify-between h-14 px-4 sm:px-6 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+      <div className="sticky z-20 flex items-center justify-between h-14 px-4 sm:px-6 border-b border-border bg-bg-surface/95 backdrop-blur-sm" style={{ top: "var(--demo-banner-h, 0px)" }}>
         <h1 className="text-base font-heading font-semibold text-text-primary truncate">{course.title}</h1>
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
