@@ -4436,9 +4436,12 @@ export async function fetchUserBadges(userId?: string) {
 }
 
 export async function seedLcaCourse() {
-  // Check if already seeded
+  // Delete existing course and modules to allow re-seeding with updated content
   const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "lca-fundamentals")).limit(1);
-  if (existing) return existing.id;
+  if (existing) {
+    await db.delete(courseModules).where(eq(courseModules.courseId, existing.id));
+    await db.delete(courses).where(eq(courses.id, existing.id));
+  }
 
   const [course] = await db.insert(courses).values({
     slug: "lca-fundamentals",
