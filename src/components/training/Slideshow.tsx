@@ -12,14 +12,13 @@ interface SlideshowProps {
   courseTitle?: string;
   moduleTitle?: string;
   onClose: () => void;
-  onComplete?: () => void; // called when user clicks "Complete Module" on last slide
+  onComplete?: () => void;
   isModuleComplete?: boolean;
 }
 
 function parseSlides(markdown: string): { heading: string; body: string }[] {
   const sections = markdown.split(/^## /m).filter(Boolean);
   if (sections.length <= 1) {
-    // No ## headers — split by ### or paragraphs
     const parts = markdown.split(/^### /m).filter(Boolean);
     if (parts.length <= 1) {
       return [{ heading: "", body: markdown }];
@@ -47,10 +46,68 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
+// Build TTS text with natural pacing — pauses between bullets and sections
+function buildSpeechText(heading: string, body: string): string {
+  const lines = body.split("\n").filter(Boolean);
+  const parts: string[] = [];
+
+  if (heading) parts.push(heading + ".");
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith("### ")) {
+      // Sub-header — add a longer pause before it
+      parts.push("... " + stripMarkdown(t) + ".");
+    } else if (t.startsWith("- ") || t.startsWith("* ")) {
+      // Bullet — ensure it ends with punctuation for a natural pause
+      let cleaned = stripMarkdown(t);
+      if (cleaned && !/[.!?]$/.test(cleaned)) cleaned += ".";
+      parts.push(cleaned);
+    } else if (t.startsWith("**") && t.endsWith("**")) {
+      parts.push(stripMarkdown(t) + ".");
+    } else if (t.startsWith('"') || t.startsWith('\u201c')) {
+      parts.push(stripMarkdown(t));
+    } else {
+      let cleaned = stripMarkdown(t);
+      if (cleaned && !/[.!?]$/.test(cleaned)) cleaned += ".";
+      parts.push(cleaned);
+    }
+  }
+
+  return parts.filter(Boolean).join(" ");
+}
+
+// Estimate cumulative word offsets for each line to sync animations
+// Assumes ~2.8 words/sec at 1.05x speed for OpenAI TTS
+const WORDS_PER_SEC = 2.8;
+
+function estimateLineTimings(heading: string, body: string): number[] {
+  const lines = body.split("\n").filter(Boolean);
+  const timings: number[] = [];
+  let cumulativeWords = 0;
+
+  // Account for heading being spoken first
+  if (heading) {
+    cumulativeWords += heading.split(/\s+/).length + 1; // +1 for the pause after period
+  }
+
+  for (const line of lines) {
+    const t = line.trim();
+    // Push current timing (when this line starts being spoken)
+    timings.push(cumulativeWords / WORDS_PER_SEC);
+
+    // Count words in this line
+    const cleaned = stripMarkdown(t);
+    const wordCount = cleaned ? cleaned.split(/\s+/).length : 0;
+    cumulativeWords += wordCount + 0.5; // +0.5 for inter-bullet pause
+  }
+
+  return timings;
+}
+
 export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, onComplete, isModuleComplete }: SlideshowProps) {
   const contentSlides = parseSlides(content);
 
-  // Build intro slide from the section headings
   const topicList = contentSlides
     .map(s => s.heading)
     .filter(Boolean)
@@ -96,7 +153,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     setSpeaking(false);
   }, [clearAdvanceTimer]);
 
-  // Auto-advance to next slide after speech ends
   const onSpeechEnd = useCallback(() => {
     if (!mountedRef.current) return;
     setSpeaking(false);
@@ -114,22 +170,21 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   const speak = useCallback(async (text: string) => {
     if (!voiceEnabled) return;
     stopSpeech();
-    const clean = stripMarkdown(text);
-    if (!clean) return;
+    if (!text) return;
 
     try {
       setSpeaking(true);
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean, voice: "nova" }),
+        body: JSON.stringify({ text, voice: "nova" }),
       });
 
       if (!mountedRef.current) return;
 
       if (!res.ok) {
         if (typeof window !== "undefined" && window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(clean);
+          const utterance = new SpeechSynthesisUtterance(text);
           utterance.rate = 0.92;
           utterance.onend = () => onSpeechEnd();
           window.speechSynthesis.speak(utterance);
@@ -153,12 +208,12 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     }
   }, [voiceEnabled, stopSpeech, onSpeechEnd]);
 
-  // Speak slide content when navigating — reduced delay for faster start
+  // Build paced speech text and speak on slide change
   useEffect(() => {
     const slide = slides[current];
     if (slide && voiceEnabled) {
-      const text = slide.heading ? `${slide.heading}. ${slide.body}` : slide.body;
-      const timer = setTimeout(() => speak(text), 100);
+      const speechText = buildSpeechText(slide.heading, slide.body);
+      const timer = setTimeout(() => speak(speechText), 100);
       return () => { clearTimeout(timer); stopSpeech(); };
     }
     return () => stopSpeech();
@@ -187,16 +242,25 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   const slide = slides[current];
   const progress = ((current + 1) / slides.length) * 100;
 
-  // Animation key resets on slide change
   const [animKey, setAnimKey] = useState(0);
   useEffect(() => setAnimKey(k => k + 1), [current]);
 
-  // Render markdown body with staggered animations
+  // Compute estimated timings for progressive reveal synced to voice
+  const lineTimings = slide ? estimateLineTimings(slide.heading, slide.body) : [];
+
+  // Render markdown body with voice-synced progressive reveal
   const renderBody = (body: string) => {
     const lines = body.split("\n").filter(Boolean);
     return lines.map((line, i) => {
       const trimmed = line.trim();
-      const delay = `${200 + i * 120}ms`;
+
+      // When voice is enabled, sync animation to estimated speech timing
+      // When muted, use fast stagger so content appears quickly
+      const voiceDelay = voiceEnabled && lineTimings[i] !== undefined
+        ? lineTimings[i] * 1000 // convert seconds to ms
+        : 0;
+      const fallbackDelay = 200 + i * 120; // fast stagger when muted
+      const delay = `${voiceEnabled ? Math.max(200, voiceDelay) : fallbackDelay}ms`;
       const style = { animationDelay: delay };
 
       if (trimmed.startsWith("### ")) return (
@@ -232,7 +296,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#E8E4DF] flex flex-col">
-      {/* CSS animations */}
       <style>{`
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
@@ -283,8 +346,10 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
               <Pause className="h-4 w-4" />
             </button>
           ) : (
-            <button onClick={() => speak(slide.heading ? `${slide.heading}. ${slide.body}` : slide.body)}
-              className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
+            <button onClick={() => {
+              const speechText = buildSpeechText(slide.heading, slide.body);
+              speak(speechText);
+            }} className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
               <Play className="h-4 w-4" />
             </button>
           )}
@@ -305,7 +370,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
           "max-w-2xl w-full py-10 animate-[slideContentIn_0.5s_ease_forwards]",
           isIntro ? "text-center" : ""
         )}>
-          {/* Slide number indicator */}
           {!isIntro && (
             <div className="animate-[fadeIn_0.3s_ease_forwards] opacity-0 mb-4">
               <span className="inline-block px-3 py-1 rounded-full bg-[#19544c]/10 text-[#19544c] text-xs font-medium tracking-wider uppercase">
@@ -314,7 +378,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
             </div>
           )}
 
-          {/* Heading */}
           {slide.heading && (
             <h2 className={cn(
               "font-bold text-[#19544c] animate-[scaleIn_0.5s_ease_forwards] opacity-0",
@@ -324,17 +387,14 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
             </h2>
           )}
 
-          {/* Accent line under heading */}
           {isIntro && (
             <div className="mx-auto w-16 h-1 rounded-full bg-[#71b59a] mb-8 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "200ms" }} />
           )}
 
-          {/* Body content */}
           <div className={cn(isIntro ? "text-lg sm:text-xl" : "text-base sm:text-lg")}>
             {renderBody(slide.body)}
           </div>
 
-          {/* Complete Module CTA on last slide */}
           {isLastSlide && onComplete && (
             <div className="mt-10 text-center animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "800ms" }}>
               <div className="inline-flex flex-col items-center gap-3">
@@ -349,10 +409,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
                     size="lg"
                     className="gap-2 px-8 bg-[#19544c] hover:bg-[#19544c]/90 text-white shadow-lg"
                     style={{ animation: "completePulse 2s ease-in-out infinite" }}
-                    onClick={() => {
-                      stopSpeech();
-                      onComplete();
-                    }}
+                    onClick={() => { stopSpeech(); onComplete(); }}
                   >
                     <CheckCircle className="h-5 w-5" />
                     Take the Quiz
