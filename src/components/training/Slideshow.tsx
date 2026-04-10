@@ -65,12 +65,24 @@ export function Slideshow({ content, title, onClose }: SlideshowProps) {
     if (!clean) return;
 
     const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 0.95;
+    utterance.rate = 0.92;
     utterance.pitch = 1;
-    // Try to find a good English voice
+    // Prioritize natural/premium voices — these sound the most human
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes("Google") && v.lang.startsWith("en"))
-      || voices.find(v => v.lang.startsWith("en-US"))
+    const preferred =
+      // macOS premium voices (very natural)
+      voices.find(v => v.name === "Samantha" && v.lang.startsWith("en")) // macOS default, natural
+      || voices.find(v => v.name === "Karen" && v.lang.startsWith("en")) // macOS Australian, clear
+      || voices.find(v => v.name === "Daniel" && v.lang.startsWith("en")) // macOS British, professional
+      // Chrome's Google voices (good quality)
+      || voices.find(v => v.name.includes("Google UK English Female"))
+      || voices.find(v => v.name.includes("Google US English"))
+      || voices.find(v => v.name.includes("Google UK English Male"))
+      // Microsoft natural voices (Edge/Windows)
+      || voices.find(v => v.name.includes("Natural") && v.lang.startsWith("en"))
+      || voices.find(v => v.name.includes("Microsoft") && v.name.includes("Online") && v.lang.startsWith("en"))
+      // Fallback to any English voice
+      || voices.find(v => v.lang === "en-US")
       || voices.find(v => v.lang.startsWith("en"));
     if (preferred) utterance.voice = preferred;
 
@@ -113,10 +125,7 @@ export function Slideshow({ content, title, onClose }: SlideshowProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#E8E4DF] flex flex-col">
-      {/* Decorative wave pattern (matching marketing assets) */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='400' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 100 Q100 50 200 100 T400 100' fill='none' stroke='%2319544c' stroke-width='2'/%3E%3Cpath d='M0 120 Q100 70 200 120 T400 120' fill='none' stroke='%2319544c' stroke-width='1.5'/%3E%3Cpath d='M0 140 Q100 90 200 140 T400 140' fill='none' stroke='%2319544c' stroke-width='1'/%3E%3C/svg%3E\")", backgroundSize: "400px 200px" }} />
-
+    <div className="fixed inset-0 z-[200] bg-[#E8E4DF] flex flex-col">
       {/* Top bar */}
       <div className="relative flex items-center justify-between h-12 px-4 sm:px-6 bg-[#19544c] border-b border-[#19544c]/20">
         <div className="flex items-center gap-3">
