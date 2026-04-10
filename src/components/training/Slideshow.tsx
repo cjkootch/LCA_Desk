@@ -127,6 +127,10 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mountedRef = useRef(true);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Audio cache: slide index → blob URL (prefetched or fetched)
+  const audioCache = useRef<Map<number, string>>(new Map());
+  const prefetchingSet = useRef<Set<number>>(new Set());
+  const speakAbortRef = useRef<AbortController | null>(null);
 
   const isLastSlide = current === slides.length - 1;
   const isIntro = current === 0;
@@ -139,6 +143,9 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   }, []);
 
   const stopSpeech = useCallback(() => {
+    // Abort any in-flight TTS fetch
+    speakAbortRef.current?.abort();
+    speakAbortRef.current = null;
     if (audioRef.current) {
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
@@ -167,54 +174,113 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     }
   }, [autoPlay, contentSlides.length]);
 
-  const speak = useCallback(async (text: string) => {
+  // Play a cached blob URL immediately
+  const playFromUrl = useCallback((url: string, owned: boolean) => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => { if (owned) URL.revokeObjectURL(url); onSpeechEnd(); };
+    audio.onerror = () => { if (owned) URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
+    audio.play();
+  }, [onSpeechEnd]);
+
+  const speak = useCallback(async (text: string, slideIdx?: number) => {
     if (!voiceEnabled) return;
+    // Abort any in-flight fetch from a previous speak call
+    speakAbortRef.current?.abort();
+    const controller = new AbortController();
+    speakAbortRef.current = controller;
     stopSpeech();
+    speakAbortRef.current = controller; // stopSpeech resets it, restore
     if (!text) return;
 
+    setSpeaking(true);
+
+    // Cache hit — instant playback, no network wait
+    if (slideIdx !== undefined && audioCache.current.has(slideIdx)) {
+      playFromUrl(audioCache.current.get(slideIdx)!, false);
+      return;
+    }
+
+    // Start browser TTS immediately as audible fallback while OpenAI loads
+    let browserActive = false;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.92;
+      utterance.onend = () => {
+        if (browserActive && mountedRef.current && !controller.signal.aborted) onSpeechEnd();
+      };
+      window.speechSynthesis.speak(utterance);
+      browserActive = true;
+    }
+
     try {
-      setSpeaking(true);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: "nova" }),
+        signal: controller.signal,
+      });
+
+      if (controller.signal.aborted || !mountedRef.current) return;
+
+      if (res.ok) {
+        const blob = await res.blob();
+        if (controller.signal.aborted || !mountedRef.current) return;
+
+        // Swap: stop browser speech, play OpenAI audio from the start
+        browserActive = false;
+        if (typeof window !== "undefined" && window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+
+        const url = URL.createObjectURL(blob);
+        // Cache for this slide (prefetch already owns a separate URL for next slides)
+        if (slideIdx !== undefined) {
+          audioCache.current.set(slideIdx, url);
+          playFromUrl(url, false); // cache owns the URL, revoked on unmount
+        } else {
+          playFromUrl(url, true); // ephemeral, revoke on ended
+        }
+      }
+      // If not ok, browser speech continues to completion
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      if (mountedRef.current && !browserActive) setSpeaking(false);
+    }
+  }, [voiceEnabled, stopSpeech, onSpeechEnd, playFromUrl]);
+
+  // Prefetch the TTS audio for a slide index into the cache
+  const prefetchSlide = useCallback(async (idx: number) => {
+    if (!voiceEnabled) return;
+    if (idx < 0 || idx >= slides.length) return;
+    if (audioCache.current.has(idx) || prefetchingSet.current.has(idx)) return;
+
+    prefetchingSet.current.add(idx);
+    const slide = slides[idx];
+    const text = buildSpeechText(slide.heading, slide.body);
+    if (!text) { prefetchingSet.current.delete(idx); return; }
+
+    try {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, voice: "nova" }),
       });
-
-      if (!mountedRef.current) return;
-
-      if (!res.ok) {
-        if (typeof window !== "undefined" && window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.92;
-          utterance.onend = () => onSpeechEnd();
-          window.speechSynthesis.speak(utterance);
-        } else {
-          setSpeaking(false);
-        }
-        return;
-      }
-
+      if (!mountedRef.current || !res.ok) { prefetchingSet.current.delete(idx); return; }
       const blob = await res.blob();
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) { prefetchingSet.current.delete(idx); return; }
+      audioCache.current.set(idx, URL.createObjectURL(blob));
+    } catch { /* silent — cache miss is handled gracefully */ }
+    prefetchingSet.current.delete(idx);
+  }, [voiceEnabled, slides]);
 
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); onSpeechEnd(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
-      audio.play();
-    } catch {
-      if (mountedRef.current) setSpeaking(false);
-    }
-  }, [voiceEnabled, stopSpeech, onSpeechEnd]);
-
-  // Build paced speech text and speak on slide change
+  // Speak current slide immediately (no delay) and prefetch the next one
   useEffect(() => {
     const slide = slides[current];
     if (slide && voiceEnabled) {
       const speechText = buildSpeechText(slide.heading, slide.body);
-      const timer = setTimeout(() => speak(speechText), 100);
-      return () => { clearTimeout(timer); stopSpeech(); };
+      speak(speechText, current);
+      prefetchSlide(current + 1);
     }
     return () => stopSpeech();
   }, [current, voiceEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -224,6 +290,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      speakAbortRef.current?.abort();
       if (audioRef.current) {
         audioRef.current.onended = null;
         audioRef.current.onerror = null;
@@ -236,6 +303,9 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
       }
+      // Revoke all prefetched blob URLs
+      audioCache.current.forEach(url => URL.revokeObjectURL(url));
+      audioCache.current.clear();
     };
   }, []);
 
@@ -348,7 +418,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
           ) : (
             <button onClick={() => {
               const speechText = buildSpeechText(slide.heading, slide.body);
-              speak(speechText);
+              speak(speechText, current);
             }} className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
               <Play className="h-4 w-4" />
             </button>
