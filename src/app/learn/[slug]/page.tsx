@@ -200,6 +200,8 @@ export default function CoursePage() {
         <Slideshow
           content={currentModule.content || ""}
           title={`${course.title} — ${currentModule.title}`}
+          courseTitle={course.title}
+          moduleTitle={currentModule.title}
           onClose={() => setShowSlideshow(false)}
         />
       )}

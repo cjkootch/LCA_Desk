@@ -9,7 +9,9 @@ import { cn } from "@/lib/utils";
 
 interface SlideshowProps {
   content: string; // markdown content
-  title: string;
+  title: string; // "Course Title — Module Title"
+  courseTitle?: string;
+  moduleTitle?: string;
   onClose: () => void;
 }
 
@@ -44,54 +46,72 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
-export function Slideshow({ content, title, onClose }: SlideshowProps) {
-  const slides = parseSlides(content);
+export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }: SlideshowProps) {
+  const contentSlides = parseSlides(content);
+
+  // Build intro slide from the section headings
+  const topicList = contentSlides
+    .map(s => s.heading)
+    .filter(Boolean)
+    .map(h => `• ${h}`)
+    .join("\n");
+
+  const introSlide = {
+    heading: moduleTitle || title,
+    body: `${courseTitle ? `**${courseTitle}**\n\n` : ""}In this module, you'll learn:\n\n${topicList || "Key concepts and practical techniques."}`,
+  };
+
+  const slides = [introSlide, ...contentSlides];
   const [current, setCurrent] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopSpeech = useCallback(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
     setSpeaking(false);
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!voiceEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
+  const speak = useCallback(async (text: string) => {
+    if (!voiceEnabled) return;
     stopSpeech();
     const clean = stripMarkdown(text);
     if (!clean) return;
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 0.92;
-    utterance.pitch = 1;
-    // Prioritize natural/premium voices — these sound the most human
-    const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      // macOS premium voices (very natural)
-      voices.find(v => v.name === "Samantha" && v.lang.startsWith("en")) // macOS default, natural
-      || voices.find(v => v.name === "Karen" && v.lang.startsWith("en")) // macOS Australian, clear
-      || voices.find(v => v.name === "Daniel" && v.lang.startsWith("en")) // macOS British, professional
-      // Chrome's Google voices (good quality)
-      || voices.find(v => v.name.includes("Google UK English Female"))
-      || voices.find(v => v.name.includes("Google US English"))
-      || voices.find(v => v.name.includes("Google UK English Male"))
-      // Microsoft natural voices (Edge/Windows)
-      || voices.find(v => v.name.includes("Natural") && v.lang.startsWith("en"))
-      || voices.find(v => v.name.includes("Microsoft") && v.name.includes("Online") && v.lang.startsWith("en"))
-      // Fallback to any English voice
-      || voices.find(v => v.lang === "en-US")
-      || voices.find(v => v.lang.startsWith("en"));
-    if (preferred) utterance.voice = preferred;
+    try {
+      setSpeaking(true);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean, voice: "nova" }),
+      });
 
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
+      if (!res.ok) {
+        // Fallback to browser speech if API fails
+        if (typeof window !== "undefined" && window.speechSynthesis) {
+          const utterance = new SpeechSynthesisUtterance(clean);
+          utterance.rate = 0.92;
+          utterance.onend = () => setSpeaking(false);
+          window.speechSynthesis.speak(utterance);
+        } else {
+          setSpeaking(false);
+        }
+        return;
+      }
 
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+      audio.onerror = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+      audio.play();
+    } catch {
+      setSpeaking(false);
+    }
   }, [voiceEnabled, stopSpeech]);
 
   // Speak slide content when navigating
