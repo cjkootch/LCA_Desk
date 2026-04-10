@@ -173,7 +173,7 @@ export default function LearnPage() {
               const hasBadge = badges.some(b => b.courseId === course.id);
               const xpReward = 500;
               return (
-                <Link key={course.id} href={`/seeker/learn/${course.slug}`}>
+                <Link key={course.id} href={`/learn/${course.slug}`}>
                   <Card className={cn(
                     "hover:border-accent/30 transition-all cursor-pointer hover:shadow-md",
                     hasBadge && "border-success/20 bg-success/[0.02]"

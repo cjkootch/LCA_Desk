@@ -96,7 +96,7 @@ export default function SupplierTrainingPage() {
           {courseList.map(course => {
             const hasBadge = badges.some((b: { courseId: string }) => b.courseId === course.id);
             return (
-              <Link key={course.id} href={`/seeker/learn/${course.slug}`}>
+              <Link key={course.id} href={`/learn/${course.slug}`}>
                 <Card className={cn("hover:border-accent/30 transition-all cursor-pointer hover:shadow-md", hasBadge && "border-success/20 bg-success/[0.02]")}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-4">

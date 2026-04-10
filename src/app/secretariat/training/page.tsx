@@ -61,7 +61,7 @@ export default function SecretariatTrainingPage() {
   const CourseCard = ({ course }: { course: typeof courseList[0] }) => {
     const hasBadge = badges.some((b: { courseId: string }) => b.courseId === course.id);
     return (
-      <Link href={`/seeker/learn/${course.slug}`}>
+      <Link href={`/learn/${course.slug}`}>
         <Card className={cn(
           "hover:border-accent/30 hover:shadow-md transition-all cursor-pointer h-full",
           hasBadge && "border-success/20 bg-success/[0.02]"

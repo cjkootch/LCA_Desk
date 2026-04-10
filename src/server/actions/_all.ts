@@ -5082,6 +5082,39 @@ export async function seedEsgCourse() {
   return course.id;
 }
 
+export async function seedAffiliateSalesCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "affiliate-sales")).limit(1);
+  if (existing) return existing.id;
+  const [course] = await db.insert(courses).values({
+    slug: "affiliate-sales", title: "How to Sell LCA Desk", audience: "all",
+    description: "Learn the compliance pain points, buyer personas, and objection handling techniques to effectively refer businesses to LCA Desk.",
+    moduleCount: 4, badgeLabel: "Sales Certified", badgeColor: "gold", estimatedMinutes: 25,
+  }).returning();
+  await db.insert(courseModules).values([
+    { courseId: course.id, orderIndex: 0, title: "Understanding the Market", content: "## The Compliance Pain\n\nEvery contractor and sub-contractor in the petroleum sector must file Half-Yearly Reports. This is mandatory under the Local Content Act 2021.\n\n### Pain Points to Highlight\n- Reports take 20-40 hours per filing period manually\n- Excel templates are confusing and error-prone\n- Missing deadlines = fines up to GY$50M\n- Employment minimums are hard to track\n- Secretariat submissions require multiple documents\n\n### Who Needs LCA Desk\n- **Contractors**: ExxonMobil partners, CNOOC, Hess, SBM Offshore\n- **Sub-contractors**: Engineering firms, catering, logistics, marine services\n- **Consultants**: Firms that file on behalf of multiple companies\n- **New entrants**: Companies just starting petroleum sector operations\n\n### Your Value Proposition\n\"LCA Desk reduces compliance reporting from 20+ hours to under 2 hours, with AI-powered narrative drafting and direct Secretariat submission.\"" },
+    { courseId: course.id, orderIndex: 1, title: "Buyer Personas", content: "## Who You're Talking To\n\n### The Compliance Officer\n- Spends days on reports\n- Frustrated with Excel templates\n- Worried about missing deadlines\n- **Pitch**: Time savings, automation, deadline reminders\n\n### The CEO/GM\n- Cares about penalties and reputation\n- Wants compliance without headcount\n- **Pitch**: Risk reduction, cost savings, audit readiness\n\n### The Consultant\n- Manages multiple companies' reports\n- Needs to scale without hiring\n- **Pitch**: Multi-entity management, bulk pricing, professional tools\n\n### The New Market Entrant\n- Doesn't understand the Act requirements\n- Needs guidance, not just tools\n- **Pitch**: Built-in training, AI expert, template guidance" },
+    { courseId: course.id, orderIndex: 2, title: "Objection Handling", content: "## Common Objections & Responses\n\n### \"We already use Excel\"\n\"Excel works, but LCA Desk automates the calculations, generates the narrative report with AI, and tracks your deadlines. Most companies save 20+ hours per period.\"\n\n### \"It's too expensive\"\n\"At $199/month, it's less than the hourly cost of one compliance officer spending 2 days on a report. Plus, the penalty for a late filing is GY$1M minimum.\"\n\n### \"We'll build our own\"\n\"LCA Desk has been purpose-built for the Local Content Act with 4 jurisdictions, AI narrative drafting, and direct Secretariat submission. Building this in-house would take 6-12 months and cost 10x more.\"\n\n### \"We don't need it yet\"\n\"The next Half-Yearly deadline is coming. Companies that start now have time to enter data properly. Last-minute filings are where errors happen.\"" },
+    { courseId: course.id, orderIndex: 3, title: "Closing Techniques", content: "## Getting the Sign-Up\n\n### The Trial Close\n\"Why not start the 30-day free trial? You can enter your real data and see if it saves you time. No credit card required to start.\"\n\n### The Deadline Close\nCheck the compliance calendar and say: \"Your next H1 report is due [date]. If you start now, you'll have time to set up properly.\"\n\n### The Referral Link\nAlways share your personal referral link. When they sign up through it:\n- They get attributed to you\n- When they subscribe, you earn your commission\n- The more companies you refer, the more you earn\n\n### Follow Up\n- Send the referral link in a follow-up email\n- Check back after 7 days if they haven't signed up\n- Offer to help them set up their first entity" },
+  ]);
+  return course.id;
+}
+
+export async function seedAffiliateMarketingCourse() {
+  const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "affiliate-marketing")).limit(1);
+  if (existing) return existing.id;
+  const [course] = await db.insert(courses).values({
+    slug: "affiliate-marketing", title: "Affiliate Marketing Playbook", audience: "all",
+    description: "Strategies for promoting LCA Desk through social media, email outreach, events, and industry networking.",
+    moduleCount: 3, badgeLabel: "Marketing Pro", badgeColor: "gold", estimatedMinutes: 20,
+  }).returning();
+  await db.insert(courseModules).values([
+    { courseId: course.id, orderIndex: 0, title: "Social Media Strategy", content: "## Building Your Online Presence\n\n### LinkedIn (Primary Channel)\nLinkedIn is where your buyers are. Post about:\n- Compliance deadlines approaching\n- Local content statistics and trends\n- Pain points of manual reporting\n- Success stories from LCA Desk users\n\n### Posting Cadence\n- 2-3 posts per week\n- Mix: 1 educational, 1 promotional, 1 engagement\n- Use the pre-written posts from Marketing Assets\n- Always include your referral link\n\n### Hashtags\n#LocalContent #Guyana #PetroleumSector #Compliance #LCADesk #OilAndGas" },
+    { courseId: course.id, orderIndex: 1, title: "Email Outreach", content: "## Direct Outreach That Works\n\n### Finding Prospects\n- LinkedIn search: \"compliance officer\" + \"Guyana\"\n- Company directories from the LCS Register\n- Industry events attendee lists\n- Chamber of Commerce membership lists\n\n### Email Structure\n1. Personal hook (mention their company/role)\n2. Pain point (compliance reporting takes too long)\n3. Solution (LCA Desk automates it)\n4. Social proof (companies already using it)\n5. CTA (your referral link for a free trial)\n\n### Use the templates in Marketing Assets — they're proven to convert." },
+    { courseId: course.id, orderIndex: 2, title: "Events & Networking", content: "## In-Person Promotion\n\n### Industry Events\n- Guyana Energy Conference\n- LCS stakeholder meetings\n- Chamber of Commerce events\n- Oil & Gas networking mixers\n\n### Your Elevator Pitch\n\"I help petroleum companies cut their compliance reporting time by 90%. LCA Desk automates Half-Yearly Reports — expenditure, employment, capacity development — and even drafts the narrative with AI. Most companies save 20+ hours per filing period.\"\n\n### Business Cards\nInclude your referral link on your business card or a QR code that links to your signup page.\n\n### Follow-Up\nAfter every conversation, send your referral link within 24 hours with a personalized note." },
+  ]);
+  return course.id;
+}
+
 // ─── JURISDICTION HELPERS ────────────────────────────────────────
 
 export async function getEntityJurisdictionCode(entityId: string): Promise<string> {

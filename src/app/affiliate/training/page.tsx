@@ -8,7 +8,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, Trophy,
   ArrowRight, Star, Target,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedAffiliateSalesCourse, seedAffiliateMarketingCourse } from "@/server/actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,19 @@ export default function AffiliateTrainingPage() {
 
   useEffect(() => {
     Promise.all([fetchCourses("all"), fetchUserBadges()])
-      .then(([c, b]) => { setCourseList(c); setBadges(b); })
+      .then(async ([c, b]) => {
+        setBadges(b);
+        // Auto-seed affiliate courses if none exist
+        const hasAffiliateCourses = c.some((course: {slug: string}) => course.slug === "affiliate-sales");
+        if (!hasAffiliateCourses) {
+          try {
+            await seedAffiliateSalesCourse();
+            await seedAffiliateMarketingCourse();
+            c = await fetchCourses("all");
+          } catch {}
+        }
+        setCourseList(c);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -66,7 +78,7 @@ export default function AffiliateTrainingPage() {
           {courseList.map(course => {
             const hasBadge = badges.some((b: { courseId: string }) => b.courseId === course.id);
             return (
-              <Link key={course.id} href={`/seeker/learn/${course.slug}`}>
+              <Link key={course.id} href={`/learn/${course.slug}`}>
                 <Card className={cn(
                   "hover:border-accent/30 hover:shadow-md transition-all cursor-pointer h-full",
                   hasBadge && "border-success/20 bg-success/[0.02]"

@@ -6,4 +6,5 @@ export {
   seedFirstReportCourse, seedFirstScheduleCourse, seedAuditPrepCourse,
   seedWinningContractsCourse, seedLcsCertCourse,
   seedCareerGuideCourse, seedInterviewPrepCourse, seedEsgCourse,
+  seedAffiliateSalesCourse, seedAffiliateMarketingCourse,
 } from "./_all";
