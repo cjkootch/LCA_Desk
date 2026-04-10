@@ -366,9 +366,9 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       </div>
 
       {/* Powered by LCA Desk watermark */}
-      <div className="absolute bottom-20 right-6 flex items-center gap-1.5 opacity-40 pointer-events-none select-none z-10">
-        <span className="text-[10px] text-[#19544c] font-medium tracking-wide">Powered by</span>
-        <Image src="/logo-full.svg" alt="LCA Desk" width={60} height={18} className="opacity-80" />
+      <div className="absolute bottom-20 right-6 flex items-center gap-2 opacity-30 pointer-events-none select-none z-10">
+        <span className="text-sm text-[#19544c] font-medium tracking-wide">Powered by</span>
+        <Image src="/logo-full.svg" alt="LCA Desk" width={180} height={54} className="opacity-80" />
       </div>
 
       {/* Navigation */}
