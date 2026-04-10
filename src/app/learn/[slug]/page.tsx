@@ -224,25 +224,45 @@ export default function CoursePage() {
       </div>
 
       <div className="p-4 sm:p-6 max-w-5xl">
-        {/* Course progress header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-text-primary">{completedCount}/{modules.length} modules</span>
-              {hasBadge && <Badge variant="success" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" /> {course.badgeLabel}</Badge>}
+        {/* Course progress card */}
+        <Card className="mb-6 border-border/60">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* Progress ring */}
+              <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0">
+                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none" stroke="currentColor" strokeWidth="3" className="text-border/40" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={`${progressPct}, 100`}
+                    strokeLinecap="round" className={hasBadge ? "text-success" : "text-accent"} style={{ transition: "stroke-dasharray 0.6s ease" }} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {hasBadge ? (
+                    <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
+                  ) : (
+                    <span className="text-sm sm:text-lg font-bold text-text-primary">{progressPct}%</span>
+                  )}
+                </div>
+              </div>
+              {/* Progress details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-sm sm:text-base font-heading font-bold text-text-primary truncate">
+                    {hasBadge ? `${course.badgeLabel} Earned` : `${completedCount} of ${modules.length} modules complete`}
+                  </h2>
+                  {hasBadge && <Badge variant="success" className="text-[10px] gap-0.5 shrink-0"><CheckCircle className="h-2.5 w-2.5" /> Certified</Badge>}
+                </div>
+                <Progress value={progressPct} className="h-1.5 mb-2" indicatorClassName={hasBadge ? "bg-success" : "bg-accent"} />
+                <div className="flex items-center gap-4 text-xs text-text-muted">
+                  <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {modules.length} modules</span>
+                  <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-gold" /> {completedCount * 100} / {modules.length * 100} XP</span>
+                  {course.estimatedMinutes && <span>~{course.estimatedMinutes} min</span>}
+                </div>
+              </div>
             </div>
-            <Progress value={progressPct} className="h-2.5" indicatorClassName={hasBadge ? "bg-success" : "bg-accent"} />
-          </div>
-          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 shrink-0">
-            <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-gold" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-text-primary">{completedCount * 100} <span className="text-text-muted font-normal">/ {modules.length * 100} XP</span></p>
-              <p className="text-[10px] text-text-muted uppercase tracking-wider">Course Progress</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Badge earned banner */}
         {hasBadge && (
@@ -282,11 +302,6 @@ export default function CoursePage() {
                    locked ? <Lock className="h-4 w-4 shrink-0" /> :
                    <div className="h-4 w-4 rounded-full border-2 border-current shrink-0 flex items-center justify-center text-[11px] font-bold">{i + 1}</div>}
                   <span className="truncate">{m.title}</span>
-                  {complete && (
-                    <span className={cn("ml-auto text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded",
-                      activeModule === i ? "bg-white/20 text-white" : "bg-gold/10 text-gold"
-                    )}>100 XP</span>
-                  )}
                 </button>
               );
             })}
@@ -297,15 +312,9 @@ export default function CoursePage() {
             {!showQuiz ? (
               <>
                 {/* Module header */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <Badge variant="default" className="text-xs">Module {activeModule + 1}</Badge>
-                  {isModuleComplete(currentModule.id) ? (
-                    <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>
-                  ) : (
-                    <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gold/10 text-gold text-xs font-semibold">
-                      <Zap className="h-3 w-3" /> +100 XP
-                    </span>
-                  )}
+                  {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
                 </div>
                 <h2 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{currentModule.title}</h2>
 

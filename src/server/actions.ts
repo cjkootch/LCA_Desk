@@ -4367,13 +4367,13 @@ export async function seedLcaCourse() {
   const [course] = await db.insert(courses).values({
     slug: "lca-fundamentals",
     title: "LCA Fundamentals",
-    description: "Understand Guyana's Local Content Act 2021 — the legal framework, filing obligations, employment requirements, and your rights as a Guyanese national in the petroleum sector.",
+    description: "The definitive course on Guyana's Local Content Act 2021 — covering the legal framework, employment targets, supplier certification, reporting obligations, enforcement, and your role in Guyana's petroleum transformation.",
     audience: "all",
     jurisdictionCode: "GY",
-    moduleCount: 5,
+    moduleCount: 8,
     badgeLabel: "LCA Certified",
     badgeColor: "accent",
-    estimatedMinutes: 30,
+    estimatedMinutes: 60,
   }).returning();
 
   const moduleData = [
