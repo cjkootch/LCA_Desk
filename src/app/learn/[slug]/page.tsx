@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, BookOpen, CheckCircle, XCircle, Trophy, ArrowRight, Lock,
-  Star, Zap, PartyPopper, Presentation, Play, ChevronDown, ChevronUp,
+  Zap, PartyPopper, Presentation, Play, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { fetchCourseWithModules, completeModule } from "@/server/actions";
 import { Slideshow } from "@/components/training/Slideshow";
@@ -87,7 +87,7 @@ function CelebrationModal({ show, badgeLabel, badgeColor, onClose }: {
             <span className="font-bold text-lg">{badgeLabel}</span>
           </div>
           <div className="space-y-2 text-xs text-text-muted mb-6">
-            <p className="flex items-center justify-center gap-1"><Star className="h-3 w-3 text-gold" /> +500 XP earned</p>
+            <p className="flex items-center justify-center gap-1"><Zap className="h-3 w-3 text-gold" /> +500 XP earned</p>
             <p className="flex items-center justify-center gap-1"><Zap className="h-3 w-3 text-accent" /> Badge visible on your Talent Pool profile</p>
           </div>
           <Button onClick={onClose} className="w-full">Continue Learning</Button>
@@ -224,19 +224,24 @@ export default function CoursePage() {
       </div>
 
       <div className="p-4 sm:p-6 max-w-5xl">
-        {/* Course progress bar */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+        {/* Course progress header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-text-primary">{completedCount}/{modules.length} modules</span>
               {hasBadge && <Badge variant="success" className="text-xs gap-0.5"><Trophy className="h-2.5 w-2.5" /> {course.badgeLabel}</Badge>}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-text-muted">
-              <Star className="h-3 w-3 text-gold" />
-              <span>{completedCount * 100} / {modules.length * 100} XP</span>
+            <Progress value={progressPct} className="h-2.5" indicatorClassName={hasBadge ? "bg-success" : "bg-accent"} />
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 shrink-0">
+            <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center">
+              <Zap className="h-4 w-4 text-gold" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-text-primary">{completedCount * 100} <span className="text-text-muted font-normal">/ {modules.length * 100} XP</span></p>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Course Progress</p>
             </div>
           </div>
-          <Progress value={progressPct} className="h-2.5" indicatorClassName={hasBadge ? "bg-success" : "bg-accent"} />
         </div>
 
         {/* Badge earned banner */}
@@ -277,7 +282,11 @@ export default function CoursePage() {
                    locked ? <Lock className="h-4 w-4 shrink-0" /> :
                    <div className="h-4 w-4 rounded-full border-2 border-current shrink-0 flex items-center justify-center text-[11px] font-bold">{i + 1}</div>}
                   <span className="truncate">{m.title}</span>
-                  {complete && <Star className="h-3 w-3 ml-auto text-gold shrink-0" />}
+                  {complete && (
+                    <span className={cn("ml-auto text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded",
+                      activeModule === i ? "bg-white/20 text-white" : "bg-gold/10 text-gold"
+                    )}>100 XP</span>
+                  )}
                 </button>
               );
             })}
@@ -290,8 +299,13 @@ export default function CoursePage() {
                 {/* Module header */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="default" className="text-xs">Module {activeModule + 1}</Badge>
-                  {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
-                  <span className="text-xs text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
+                  {isModuleComplete(currentModule.id) ? (
+                    <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>
+                  ) : (
+                    <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gold/10 text-gold text-xs font-semibold">
+                      <Zap className="h-3 w-3" /> +100 XP
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{currentModule.title}</h2>
 
@@ -479,8 +493,8 @@ export default function CoursePage() {
                             <span className="text-lg font-bold text-success">Passed!</span>
                           </div>
                           <p className="text-sm text-text-secondary">Score: {quizResult.score}%</p>
-                          <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gold">
-                            <Star className="h-3.5 w-3.5" /> +100 XP earned
+                          <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold">
+                            <Zap className="h-3.5 w-3.5" /> +100 XP earned
                           </div>
                           {quizResult.badgeEarned && (
                             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold/10 text-gold text-sm font-medium">
