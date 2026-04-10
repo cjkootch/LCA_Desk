@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, Presentation, X, SkipForward, CheckCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface SlideshowProps {
   content: string; // markdown content
@@ -362,6 +363,12 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
             </div>
           )}
         </div>
+      </div>
+
+      {/* Powered by LCA Desk watermark */}
+      <div className="absolute bottom-20 right-6 flex items-center gap-1.5 opacity-40 pointer-events-none select-none z-10">
+        <span className="text-[10px] text-[#19544c] font-medium tracking-wide">Powered by</span>
+        <Image src="/logo-full.svg" alt="LCA Desk" width={60} height={18} className="opacity-80" />
       </div>
 
       {/* Navigation */}
