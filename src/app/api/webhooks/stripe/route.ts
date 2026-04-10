@@ -139,16 +139,26 @@ export async function POST(req: NextRequest) {
           trialEndsAt: null,
         }).where(eq(tenants.id, tenantId));
 
+        // Look up tenant owner for downstream sync
+        const [owner] = await db.select({ email: users.email, userId: tenantMembers.userId }).from(tenantMembers)
+          .innerJoin(users, eq(tenantMembers.userId, users.id))
+          .where(eq(tenantMembers.tenantId, tenantId)).limit(1);
+
         // Sync payment to HubSpot
         try {
-          const [owner] = await db.select({ email: users.email }).from(tenantMembers)
-            .innerJoin(users, eq(tenantMembers.userId, users.id))
-            .where(eq(tenantMembers.tenantId, tenantId)).limit(1);
           if (owner?.email) {
             const { syncPayment } = await import("@/lib/hubspot-sync");
             await syncPayment(owner.email, plan, session.customer as string);
           }
         } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
+
+        // Qualify referral for the subscribing user
+        try {
+          if (owner?.userId) {
+            const { qualifyReferral } = await import("@/server/actions/_all");
+            await qualifyReferral(owner.userId);
+          }
+        } catch (err) { console.error("[stripe-webhook] qualifyReferral error:", err instanceof Error ? err.message : err); }
       }
       break;
     }

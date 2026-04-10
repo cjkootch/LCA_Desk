@@ -949,6 +949,13 @@ export async function fetchUserContext() {
     with: { tenant: { with: { jurisdiction: true } } },
   });
 
+  // Build billing state (mirrors fetchPlanAndUsage)
+  const plan = membership?.tenant?.plan || "lite";
+  const trialEndsAt = membership?.tenant?.trialEndsAt ?? null;
+  const stripeSubId = membership?.tenant?.stripeSubscriptionId ?? null;
+  const stripeSubStatus = membership?.tenant?.stripeSubscriptionStatus ?? null;
+  const billingAccess = getBillingAccess(plan, trialEndsAt, stripeSubId, stripeSubStatus);
+
   return {
     user: session.user,
     tenant: membership?.tenant ? {
@@ -957,6 +964,14 @@ export async function fetchUserContext() {
     } : null,
     role: membership?.role || null,
     isSuperAdmin: user?.isSuperAdmin ?? false,
+    trialEndsAt,
+    stripeSubscriptionId: stripeSubId,
+    stripeSubscriptionStatus: stripeSubStatus,
+    billingAccess,
+    isInTrial: isInTrial(trialEndsAt) || stripeSubStatus === "trialing",
+    isTrialExpired: isTrialExpired(trialEndsAt, stripeSubId),
+    trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),
+    effectivePlan: getEffectivePlan(plan, trialEndsAt).code,
   };
 }
 
