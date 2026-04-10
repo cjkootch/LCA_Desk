@@ -37,7 +37,8 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Referrals", href: "/seeker/referrals", icon: Gift },
       { label: "Notifications", href: "/seeker/notifications", icon: Bell },
-      { label: "Settings", href: "/seeker/settings", icon: Settings },
+      { label: "Support", href: "/seeker/support", icon: LifeBuoy },
+    { label: "Settings", href: "/seeker/settings", icon: Settings },
     ],
   },
 ];
