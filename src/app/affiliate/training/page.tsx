@@ -8,7 +8,7 @@ import {
   GraduationCap, BookOpen, CheckCircle, Clock, Trophy,
   ArrowRight, Star, Target,
 } from "lucide-react";
-import { fetchCourses, fetchUserBadges, seedAffiliateSalesCourse, seedAffiliateMarketingCourse } from "@/server/actions";
+import { fetchCourses, fetchUserBadges, seedAffiliateSalesCourse, seedAffiliateMarketingCourse, seedLcaCourse } from "@/server/actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -24,14 +24,12 @@ export default function AffiliateTrainingPage() {
       .then(async ([c, b]) => {
         setBadges(b);
         // Auto-seed affiliate courses if none exist
-        const hasAffiliateCourses = c.some((course: {slug: string}) => course.slug === "affiliate-sales");
-        if (!hasAffiliateCourses) {
-          try {
-            await seedAffiliateSalesCourse();
-            await seedAffiliateMarketingCourse();
-            c = await fetchCourses("all");
-          } catch {}
-        }
+        try {
+          await seedLcaCourse();
+          await seedAffiliateSalesCourse();
+          await seedAffiliateMarketingCourse();
+          c = await fetchCourses("all");
+        } catch {}
         setCourseList(c);
       })
       .catch(() => {})
