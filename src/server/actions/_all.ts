@@ -1004,6 +1004,10 @@ export async function fetchMyReferralInfo() {
     status: referrals.status,
     rewardType: referrals.rewardType,
     rewardAmount: referrals.rewardAmount,
+    commissionAmount: referrals.commissionAmount,
+    commissionPaidAt: referrals.commissionPaidAt,
+    convertedPlan: referrals.convertedPlan,
+    rewardedAt: referrals.rewardedAt,
     createdAt: referrals.createdAt,
   }).from(referrals)
     .where(eq(referrals.referrerUserId, session.user.id))
@@ -1067,17 +1071,19 @@ export async function qualifyReferral(referredUserId: string) {
       await db.update(tenants).set({ trialEndsAt: newEnd }).where(eq(tenants.id, membership.tenantId));
     };
 
-    // Extend BOTH referrer and referred user's trials
-    await extendTrial(ref.referrerUserId);
-    await extendTrial(referredUserId);
-
-    // Check if referrer is an affiliate — calculate commission
+    // Check if referrer is an affiliate
     const [referrerUser] = await db.select({
       userRole: users.userRole,
       commissionRate: users.affiliateCommissionRate,
     }).from(users).where(eq(users.id, ref.referrerUserId)).limit(1);
 
-    const isAffiliate = referrerUser?.userRole?.includes("affiliate");
+    const isAffiliate = referrerUser?.userRole === "affiliate";
+
+    // For regular (non-affiliate) referrers: extend both parties' trials
+    if (!isAffiliate) {
+      await extendTrial(ref.referrerUserId);
+      await extendTrial(referredUserId);
+    }
     const commissionRate = referrerUser?.commissionRate || 20; // default 20%
 
     // Determine reward type based on referrer role
@@ -1103,7 +1109,14 @@ export async function qualifyReferral(referredUserId: string) {
       rewardUpdate.rewardType = "commission";
       rewardUpdate.rewardAmount = `$${commission.toFixed(2)}`;
       rewardUpdate.commissionAmount = String(commission.toFixed(2));
-      rewardUpdate.convertedPlan = "lite"; // will be updated when they actually subscribe
+      // Use actual plan from the referred user's tenant
+      let actualPlan = "lite";
+      if (referredMembership) {
+        const [tp] = await db.select({ plan: tenants.plan }).from(tenants)
+          .where(eq(tenants.id, referredMembership.tenantId)).limit(1);
+        if (tp?.plan) actualPlan = tp.plan;
+      }
+      rewardUpdate.convertedPlan = actualPlan;
     } else {
       // Regular user: trial extension
       rewardUpdate.rewardType = "trial_extension";

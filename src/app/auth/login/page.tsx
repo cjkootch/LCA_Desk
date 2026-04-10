@@ -55,6 +55,7 @@ function LoginForm() {
     supplier: "Supplier",
     secretariat: "Regulatory Office",
     filer: "Compliance Filing",
+    affiliate: "Affiliate Partner",
   };
 
   return (

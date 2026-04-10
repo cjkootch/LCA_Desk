@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import {
   Building2, Briefcase, Truck, Shield, Crown, Lock,
-  User, Search, Plus,
+  User, Search, Plus, Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -94,6 +94,17 @@ const DEMO_USERS = [
     bgColor: "bg-gold/10",
   },
   {
+    id: "affiliate",
+    label: "Affiliate",
+    description: "Refer businesses, track commissions, earn payouts",
+    icon: Gift,
+    plan: null,
+    role: "affiliate",
+    email: "demo-affiliate@lcadesk.com",
+    color: "text-gold",
+    bgColor: "bg-gold/10",
+  },
+  {
     id: "admin",
     label: "Super Admin",
     description: "Platform admin — all tenants, admin panel, enterprise",
@@ -144,6 +155,7 @@ function DemoContent() {
       if (user.role === "job_seeker") window.location.href = "/seeker/dashboard";
       else if (user.role === "supplier") window.location.href = "/supplier-portal/dashboard";
       else if (user.role === "secretariat") window.location.href = "/secretariat/dashboard";
+      else if (user.role === "affiliate") window.location.href = "/affiliate/dashboard";
       else if ((user as { isRealAdmin?: boolean }).isRealAdmin) window.location.href = "/dashboard/admin";
       else window.location.href = "/dashboard";
     } catch {

@@ -463,6 +463,10 @@ CERTIFICATIONS
     }
     results.push(`✓ Job Seeker 4 (no badges, entry-level): ${seeker4.email}`);
 
+    // ═══ 6c. Affiliate Partner ═══
+    const affiliate = await ensureUser("demo-affiliate@lcadesk.com", "Jordan Blake", "affiliate");
+    results.push(`✓ Affiliate: ${affiliate.email}`);
+
     // ═══ 7. Supplier (with full profile) ═══
     const supplier = await ensureUser("demo-supplier@lcadesk.com", "Anil Raghunath", "supplier");
     const [existingSupplier] = await db.select().from(supplierProfiles).where(eq(supplierProfiles.userId, supplier.id)).limit(1);
