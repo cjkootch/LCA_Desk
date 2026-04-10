@@ -153,9 +153,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
     clearAdvanceTimer();
     setSpeaking(false);
   }, [clearAdvanceTimer]);
@@ -201,18 +198,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       return;
     }
 
-    // Start browser TTS immediately as audible fallback while OpenAI loads
-    let browserActive = false;
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.92;
-      utterance.onend = () => {
-        if (browserActive && mountedRef.current && !controller.signal.aborted) onSpeechEnd();
-      };
-      window.speechSynthesis.speak(utterance);
-      browserActive = true;
-    }
-
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
@@ -223,29 +208,24 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
       if (controller.signal.aborted || !mountedRef.current) return;
 
-      if (res.ok) {
-        const blob = await res.blob();
-        if (controller.signal.aborted || !mountedRef.current) return;
-
-        // Swap: stop browser speech, play OpenAI audio from the start
-        browserActive = false;
-        if (typeof window !== "undefined" && window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-
-        const url = URL.createObjectURL(blob);
-        // Cache for this slide (prefetch already owns a separate URL for next slides)
-        if (slideIdx !== undefined) {
-          audioCache.current.set(slideIdx, url);
-          playFromUrl(url, false); // cache owns the URL, revoked on unmount
-        } else {
-          playFromUrl(url, true); // ephemeral, revoke on ended
-        }
+      if (!res.ok) {
+        if (mountedRef.current) setSpeaking(false);
+        return;
       }
-      // If not ok, browser speech continues to completion
+
+      const blob = await res.blob();
+      if (controller.signal.aborted || !mountedRef.current) return;
+
+      const url = URL.createObjectURL(blob);
+      if (slideIdx !== undefined) {
+        audioCache.current.set(slideIdx, url);
+        playFromUrl(url, false); // cache owns the URL, revoked on unmount
+      } else {
+        playFromUrl(url, true); // ephemeral, revoke on ended
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      if (mountedRef.current && !browserActive) setSpeaking(false);
+      if (mountedRef.current) setSpeaking(false);
     }
   }, [voiceEnabled, stopSpeech, onSpeechEnd, playFromUrl]);
 
@@ -296,9 +276,6 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
         audioRef.current.onerror = null;
         audioRef.current.pause();
         audioRef.current = null;
-      }
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
       }
       if (advanceTimerRef.current) {
         clearTimeout(advanceTimerRef.current);
