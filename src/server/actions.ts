@@ -2976,6 +2976,7 @@ export async function fetchUserSettings() {
     linkedinUrl: users.linkedinUrl,
     twitterUrl: users.twitterUrl,
     websiteUrl: users.websiteUrl,
+    affiliatePayoutEmail: users.affiliatePayoutEmail,
   }).from(users).where(eq(users.id, session.user.id)).limit(1);
   return user;
 }
@@ -2987,6 +2988,7 @@ export async function updateUserSettings(data: {
   linkedinUrl?: string;
   twitterUrl?: string;
   websiteUrl?: string;
+  affiliatePayoutEmail?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -2997,6 +2999,7 @@ export async function updateUserSettings(data: {
     ...(data.linkedinUrl !== undefined ? { linkedinUrl: data.linkedinUrl } : {}),
     ...(data.twitterUrl !== undefined ? { twitterUrl: data.twitterUrl } : {}),
     ...(data.websiteUrl !== undefined ? { websiteUrl: data.websiteUrl } : {}),
+    ...(data.affiliatePayoutEmail !== undefined ? { affiliatePayoutEmail: data.affiliatePayoutEmail } : {}),
     updatedAt: new Date(),
   }).where(eq(users.id, session.user.id));
 }

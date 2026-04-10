@@ -60,6 +60,30 @@ export default function AffiliateDashboard() {
         </Card>
       </div>
 
+      {/* Commission tier */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <DollarSign className="h-4 w-4 text-gold" />
+            <p className="text-sm font-semibold text-text-primary">Your Commission Rate: 20%</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { plan: "Essentials", price: "$199/mo", commission: "$39.80" },
+              { plan: "Professional", price: "$499/mo", commission: "$99.80" },
+              { plan: "Enterprise", price: "$999/mo", commission: "$199.80" },
+            ].map(tier => (
+              <div key={tier.plan} className="bg-bg-primary rounded-lg p-3 text-center">
+                <p className="text-xs font-medium text-text-secondary">{tier.plan}</p>
+                <p className="text-xs text-text-muted">{tier.price}</p>
+                <p className="text-sm font-bold text-gold mt-1">{tier.commission}</p>
+                <p className="text-[11px] text-text-muted">per conversion</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Pending payout */}
       {pendingCommission > 0 && (
         <Card className="mb-4 border-gold/20 bg-gradient-to-r from-gold/5 to-transparent">
