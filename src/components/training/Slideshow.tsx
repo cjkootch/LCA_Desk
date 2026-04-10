@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, Presentation, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, Presentation, X, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SlideshowProps {
@@ -65,15 +63,49 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
   const [current, setCurrent] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mountedRef = useRef(true);
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAdvanceTimer = useCallback(() => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+  }, []);
 
   const stopSpeech = useCallback(() => {
+    // Cancel OpenAI TTS audio
     if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
+    // Cancel browser speech synthesis fallback
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    clearAdvanceTimer();
     setSpeaking(false);
-  }, []);
+  }, [clearAdvanceTimer]);
+
+  // Auto-advance to next slide after speech ends
+  const onSpeechEnd = useCallback(() => {
+    if (!mountedRef.current) return;
+    setSpeaking(false);
+    if (autoPlay) {
+      advanceTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        setCurrent(prev => {
+          const totalSlides = contentSlides.length + 1; // +1 for intro
+          return prev < totalSlides - 1 ? prev + 1 : prev;
+        });
+      }, 2000); // 2-second buffer before advancing
+    }
+  }, [autoPlay, contentSlides.length]);
 
   const speak = useCallback(async (text: string) => {
     if (!voiceEnabled) return;
@@ -86,15 +118,17 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean, voice: "shimmer" }),
+        body: JSON.stringify({ text: clean, voice: "nova" }),
       });
+
+      if (!mountedRef.current) return;
 
       if (!res.ok) {
         // Fallback to browser speech if API fails
         if (typeof window !== "undefined" && window.speechSynthesis) {
           const utterance = new SpeechSynthesisUtterance(clean);
           utterance.rate = 0.92;
-          utterance.onend = () => setSpeaking(false);
+          utterance.onend = () => onSpeechEnd();
           window.speechSynthesis.speak(utterance);
         } else {
           setSpeaking(false);
@@ -103,16 +137,18 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
       }
 
       const blob = await res.blob();
+      if (!mountedRef.current) return;
+
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => { setSpeaking(false); URL.revokeObjectURL(url); };
-      audio.onerror = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+      audio.onended = () => { URL.revokeObjectURL(url); onSpeechEnd(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
       audio.play();
     } catch {
-      setSpeaking(false);
+      if (mountedRef.current) setSpeaking(false);
     }
-  }, [voiceEnabled, stopSpeech]);
+  }, [voiceEnabled, stopSpeech, onSpeechEnd]);
 
   // Speak slide content when navigating
   useEffect(() => {
@@ -126,41 +162,117 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
     return () => stopSpeech();
   }, [current, voiceEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup on unmount
-  useEffect(() => () => stopSpeech(), [stopSpeech]);
+  // Cleanup on unmount — aggressively stop all audio
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      // Directly clean up without relying on state
+      if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+      }
+    };
+  }, []);
 
   const slide = slides[current];
   const progress = ((current + 1) / slides.length) * 100;
 
-  // Render markdown body as simple HTML
+  // Animation key resets on slide change
+  const [animKey, setAnimKey] = useState(0);
+  useEffect(() => setAnimKey(k => k + 1), [current]);
+
+  const isIntro = current === 0;
+
+  // Render markdown body with staggered animations
   const renderBody = (body: string) => {
     const lines = body.split("\n").filter(Boolean);
     return lines.map((line, i) => {
       const trimmed = line.trim();
-      if (trimmed.startsWith("### ")) return <h3 key={i} className="text-lg font-bold text-text-primary mt-4 mb-2">{trimmed.slice(4)}</h3>;
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) return <li key={i} className="text-text-secondary ml-4 mb-1">{trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, "$1")}</li>;
-      if (trimmed.startsWith('"') || trimmed.startsWith('"')) return <blockquote key={i} className="border-l-4 border-accent/30 pl-4 py-1 my-2 text-text-secondary italic">{trimmed}</blockquote>;
-      return <p key={i} className="text-text-secondary mb-2 leading-relaxed">{trimmed.replace(/\*\*(.+?)\*\*/g, "$1")}</p>;
+      const delay = `${150 + i * 80}ms`;
+      const style = { animationDelay: delay };
+
+      if (trimmed.startsWith("### ")) return (
+        <h3 key={i} className="text-xl font-bold text-[#19544c] mt-6 mb-3 animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={style}>
+          {trimmed.slice(4)}
+        </h3>
+      );
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) return (
+        <div key={i} className="flex items-start gap-3 mb-2 animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={style}>
+          <div className="h-2 w-2 rounded-full bg-[#71b59a] mt-2.5 shrink-0" />
+          <span className="text-[#475569] text-base sm:text-lg leading-relaxed">
+            {trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
+          </span>
+        </div>
+      );
+      if (trimmed.startsWith('"') || trimmed.startsWith('"')) return (
+        <blockquote key={i} className="border-l-4 border-[#71b59a] pl-5 py-2 my-4 animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={style}>
+          <p className="text-[#334155] italic text-base sm:text-lg">{trimmed}</p>
+        </blockquote>
+      );
+      if (trimmed.startsWith("**") && trimmed.endsWith("**")) return (
+        <p key={i} className="text-[#19544c] font-semibold text-base sm:text-lg mb-2 animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={style}>
+          {trimmed.replace(/\*\*/g, "")}
+        </p>
+      );
+      return (
+        <p key={i} className="text-[#475569] text-base sm:text-lg mb-2 leading-relaxed animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={style}>
+          {trimmed.replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
+        </p>
+      );
     });
   };
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#E8E4DF] flex flex-col">
+      {/* CSS animations */}
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(113, 181, 154, 0.4); }
+          50% { box-shadow: 0 0 20px 4px rgba(113, 181, 154, 0.15); }
+        }
+      `}</style>
+
       {/* Top bar */}
-      <div className="relative flex items-center justify-between h-12 px-4 sm:px-6 bg-[#19544c] border-b border-[#19544c]/20">
+      <div className="relative flex items-center justify-between h-12 px-4 sm:px-6 bg-[#19544c]">
         <div className="flex items-center gap-3">
           <Presentation className="h-4 w-4 text-[#71b59a]" />
           <span className="text-sm font-medium text-white/90 truncate">{title}</span>
           <span className="text-xs text-white/50">Slide {current + 1} of {slides.length}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { setAutoPlay(!autoPlay); if (!autoPlay) clearAdvanceTimer(); }}
+            className={cn("p-1.5 rounded-lg transition-colors", autoPlay ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
+            title={autoPlay ? "Disable auto-advance" : "Enable auto-advance"}>
+            <SkipForward className="h-4 w-4" />
+          </button>
           <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (voiceEnabled) stopSpeech(); }}
             className={cn("p-1.5 rounded-lg transition-colors", voiceEnabled ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
             title={voiceEnabled ? "Mute voiceover" : "Enable voiceover"}>
             {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </button>
           {speaking ? (
-            <button onClick={stopSpeech} className="p-1.5 rounded-lg text-[#71b59a] hover:text-[#71b59a]/80">
+            <button onClick={stopSpeech} className="p-1.5 rounded-lg text-[#71b59a] hover:text-[#71b59a]/80" style={{ animation: "pulseGlow 2s ease-in-out infinite" }}>
               <Pause className="h-4 w-4" />
             </button>
           ) : (
@@ -176,25 +288,49 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
       </div>
 
       {/* Progress */}
-      <Progress value={progress} className="h-1 rounded-none" indicatorClassName="bg-gold rounded-none" />
+      <div className="h-1 bg-[#19544c]/20">
+        <div className="h-full bg-[#71b59a] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+      </div>
 
       {/* Slide content */}
-      <div className="relative flex-1 flex items-center justify-center px-4 sm:px-8 overflow-y-auto">
-        <div className="max-w-2xl w-full py-8">
-          {slide.heading && (
-            <h2 className="text-2xl sm:text-4xl font-bold text-[#19544c] mb-6" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.03em" }}>{slide.heading}</h2>
+      <div className="relative flex-1 flex items-center justify-center px-4 sm:px-8 overflow-y-auto" key={animKey}>
+        <div className={cn("max-w-2xl w-full py-10", isIntro ? "text-center" : "")}>
+          {/* Slide number indicator */}
+          {!isIntro && (
+            <div className="animate-[fadeIn_0.3s_ease_forwards] opacity-0 mb-4">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#19544c]/10 text-[#19544c] text-xs font-medium tracking-wider uppercase">
+                {current} of {slides.length - 1}
+              </span>
+            </div>
           )}
-          <div className="text-base sm:text-lg text-[#334155] leading-relaxed space-y-1">
+
+          {/* Heading */}
+          {slide.heading && (
+            <h2 className={cn(
+              "font-bold text-[#19544c] animate-[scaleIn_0.4s_ease_forwards] opacity-0",
+              isIntro ? "text-3xl sm:text-5xl mb-8" : "text-2xl sm:text-4xl mb-6"
+            )} style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.03em" }}>
+              {slide.heading}
+            </h2>
+          )}
+
+          {/* Accent line under heading */}
+          {isIntro && (
+            <div className="mx-auto w-16 h-1 rounded-full bg-[#71b59a] mb-8 animate-[fadeSlideUp_0.5s_ease_forwards] opacity-0" style={{ animationDelay: "200ms" }} />
+          )}
+
+          {/* Body content */}
+          <div className={cn(isIntro ? "text-lg sm:text-xl" : "text-base sm:text-lg")}>
             {renderBody(slide.body)}
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="relative flex items-center justify-between h-16 px-4 sm:px-8 bg-[#19544c] border-t border-[#19544c]/20">
+      <div className="relative flex items-center justify-between h-16 px-4 sm:px-8 bg-[#19544c]">
         <Button
           variant="ghost"
-          onClick={() => { stopSpeech(); setCurrent(Math.max(0, current - 1)); }}
+          onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.max(0, current - 1)); }}
           disabled={current === 0}
           className="text-white/70 hover:text-white disabled:opacity-30 gap-1.5"
         >
@@ -202,15 +338,15 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose }:
         </Button>
         <div className="flex gap-1.5">
           {slides.map((_, i) => (
-            <button key={i} onClick={() => { stopSpeech(); setCurrent(i); }}
-              className={cn("h-2 rounded-full transition-all",
-                i === current ? "w-6 bg-[#71b59a]" : i < current ? "w-2 bg-[#71b59a]/40" : "w-2 bg-white/20"
+            <button key={i} onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(i); }}
+              className={cn("h-2 rounded-full transition-all duration-300",
+                i === current ? "w-8 bg-[#71b59a]" : i < current ? "w-2 bg-[#71b59a]/50" : "w-2 bg-white/20"
               )} />
           ))}
         </div>
         <Button
           variant="ghost"
-          onClick={() => { stopSpeech(); setCurrent(Math.min(slides.length - 1, current + 1)); }}
+          onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.min(slides.length - 1, current + 1)); }}
           disabled={current === slides.length - 1}
           className="text-white/70 hover:text-white disabled:opacity-30 gap-1.5"
         >
