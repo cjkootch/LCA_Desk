@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   userRole: text("user_role").default("filer"),
   isDemo: boolean("is_demo").default(false),
   referralCode: text("referral_code").unique(),
+  affiliatePayoutEmail: text("affiliate_payout_email"),
+  affiliateCommissionRate: integer("affiliate_commission_rate"), // percentage, e.g. 20 = 20%
   notificationPreferences: text("notification_preferences"),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -182,8 +184,11 @@ export const referrals = pgTable("referrals", {
   status: text("status").notNull().default("pending"), // pending | signed_up | qualified | rewarded
   qualifiedAt: timestamp("qualified_at"),
   rewardedAt: timestamp("rewarded_at"),
-  rewardType: text("reward_type"), // trial_extension | plan_credit | custom
+  rewardType: text("reward_type"), // trial_extension | plan_credit | commission
   rewardAmount: text("reward_amount"), // "14 days" or "$50"
+  commissionAmount: numeric("commission_amount"), // dollar amount for affiliate payouts
+  commissionPaidAt: timestamp("commission_paid_at"),
+  convertedPlan: text("converted_plan"), // the plan the referred user subscribed to
   createdAt: timestamp("created_at").defaultNow(),
 });
 

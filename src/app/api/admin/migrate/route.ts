@@ -61,6 +61,13 @@ export async function POST(req: NextRequest) {
       created_at TIMESTAMP DEFAULT NOW()
     )`);
 
+    // Affiliate fields
+    await run("users.affiliate_payout_email", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS affiliate_payout_email TEXT`);
+    await run("users.affiliate_commission_rate", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS affiliate_commission_rate INTEGER`);
+    await run("referrals.commission_amount", sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS commission_amount NUMERIC`);
+    await run("referrals.commission_paid_at", sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS commission_paid_at TIMESTAMP`);
+    await run("referrals.converted_plan", sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS converted_plan TEXT`);
+
     return NextResponse.json({ success: true, results });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });

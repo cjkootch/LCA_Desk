@@ -1071,14 +1071,46 @@ export async function qualifyReferral(referredUserId: string) {
     await extendTrial(ref.referrerUserId);
     await extendTrial(referredUserId);
 
-    // Single atomic status update: qualified + rewarded together
-    await db.update(referrals).set({
+    // Check if referrer is an affiliate — calculate commission
+    const [referrerUser] = await db.select({
+      userRole: users.userRole,
+      commissionRate: users.affiliateCommissionRate,
+    }).from(users).where(eq(users.id, ref.referrerUserId)).limit(1);
+
+    const isAffiliate = referrerUser?.userRole?.includes("affiliate");
+    const commissionRate = referrerUser?.commissionRate || 20; // default 20%
+
+    // Determine reward type based on referrer role
+    const rewardUpdate: Record<string, unknown> = {
       status: "rewarded",
       qualifiedAt: new Date(),
       rewardedAt: new Date(),
-      rewardType: "trial_extension",
-      rewardAmount: `+${BONUS_DAYS} days (both)`,
-    }).where(eq(referrals.id, ref.id));
+    };
+
+    if (isAffiliate) {
+      // Affiliate: calculate commission based on plan price
+      // Default: 20% of monthly plan price
+      const planPrices: Record<string, number> = { lite: 199, pro: 499, enterprise: 999 };
+      const [referredMembership] = await db.select({ tenantId: tenantMembers.tenantId })
+        .from(tenantMembers).where(eq(tenantMembers.userId, referredUserId)).limit(1);
+      let planPrice = 199; // default
+      if (referredMembership) {
+        const [t] = await db.select({ plan: tenants.plan }).from(tenants)
+          .where(eq(tenants.id, referredMembership.tenantId)).limit(1);
+        if (t?.plan) planPrice = planPrices[t.plan] || 199;
+      }
+      const commission = (planPrice * commissionRate) / 100;
+      rewardUpdate.rewardType = "commission";
+      rewardUpdate.rewardAmount = `$${commission.toFixed(2)}`;
+      rewardUpdate.commissionAmount = String(commission.toFixed(2));
+      rewardUpdate.convertedPlan = "lite"; // will be updated when they actually subscribe
+    } else {
+      // Regular user: trial extension
+      rewardUpdate.rewardType = "trial_extension";
+      rewardUpdate.rewardAmount = `+${BONUS_DAYS} days (both)`;
+    }
+
+    await db.update(referrals).set(rewardUpdate).where(eq(referrals.id, ref.id));
   } catch {} // Don't break the calling workflow
 }
 

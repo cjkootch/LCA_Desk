@@ -27,6 +27,7 @@ function LoginForm() {
     if (role === "job_seeker") return "/seeker/dashboard";
     if (role === "supplier") return "/supplier-portal/dashboard";
     if (role === "secretariat") return "/secretariat/dashboard";
+    if (role === "affiliate") return "/affiliate/dashboard";
     return "/dashboard";
   };
 

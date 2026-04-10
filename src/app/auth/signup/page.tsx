@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Building2, Users, ArrowRight, ArrowLeft, Truck, Search } from "lucide-react";
+import { Building2, Users, ArrowRight, ArrowLeft, Truck, Search, Gift } from "lucide-react";
 
-type UserRole = "filer" | "supplier" | "job_seeker" | "secretariat" | null;
+type UserRole = "filer" | "supplier" | "job_seeker" | "secretariat" | "affiliate" | null;
 type AccountType = "self" | "others" | null;
 
 function SignupContent() {
@@ -79,6 +79,7 @@ function SignupContent() {
         if (role === "job_seeker") window.location.href = "/seeker/dashboard";
         else if (role === "supplier") window.location.href = "/supplier-portal/dashboard";
         else if (role === "secretariat") window.location.href = "/secretariat/dashboard";
+        else if (role === "affiliate") window.location.href = "/affiliate/dashboard";
         else window.location.href = inviteToken ? "/auth/login?registered=1" : "/dashboard/activate";
       }
     } catch {
@@ -93,6 +94,7 @@ function SignupContent() {
     supplier: { redirect: "/supplier-portal/dashboard", companyLabel: "Company Name", companyPlaceholder: "Your company's legal name" },
     job_seeker: { redirect: "/seeker/dashboard", companyLabel: null, companyPlaceholder: null },
     secretariat: { redirect: "/secretariat/dashboard", companyLabel: null, companyPlaceholder: null },
+    affiliate: { redirect: "/affiliate/dashboard", companyLabel: null, companyPlaceholder: null },
   };
 
   const config = role ? (roleConfig[role as string] ?? null) : null;
@@ -122,6 +124,7 @@ function SignupContent() {
                   { id: "filer" as const, icon: Building2, label: "I need to file LCA reports", desc: "Contractor, Sub-Contractor, or Licensee with a filing obligation" },
                   { id: "supplier" as const, icon: Truck, label: "I'm a local supplier", desc: "Registered or seeking to be listed in the supplier directory" },
                   { id: "job_seeker" as const, icon: Search, label: "I'm looking for work", desc: "Search petroleum sector jobs and build your professional profile" },
+                  { id: "affiliate" as const, icon: Gift, label: "I want to refer businesses", desc: "Earn commissions by referring companies to LCA Desk" },
                 ].map(r => (
                   <button key={r.id} onClick={() => setRole(r.id)}
                     className={cn("w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",

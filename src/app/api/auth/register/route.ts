@@ -14,7 +14,7 @@ const registerSchema = z.object({
   companyName: z.string().optional(),
   accountType: z.enum(["self", "others"]).optional(),
   // Role-based registration
-  role: z.enum(["filer", "job_seeker", "supplier", "secretariat"]).default("filer"),
+  role: z.enum(["filer", "job_seeker", "supplier", "secretariat", "affiliate"]).default("filer"),
   ref: z.string().optional(), // referral code
   // Job seeker fields
   currentJobTitle: z.string().optional(),
@@ -158,6 +158,15 @@ export async function POST(req: NextRequest) {
       // above handles team join. Just redirect to login.
       return NextResponse.json(
         { success: true, userId: user.id, role: "secretariat", redirectTo: "/auth/login" },
+        { headers: cors }
+      );
+    }
+
+    // ─── AFFILIATE REGISTRATION ─────────────────────────────────
+    if (role === "affiliate") {
+      // Affiliates have no tenant — they just use the referral system
+      return NextResponse.json(
+        { success: true, userId: user.id, role: "affiliate", redirectTo: "/auth/login" },
         { headers: cors }
       );
     }
