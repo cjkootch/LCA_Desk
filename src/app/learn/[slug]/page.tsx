@@ -205,6 +205,14 @@ export default function CoursePage() {
           courseTitle={course.title}
           moduleTitle={currentModule.title}
           onClose={() => setShowSlideshow(false)}
+          isModuleComplete={isModuleComplete(currentModule.id)}
+          onComplete={() => {
+            setShowSlideshow(false);
+            setWatchedModules(prev => new Set(prev).add(activeModule));
+            setShowQuiz(true);
+            setAnswers({});
+            setQuizResult(null);
+          }}
         />
       )}
 
