@@ -21,6 +21,8 @@ import {
   Bell,
   Trash2,
   Plus,
+  X,
+  Clock,
   Save,
   Plug,
   CheckCircle,
@@ -35,6 +37,8 @@ import {
   fetchTeamMembers,
   inviteTeamMember,
   removeTeamMember,
+  fetchPendingInvites,
+  cancelInvite,
   fetchQboStatus,
   disconnectQbo,
   fetchFeaturePreferences,
@@ -327,17 +331,21 @@ function CompanyTab({ ctx }: { ctx: UserContext | null }) {
 // ─── Team Tab ────────────────────────────────────────────────────
 function TeamTab() {
   const [members, setMembers] = useState<TeamMember[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadMembers = useCallback(async () => {
     try {
-      const data = await fetchTeamMembers();
+      const [data, invites] = await Promise.all([fetchTeamMembers(), fetchPendingInvites().catch(() => [])]);
       setMembers(data as TeamMember[]);
+      setPendingInvites(invites);
     } catch {
       toast.error("Failed to load team members.");
     } finally {
@@ -456,6 +464,48 @@ function TeamTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pending Invites */}
+      {pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4 text-warning" /> Pending Invites ({pendingInvites.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-border">
+              {pendingInvites.map((invite: { id: string; email: string; role: string; expiresAt: string | null; createdAt: string | null }) => (
+                <div key={invite.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{invite.email}</p>
+                    <p className="text-xs text-text-muted">
+                      Invited as {invite.role} · {invite.createdAt ? new Date(invite.createdAt).toLocaleDateString() : ""}
+                      {invite.expiresAt && ` · Expires ${new Date(invite.expiresAt).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={cancellingId === invite.id}
+                    onClick={async () => {
+                      setCancellingId(invite.id);
+                      try {
+                        await cancelInvite(invite.id);
+                        setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
+                        toast.success("Invite cancelled");
+                      } catch { toast.error("Failed to cancel"); }
+                      setCancellingId(null);
+                    }}
+                  >
+                    <X className="h-4 w-4 text-danger" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

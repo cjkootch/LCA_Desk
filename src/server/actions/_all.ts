@@ -1282,6 +1282,29 @@ export async function acceptPendingInvites(userId: string, email: string) {
   return accepted;
 }
 
+export async function fetchPendingInvites() {
+  const { tenantId } = await getSessionTenant();
+  return db.select({
+    id: teamInvites.id,
+    email: teamInvites.email,
+    role: teamInvites.role,
+    inviterName: teamInvites.inviterName,
+    status: teamInvites.status,
+    expiresAt: teamInvites.expiresAt,
+    createdAt: teamInvites.createdAt,
+  }).from(teamInvites)
+    .where(and(eq(teamInvites.tenantId, tenantId), eq(teamInvites.status, "pending")))
+    .orderBy(desc(teamInvites.createdAt))
+    .limit(50);
+}
+
+export async function cancelInvite(inviteId: string) {
+  const { tenantId } = await getSessionTenant();
+  await db.update(teamInvites).set({ status: "expired" })
+    .where(and(eq(teamInvites.id, inviteId), eq(teamInvites.tenantId, tenantId)));
+  return { success: true };
+}
+
 export async function removeTeamMember(memberId: string) {
   const { tenantId } = await getSessionTenant();
   await db
