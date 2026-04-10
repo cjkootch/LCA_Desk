@@ -183,11 +183,17 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   const speak = useCallback(async (text: string, slideIdx?: number) => {
     if (!voiceEnabled) return;
     // Abort any in-flight fetch from a previous speak call
+    // Stop any current audio and abort previous fetch
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     speakAbortRef.current?.abort();
+    clearAdvanceTimer();
     const controller = new AbortController();
     speakAbortRef.current = controller;
-    stopSpeech();
-    speakAbortRef.current = controller; // stopSpeech resets it, restore
     if (!text) return;
 
     setSpeaking(true);
