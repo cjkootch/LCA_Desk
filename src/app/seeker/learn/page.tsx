@@ -20,13 +20,24 @@ export default function LearnPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [badges, setBadges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Must be declared before any early returns — Rules of Hooks
+  const [tipDismissed, setTipDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setTipDismissed(localStorage.getItem("lca-learn-tip-dismissed") === "true");
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([fetchCourses("seeker"), fetchUserBadges()])
       .then(async ([c, b]) => {
+        // Always re-seed LCA course to pick up latest content updates
+        try { await seedLcaCourse(); } catch {}
         if (c.length === 0) {
-          try { await seedLcaCourse(); await seedPlatformCourse(); await seedSupplierCourse(); await seedWinningContractsCourse(); await seedLcsCertCourse(); await seedCareerGuideCourse(); await seedInterviewPrepCourse(); await seedEsgCourse(); c = await fetchCourses("seeker"); } catch {}
+          try { await seedPlatformCourse(); await seedSupplierCourse(); await seedWinningContractsCourse(); await seedLcsCertCourse(); await seedCareerGuideCourse(); await seedInterviewPrepCourse(); await seedEsgCourse(); } catch {}
         }
+        c = await fetchCourses("seeker");
         setCourseList(c);
         setBadges(b);
       })
@@ -47,14 +58,6 @@ export default function LearnPage() {
   const completedCourses = badges.length;
   const xp = completedCourses * 500 + badges.length * 200;
   const level = Math.floor(xp / 1000) + 1;
-
-  const [tipDismissed, setTipDismissed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setTipDismissed(localStorage.getItem("lca-learn-tip-dismissed") === "true");
-    }
-  }, []);
 
   const dismissTip = () => {
     setTipDismissed(true);
