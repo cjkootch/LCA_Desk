@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, BookOpen, CheckCircle, XCircle, Trophy, ArrowRight, Lock,
-  Star, Zap, PartyPopper,
+  Star, Zap, PartyPopper, Presentation,
 } from "lucide-react";
 import { fetchCourseWithModules, completeModule } from "@/server/actions";
+import { Slideshow } from "@/components/training/Slideshow";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -117,6 +118,7 @@ export default function CoursePage() {
   const [quizResult, setQuizResult] = useState<{ passed: boolean; score: number; badgeEarned?: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showSlideshow, setShowSlideshow] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
@@ -193,6 +195,14 @@ export default function CoursePage() {
         badgeColor={course.badgeColor || "accent"}
         onClose={() => setShowCelebration(false)}
       />
+
+      {showSlideshow && currentModule && (
+        <Slideshow
+          content={currentModule.content || ""}
+          title={`${course.title} — ${currentModule.title}`}
+          onClose={() => setShowSlideshow(false)}
+        />
+      )}
 
       <div className="sticky z-20 flex items-center justify-between h-14 px-4 sm:px-6 border-b border-border bg-bg-surface/95 backdrop-blur-sm" style={{ top: "var(--demo-banner-h, 0px)" }}>
         <h1 className="text-base font-heading font-semibold text-text-primary truncate">{course.title}</h1>
@@ -271,7 +281,12 @@ export default function CoursePage() {
                     {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
                     <span className="text-xs text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
                   </div>
-                  <CardTitle className="text-lg mt-1">{currentModule.title}</CardTitle>
+                  <div className="flex items-center justify-between mt-1">
+                    <CardTitle className="text-lg">{currentModule.title}</CardTitle>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs shrink-0" onClick={() => setShowSlideshow(true)}>
+                      <Presentation className="h-3 w-3" /> Present
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none mb-6">
