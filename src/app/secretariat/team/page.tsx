@@ -35,6 +35,7 @@ export default function SecretariatTeamPage() {
         toast.success(`Invitation sent to ${inviteEmail}. They'll join when they sign up.`);
       } else {
         toast.success(`${inviteEmail} added as ${inviteRole}`);
+        toast.info("Role updated. The user must log out and back in for changes to take effect.");
       }
       setInviteEmail("");
       const fresh = await fetchSecretariatDashboard();

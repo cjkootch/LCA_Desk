@@ -17,6 +17,13 @@ export interface JurisdictionTemplate {
   // Employment
   employmentMinimums: EmploymentMinimums;
   employmentCategories: string[]; // ["Managerial", "Technical", "Non-Technical"]
+  /** Maps the canonical category keys to the jurisdiction-specific display strings
+   *  used in employment records (employment_category field). */
+  employmentCategoryMap: {
+    managerial: string;
+    technical: string;
+    non_technical: string;
+  };
   nationalityTerm: string; // "Guyanese" or "Nigerian"
   nationalityDefinition: string; // legal definition for attestation
   // Supplier
@@ -49,6 +56,7 @@ const JURISDICTION_TEMPLATES: Record<string, JurisdictionTemplate> = {
     localCurrencyCode: "GYD",
     employmentMinimums: { managerial: 75, technical: 60, non_technical: 80 },
     employmentCategories: ["Managerial", "Technical", "Non-Technical"],
+    employmentCategoryMap: { managerial: "Managerial", technical: "Technical", non_technical: "Non-Technical" },
     nationalityTerm: "Guyanese",
     nationalityDefinition: "A citizen or permanent resident of Guyana as defined in Section 2 of the Local Content Act 2021",
     supplierCertName: "LCS Certificate",
@@ -74,6 +82,7 @@ const JURISDICTION_TEMPLATES: Record<string, JurisdictionTemplate> = {
     localCurrencyCode: "NGN",
     employmentMinimums: { managerial: 50, technical: 50, non_technical: 80 },
     employmentCategories: ["Management", "Technical/Supervisory", "Non-Technical/Skilled", "Semi-Skilled", "Unskilled"],
+    employmentCategoryMap: { managerial: "Management", technical: "Technical/Supervisory", non_technical: "Non-Technical/Skilled" },
     nationalityTerm: "Nigerian",
     nationalityDefinition: "A citizen of Nigeria as defined in Chapter III of the Constitution of the Federal Republic of Nigeria",
     supplierCertName: "NOGIC Certificate",
@@ -99,6 +108,7 @@ const JURISDICTION_TEMPLATES: Record<string, JurisdictionTemplate> = {
     localCurrencyCode: "SRD",
     employmentMinimums: { managerial: 0, technical: 0, non_technical: 0 },
     employmentCategories: ["Management", "Technical", "Non-Technical"],
+    employmentCategoryMap: { managerial: "Management", technical: "Technical", non_technical: "Non-Technical" },
     nationalityTerm: "Surinamese",
     nationalityDefinition: "A citizen of Suriname",
     supplierCertName: "Local Supplier Certificate",
@@ -124,6 +134,7 @@ const JURISDICTION_TEMPLATES: Record<string, JurisdictionTemplate> = {
     localCurrencyCode: "NAD",
     employmentMinimums: { managerial: 0, technical: 0, non_technical: 0 },
     employmentCategories: ["Management", "Technical", "Non-Technical"],
+    employmentCategoryMap: { managerial: "Management", technical: "Technical", non_technical: "Non-Technical" },
     nationalityTerm: "Namibian",
     nationalityDefinition: "A citizen of Namibia",
     supplierCertName: "NAMCOR Certificate",

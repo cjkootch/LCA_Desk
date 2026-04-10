@@ -45,7 +45,7 @@ export function useComplianceAlerts(
       // Check employment metrics
       const empRecords = employmentByEntity[entity.id] || [];
       if (empRecords.length > 0) {
-        const metrics = calculateEmploymentMetrics(empRecords);
+        const metrics = calculateEmploymentMetrics(empRecords, jurisdictionCode);
         if (metrics.managerial_total > 0 && metrics.managerial_guyanese_pct < minimums.managerial) {
           alerts.push({
             level: "warning",

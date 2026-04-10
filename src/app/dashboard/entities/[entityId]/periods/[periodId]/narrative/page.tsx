@@ -78,7 +78,7 @@ export default function NarrativePage() {
   }
 
   const lcMetrics = calculateLocalContentRate(expenditures);
-  const empMetrics = calculateEmploymentMetrics(employment);
+  const empMetrics = calculateEmploymentMetrics(employment, jurisdictionCode);
   const capMetrics = calculateCapacityMetrics(capacity);
 
   const expenditureData = { companyName: entityName, periodLabel, periodStart, periodEnd, reportType, totalExpenditure: lcMetrics.total_expenditure, totalUsd: 0, guyaneseExpenditure: lcMetrics.guyanese_expenditure, nonGuyaneseExpenditure: lcMetrics.non_guyanese_expenditure, localContentRate: lcMetrics.local_content_rate, guyaneseSupplierCount: lcMetrics.supplier_count_guyanese, nonGuyaneseSupplierCount: lcMetrics.supplier_count_non_guyanese, soleSourcingCount: expenditures.filter((e) => !!e.sole_source_code).length, topCategories: [] as Array<{name: string; amount: number; isGuyanese: boolean}>, annualPlanCommitment: null };

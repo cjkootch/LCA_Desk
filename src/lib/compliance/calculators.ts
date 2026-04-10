@@ -1,5 +1,6 @@
 import type { ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
 import type { LocalContentMetrics, EmploymentMetrics, CapacityMetrics } from "@/types/reporting.types";
+import { getJurisdictionTemplate } from "@/lib/compliance/jurisdiction-config";
 
 export function calculateLocalContentRate(
   expenditures: ExpenditureRecord[]
@@ -27,10 +28,13 @@ export function calculateLocalContentRate(
 }
 
 export function calculateEmploymentMetrics(
-  records: EmploymentRecord[]
+  records: EmploymentRecord[],
+  jurisdictionCode = "GY"
 ): EmploymentMetrics {
   const totalHeadcount = records.reduce((sum, r) => sum + r.total_employees, 0);
   const guyaneseHeadcount = records.reduce((sum, r) => sum + r.guyanese_employed, 0);
+
+  const { employmentCategoryMap } = getJurisdictionTemplate(jurisdictionCode);
 
   const byCategory = (cat: string) => {
     const filtered = records.filter((r) => r.employment_category === cat);
@@ -39,9 +43,9 @@ export function calculateEmploymentMetrics(
     return { total, guyanese, pct: total > 0 ? (guyanese / total) * 100 : 0 };
   };
 
-  const managerial = byCategory("Managerial");
-  const technical = byCategory("Technical");
-  const nonTechnical = byCategory("Non-Technical");
+  const managerial = byCategory(employmentCategoryMap.managerial);
+  const technical = byCategory(employmentCategoryMap.technical);
+  const nonTechnical = byCategory(employmentCategoryMap.non_technical);
 
   return {
     total_headcount: totalHeadcount,

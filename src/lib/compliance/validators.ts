@@ -60,7 +60,7 @@ export function validateEmployment(
     return results;
   }
 
-  const metrics = calculateEmploymentMetrics(records);
+  const metrics = calculateEmploymentMetrics(records, jurisdictionCode);
   const minimums = getEmploymentMinimums(jurisdictionCode);
 
   if (minimums.managerial > 0 && metrics.managerial_total > 0 && metrics.managerial_guyanese_pct < minimums.managerial) {

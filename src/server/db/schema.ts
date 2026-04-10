@@ -1475,3 +1475,22 @@ export const cancellationFeedback = pgTable("cancellation_feedback", {
   savedByOffer: boolean("saved_by_offer").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// ─── STRIPE IDEMPOTENCY ─────────────────────────────────────────
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(), // Stripe event ID (evt_xxx)
+  type: text("type").notNull(),
+  processedAt: timestamp("processed_at").defaultNow(),
+});
+
+// ─── CRON RUN OBSERVABILITY ─────────────────────────────────────
+export const cronRuns = pgTable("cron_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobName: text("job_name").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  status: text("status").notNull().default("running"), // running | success | failed | partial
+  recordsProcessed: integer("records_processed").default(0),
+  errorMessage: text("error_message"),
+  durationMs: integer("duration_ms"),
+});

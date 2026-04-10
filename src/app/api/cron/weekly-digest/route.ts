@@ -3,14 +3,25 @@ import { tenants, tenantMembers, users, entities, reportingPeriods, expenditureR
 import { eq, and, gte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/client";
+import { startCronRun, completeCronRun, isAlreadyRunning } from "@/lib/cron-logger";
 
 export const dynamic = "force-dynamic";
+
+const JOB_NAME = "weekly-digest";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  if (await isAlreadyRunning(JOB_NAME)) {
+    return NextResponse.json({ skipped: "already running" }, { status: 200 });
+  }
+
+  const runId = await startCronRun(JOB_NAME);
+  let recordsProcessed = 0;
+  let cronError: string | undefined;
 
   try {
     // Get all active tenants
@@ -108,10 +119,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    recordsProcessed = sent;
     return NextResponse.json({ success: true, emailsSent: sent });
   } catch (error) {
+    cronError = error instanceof Error ? error.message : String(error);
     console.error("Weekly digest error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
+  } finally {
+    await completeCronRun(runId, cronError ? "failed" : "success", recordsProcessed, cronError);
   }
 }
 

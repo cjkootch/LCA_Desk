@@ -3,8 +3,11 @@ import { reportingPeriods, entities, tenantMembers, users, expenditureRecords, e
 import { eq, gte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { notifyDeadlineReminder } from "@/lib/email/unified-notify";
+import { startCronRun, completeCronRun, isAlreadyRunning } from "@/lib/cron-logger";
 
 export const dynamic = "force-dynamic";
+
+const JOB_NAME = "deadline-reminders";
 
 // Runs weekly via Vercel Cron — checks for upcoming deadlines and sends reminders
 export async function GET(req: NextRequest) {
@@ -12,6 +15,14 @@ export async function GET(req: NextRequest) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  if (await isAlreadyRunning(JOB_NAME)) {
+    return NextResponse.json({ skipped: "already running" }, { status: 200 });
+  }
+
+  const runId = await startCronRun(JOB_NAME);
+  let recordsProcessed = 0;
+  let cronError: string | undefined;
 
   try {
     const now = new Date();
@@ -114,6 +125,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    recordsProcessed = sent;
     return NextResponse.json({
       success: true,
       periodsChecked: upcomingPeriods.length,
@@ -121,7 +133,10 @@ export async function GET(req: NextRequest) {
       emailsSent: sent,
     });
   } catch (error) {
+    cronError = error instanceof Error ? error.message : String(error);
     console.error("Deadline reminder cron error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
+  } finally {
+    await completeCronRun(runId, cronError ? "failed" : "success", recordsProcessed, cronError);
   }
 }

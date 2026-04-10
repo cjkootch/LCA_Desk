@@ -6656,21 +6656,6 @@ export async function reviewCertApplication(id: string, data: {
   }
 }
 
-// ─── REFERRALS ──────────────────────────────────────────────────
-
-/**
- * Marks the referral for userId as qualified (i.e. the referred user converted
- * to a paid subscription). Called from the Stripe webhook on checkout.session.completed.
- *
- * TODO: implement referral reward logic — update the referrals table, credit the
- * referring affiliate, and trigger any downstream notifications.
- */
-export async function qualifyReferral(userId: string): Promise<void> {
-  // Implementation pending — stub exists so the webhook call compiles and the
-  // wiring is in place. Fill in referral-table update logic here.
-  void userId;
-}
-
 // ─── INDUSTRY NEWS ──────────────────────────────────────────────
 
 export async function fetchIndustryNews(limit = 20, userType?: "filer" | "supplier" | "seeker" | "secretariat") {

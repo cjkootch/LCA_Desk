@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users } from "@/server/db/schema";
+import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users, stripeEvents } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { qualifyReferral } from "@/server/actions";
 
@@ -38,6 +38,17 @@ export async function POST(req: NextRequest) {
     console.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
+
+  // Idempotency guard — skip events we've already processed
+  const [existingEvent] = await db
+    .select({ id: stripeEvents.id })
+    .from(stripeEvents)
+    .where(eq(stripeEvents.id, event.id))
+    .limit(1);
+  if (existingEvent) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  await db.insert(stripeEvents).values({ id: event.id, type: event.type });
 
   switch (event.type) {
 

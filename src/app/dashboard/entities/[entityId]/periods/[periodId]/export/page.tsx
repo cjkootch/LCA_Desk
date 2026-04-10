@@ -68,7 +68,7 @@ export default function ExportPage() {
         period: { ...rawPeriod, report_type: rawPeriod?.reportType, period_start: rawPeriod?.periodStart, period_end: rawPeriod?.periodEnd, due_date: rawPeriod?.dueDate, fiscal_year: rawPeriod?.fiscalYear },
         expenditures, employment, capacity, sectorCategories: [], jurisdictionCode: jurisdictionCode,
         localContentMetrics: calculateLocalContentRate(expenditures),
-        employmentMetrics: calculateEmploymentMetrics(employment),
+        employmentMetrics: calculateEmploymentMetrics(employment, jurisdictionCode),
         capacityMetrics: calculateCapacityMetrics(capacity),
         narratives: {
           expenditure: rawNar.find((n) => n.section === "expenditure_narrative")?.draftContent || "",

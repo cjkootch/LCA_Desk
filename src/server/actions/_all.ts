@@ -50,9 +50,9 @@ import {
   teamInvites,
   referrals,
 } from "@/server/db/schema";
-import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, desc, asc, isNull, type InferInsertModel } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
-import { entitySchema } from "@/server/schemas";
+import { entitySchema, type EntityInput, type ExpenditureInput, type EmploymentInput, type CapacityInput } from "@/server/schemas";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -190,7 +190,13 @@ function mapEntityData(data: Record<string, unknown>) {
   };
 }
 
-export async function addEntity(data: Record<string, unknown>) {
+// DB insert shape aliases derived from the Drizzle schema (used to type values() objects)
+type EntityInsert = InferInsertModel<typeof entities>;
+type ExpenditureInsert = InferInsertModel<typeof expenditureRecords>;
+type EmploymentInsert = InferInsertModel<typeof employmentRecords>;
+type CapacityInsert = InferInsertModel<typeof capacityDevelopmentRecords>;
+
+export async function addEntity(data: EntityInput & Record<string, unknown>) {
   const validated = entitySchema.safeParse(data);
   if (!validated.success) throw new Error(`Invalid entity data: ${validated.error.issues.map(i => i.message).join(", ")}`);
   const { tenantId, tenant, plan } = await getSessionTenant();
@@ -644,7 +650,7 @@ export async function fetchExpenditures(periodId: string) {
 export async function addExpenditure(
   periodId: string,
   entityId: string,
-  data: Record<string, unknown>
+  data: ExpenditureInput & Record<string, unknown>
 ) {
   // Validate critical fields
   if (!data.supplier_name || typeof data.supplier_name !== "string") throw new Error("Supplier name is required");
@@ -731,7 +737,7 @@ export async function fetchEmployment(periodId: string) {
 export async function addEmployment(
   periodId: string,
   entityId: string,
-  data: Record<string, unknown>
+  data: EmploymentInput & Record<string, unknown>
 ) {
   if (!data.employment_category || typeof data.employment_category !== "string") throw new Error("Employment category is required");
   const { tenantId, userId } = await getSessionTenant();
@@ -808,7 +814,7 @@ export async function fetchCapacity(periodId: string) {
 export async function addCapacity(
   periodId: string,
   entityId: string,
-  data: Record<string, unknown>
+  data: CapacityInput & Record<string, unknown>
 ) {
   const { tenantId } = await getSessionTenant();
   const [record] = await db
@@ -1314,7 +1320,17 @@ export async function acceptPendingInvites(userId: string, email: string) {
         const currentRole = userData?.userRole || "";
         if (!currentRole.includes("secretariat")) {
           const newRole = currentRole ? `${currentRole},secretariat` : "secretariat";
+          // IMPORTANT: Role changes require the user to log out and back in — JWT is not auto-invalidated
           await db.update(users).set({ userRole: newRole }).where(eq(users.id, userId));
+          await logAudit({
+            tenantId: invite.secretariatOfficeId,
+            userId,
+            action: "update",
+            entityType: "user_role",
+            entityId: userId,
+            oldValue: currentRole,
+            newValue: newRole,
+          });
         }
         await db.insert(secretariatMembers).values({ officeId: invite.secretariatOfficeId, userId, role: invite.role });
       }
@@ -2495,10 +2511,21 @@ export async function upgradeSupplierToFiler(companyName: string) {
   const currentRole = user?.userRole || "supplier";
   const newRole = currentRole.includes("filer") ? currentRole : `${currentRole},filer`;
 
+  // IMPORTANT: Role changes require the user to log out and back in — JWT is not auto-invalidated
   await db
     .update(users)
     .set({ userRole: newRole, updatedAt: new Date() })
     .where(eq(users.id, session.user.id));
+
+  await logAudit({
+    tenantId: tenant.id,
+    userId: session.user.id,
+    action: "update",
+    entityType: "user_role",
+    entityId: session.user.id,
+    oldValue: currentRole,
+    newValue: newRole,
+  });
 
   return { tenantId: tenant.id };
 }

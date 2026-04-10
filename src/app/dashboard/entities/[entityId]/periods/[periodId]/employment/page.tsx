@@ -153,7 +153,7 @@ export default function EmploymentPage() {
     if (added > 0) await loadData();
   };
 
-  const metrics = calculateEmploymentMetrics(records);
+  const metrics = calculateEmploymentMetrics(records, jurisdictionCode);
   const minimums = getEmploymentMinimums(jurisdictionCode);
 
   if (loading) {
