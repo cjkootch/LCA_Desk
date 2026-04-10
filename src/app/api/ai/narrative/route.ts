@@ -4,9 +4,10 @@ import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 import { incrementUsage } from "@/server/actions";
 import { db } from "@/server/db";
-import { tenantMembers } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { tenantMembers, tenants, usageTracking } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
+import { getEffectivePlan } from "@/lib/plans";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -19,13 +20,37 @@ export async function POST(req: NextRequest) {
       return new Response("Missing required fields: section, data", { status: 400 });
     }
 
-    // Resolve tenantId for analytics (fire-and-forget if unavailable)
+    // Resolve tenantId and enforce plan limits before calling Anthropic
     const [membership] = await db
       .select({ tenantId: tenantMembers.tenantId })
       .from(tenantMembers)
       .where(eq(tenantMembers.userId, session.user.id))
       .limit(1);
     const tenantId = membership?.tenantId;
+
+    if (!tenantId) {
+      return new Response("Tenant not found", { status: 403 });
+    }
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const [[tenant], [usage]] = await Promise.all([
+      db.select({ plan: tenants.plan, trialEndsAt: tenants.trialEndsAt })
+        .from(tenants).where(eq(tenants.id, tenantId)).limit(1),
+      db.select({ aiDraftsUsed: usageTracking.aiDraftsUsed })
+        .from(usageTracking)
+        .where(and(eq(usageTracking.tenantId, tenantId), eq(usageTracking.periodMonth, currentMonth)))
+        .limit(1),
+    ]);
+
+    const effectivePlan = getEffectivePlan(tenant?.plan, tenant?.trialEndsAt ?? null);
+    const aiDraftsUsed = usage?.aiDraftsUsed ?? 0;
+
+    if (!effectivePlan.features.aiNarrativeDrafting) {
+      return new Response("AI narrative drafting requires the Professional plan.", { status: 403 });
+    }
+    if (effectivePlan.aiDraftsPerMonth !== -1 && aiDraftsUsed >= effectivePlan.aiDraftsPerMonth) {
+      return new Response(`AI draft limit reached (${effectivePlan.aiDraftsPerMonth}/month). Upgrade to continue.`, { status: 429 });
+    }
 
     // Track AI draft usage
     await incrementUsage("aiDraftsUsed");

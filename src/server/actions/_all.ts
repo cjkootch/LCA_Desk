@@ -968,7 +968,7 @@ export async function saveNarrative(
     const wasEdited = existing.draftContent !== content;
     const [updated] = await db
       .update(narrativeDrafts)
-      .set({ draftContent: content, modelUsed: "claude-sonnet-4-6" })
+      .set({ draftContent: content, modelUsed: "claude-sonnet-4-6", promptVersion: "v1.0-jurisdiction-aware" })
       .where(eq(narrativeDrafts.id, existing.id))
       .returning();
     await trackEvent(userId, tenantId, "narrative_approved", { section, wasEdited });
@@ -984,7 +984,7 @@ export async function saveNarrative(
       section,
       draftContent: content,
       modelUsed: "claude-sonnet-4-6",
-      promptVersion: "1.0",
+      promptVersion: "v1.0-jurisdiction-aware",
     })
     .returning();
   // First save — treat as approval with no prior draft to compare against

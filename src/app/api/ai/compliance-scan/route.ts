@@ -2,6 +2,10 @@ import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 import { incrementUsage } from "@/server/actions";
+import { db } from "@/server/db";
+import { tenantMembers, tenants, usageTracking } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
+import { getEffectivePlan } from "@/lib/plans";
 
 const SYSTEM_PROMPT = `You are the LCA Desk Compliance Scanner. You analyze submission data for Local Content Half-Yearly Reports and identify issues the Secretariat is likely to scrutinize.
 
@@ -35,6 +39,38 @@ export async function POST(req: NextRequest) {
 
     if (!data) {
       return new Response("Missing data", { status: 400 });
+    }
+
+    // Enforce plan limits before calling Anthropic
+    const [membership] = await db
+      .select({ tenantId: tenantMembers.tenantId })
+      .from(tenantMembers)
+      .where(eq(tenantMembers.userId, session.user.id))
+      .limit(1);
+    const tenantId = membership?.tenantId;
+
+    if (!tenantId) {
+      return new Response("Tenant not found", { status: 403 });
+    }
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const [[tenant], [usage]] = await Promise.all([
+      db.select({ plan: tenants.plan, trialEndsAt: tenants.trialEndsAt })
+        .from(tenants).where(eq(tenants.id, tenantId)).limit(1),
+      db.select({ aiDraftsUsed: usageTracking.aiDraftsUsed })
+        .from(usageTracking)
+        .where(and(eq(usageTracking.tenantId, tenantId), eq(usageTracking.periodMonth, currentMonth)))
+        .limit(1),
+    ]);
+
+    const effectivePlan = getEffectivePlan(tenant?.plan, tenant?.trialEndsAt ?? null);
+    const aiDraftsUsed = usage?.aiDraftsUsed ?? 0;
+
+    if (!effectivePlan.features.complianceScan) {
+      return new Response("Compliance scan requires the Professional plan.", { status: 403 });
+    }
+    if (effectivePlan.aiDraftsPerMonth !== -1 && aiDraftsUsed >= effectivePlan.aiDraftsPerMonth) {
+      return new Response(`AI usage limit reached (${effectivePlan.aiDraftsPerMonth}/month). Upgrade to continue.`, { status: 429 });
     }
 
     // Track as AI draft usage (compliance scan is an AI-powered feature)

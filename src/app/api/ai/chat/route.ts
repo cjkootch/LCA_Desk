@@ -1,10 +1,11 @@
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
-import { tenantMembers, entities, reportingPeriods, expenditureRecords, employmentRecords } from "@/server/db/schema";
+import { tenantMembers, tenants, usageTracking, entities, reportingPeriods, expenditureRecords, employmentRecords } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { incrementUsage } from "@/server/actions";
+import { getEffectivePlan } from "@/lib/plans";
 
 const BASE_PROMPT = `You are the LCA Expert — an AI assistant built into LCA Desk, trained on the complete Local Content Act No. 18 of 2021 (Guyana), all Local Content Secretariat guidelines including Version 4.1 (June 2025), and the official Half-Yearly Report Template Version 4.0.
 
@@ -29,6 +30,7 @@ Key facts you know:
 - Employment categories: Managerial (min 75%), Technical (min 60%), Non-Technical (min 80%)
 - Suppliers must have a valid LCS Certificate ID to count as Guyanese suppliers`;
 
+// Called once per chat POST — result is passed directly to the Anthropic system prompt.
 async function buildUserContext(userId: string): Promise<string> {
   try {
     const membership = await db.query.tenantMembers.findFirst({
@@ -39,8 +41,8 @@ async function buildUserContext(userId: string): Promise<string> {
     const tenantId = membership.tenantId;
     const ents = await db.select().from(entities).where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
     const periods = await db.select().from(reportingPeriods).where(eq(reportingPeriods.tenantId, tenantId));
-    const allExp = await db.select().from(expenditureRecords).where(eq(expenditureRecords.tenantId, tenantId));
-    const allEmp = await db.select().from(employmentRecords).where(eq(employmentRecords.tenantId, tenantId));
+    const allExp = await db.select().from(expenditureRecords).where(eq(expenditureRecords.tenantId, tenantId)).limit(500);
+    const allEmp = await db.select().from(employmentRecords).where(eq(employmentRecords.tenantId, tenantId)).limit(500);
 
     if (ents.length === 0) return "";
 
@@ -106,11 +108,37 @@ export async function POST(req: NextRequest) {
       return new Response("Missing messages array", { status: 400 });
     }
 
-    // Get user context if authenticated
+    // Get user context and enforce plan limits if authenticated
     let userContext = "";
     const session = await auth();
     if (session?.user?.id) {
       userContext = await buildUserContext(session.user.id);
+
+      // Plan enforcement — check before calling Anthropic
+      const [membership] = await db
+        .select({ tenantId: tenantMembers.tenantId })
+        .from(tenantMembers)
+        .where(eq(tenantMembers.userId, session.user.id))
+        .limit(1);
+
+      if (membership?.tenantId) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const [[tenant], [usage]] = await Promise.all([
+          db.select({ plan: tenants.plan, trialEndsAt: tenants.trialEndsAt })
+            .from(tenants).where(eq(tenants.id, membership.tenantId)).limit(1),
+          db.select({ aiChatMessagesUsed: usageTracking.aiChatMessagesUsed })
+            .from(usageTracking)
+            .where(and(eq(usageTracking.tenantId, membership.tenantId), eq(usageTracking.periodMonth, currentMonth)))
+            .limit(1),
+        ]);
+
+        const effectivePlan = getEffectivePlan(tenant?.plan, tenant?.trialEndsAt ?? null);
+        const chatUsed = usage?.aiChatMessagesUsed ?? 0;
+
+        if (effectivePlan.aiChatMessagesPerMonth !== -1 && chatUsed >= effectivePlan.aiChatMessagesPerMonth) {
+          return new Response(`Chat limit reached (${effectivePlan.aiChatMessagesPerMonth}/month). Upgrade to continue.`, { status: 429 });
+        }
+      }
     }
 
     // Track usage
