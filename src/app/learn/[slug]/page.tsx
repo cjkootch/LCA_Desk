@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, BookOpen, CheckCircle, XCircle, Trophy, ArrowRight, Lock,
-  Star, Zap, PartyPopper, Presentation,
+  Star, Zap, PartyPopper, Presentation, Play, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { fetchCourseWithModules, completeModule } from "@/server/actions";
 import { Slideshow } from "@/components/training/Slideshow";
@@ -120,6 +120,8 @@ export default function CoursePage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showSlideshow, setShowSlideshow] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [watchedModules, setWatchedModules] = useState<Set<number>>(new Set());
+  const [showReadingContent, setShowReadingContent] = useState(false);
 
   useEffect(() => {
     fetchCourseWithModules(slug).then(setData).catch(() => {}).finally(() => setLoading(false));
@@ -254,7 +256,7 @@ export default function CoursePage() {
               const locked = i > 0 && !isModuleComplete(modules[i - 1].id) && !complete;
               return (
                 <button key={m.id}
-                  onClick={() => { if (!locked) { setActiveModule(i); setShowQuiz(false); setQuizResult(null); setAnswers({}); } }}
+                  onClick={() => { if (!locked) { setActiveModule(i); setShowQuiz(false); setQuizResult(null); setAnswers({}); setShowReadingContent(false); } }}
                   disabled={locked}
                   className={cn(
                     "w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2",
@@ -274,39 +276,143 @@ export default function CoursePage() {
           </div>
 
           {/* Content area */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-4">
             {!showQuiz ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-xs">Module {activeModule + 1}</Badge>
-                    {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
-                    <span className="text-xs text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <CardTitle className="text-lg">{currentModule.title}</CardTitle>
-                    <Button variant="outline" size="sm" className="gap-1 text-xs shrink-0" onClick={() => setShowSlideshow(true)}>
-                      <Presentation className="h-3 w-3" /> Present
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none mb-6">
-                    {currentModule.content.split("\n").map((line: string, i: number) => {
-                      const t = line.trim();
-                      if (t.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-text-primary mt-5 mb-2">{t.slice(3)}</h2>;
-                      if (t.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-text-primary mt-4 mb-1">{t.slice(4)}</h3>;
-                      if (t.startsWith("- ")) return <li key={i} className="text-sm text-text-secondary ml-4">{t.slice(2)}</li>;
-                      if (t.startsWith("**") && t.endsWith("**")) return <p key={i} className="text-sm font-bold text-text-primary">{t.replace(/\*\*/g, "")}</p>;
-                      if (t.length === 0) return <div key={i} className="h-3" />;
-                      return <p key={i} className="text-sm text-text-secondary leading-relaxed">{t.replace(/\*\*/g, "")}</p>;
-                    })}
-                  </div>
-                  <Button onClick={() => { setShowQuiz(true); setAnswers({}); setQuizResult(null); }} className="gap-1.5" size="lg">
-                    Take Quiz <ArrowRight className="h-4 w-4" />
+              <>
+                {/* Module header */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="default" className="text-xs">Module {activeModule + 1}</Badge>
+                  {isModuleComplete(currentModule.id) && <Badge variant="success" className="text-xs gap-0.5"><CheckCircle className="h-2.5 w-2.5" /> Complete</Badge>}
+                  <span className="text-xs text-text-muted ml-auto flex items-center gap-0.5"><Star className="h-3 w-3 text-gold" /> +100 XP</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{currentModule.title}</h2>
+
+                {/* Learning path steps */}
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {[
+                    { step: 1, label: "Watch Presentation", icon: Presentation, done: watchedModules.has(activeModule) || isModuleComplete(currentModule.id) },
+                    { step: 2, label: "Review Content", icon: BookOpen, done: showReadingContent || watchedModules.has(activeModule) || isModuleComplete(currentModule.id) },
+                    { step: 3, label: "Take Quiz", icon: Trophy, done: isModuleComplete(currentModule.id) },
+                  ].map(({ step, label, icon: Icon, done }) => (
+                    <div key={step} className={cn(
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm transition-colors",
+                      done ? "border-success/30 bg-success/5 text-success" : "border-border bg-bg-surface text-text-muted"
+                    )}>
+                      <div className={cn(
+                        "h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        done ? "bg-success text-white" : "bg-bg-primary text-text-muted border border-border"
+                      )}>
+                        {done ? <CheckCircle className="h-3.5 w-3.5" /> : step}
+                      </div>
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="font-medium">{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Presentation CTA */}
+                {!isModuleComplete(currentModule.id) && (
+                  <Card className="border-accent/20 bg-gradient-to-br from-accent/5 via-transparent to-transparent overflow-hidden">
+                    <CardContent className="p-6 sm:p-8">
+                      <div className="flex flex-col sm:flex-row items-center gap-5">
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+                          <Presentation className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />
+                        </div>
+                        <div className="flex-1 text-center sm:text-left">
+                          <h3 className="text-lg font-heading font-bold text-text-primary mb-1">
+                            {watchedModules.has(activeModule) ? "Replay Presentation" : "Start with the Presentation"}
+                          </h3>
+                          <p className="text-sm text-text-secondary leading-relaxed">
+                            {watchedModules.has(activeModule)
+                              ? "Watch the AI-narrated slideshow again to reinforce key concepts before taking the quiz."
+                              : "Watch the AI-narrated interactive slideshow to learn the key concepts before diving into the reading material and quiz."}
+                          </p>
+                        </div>
+                        <Button
+                          size="lg"
+                          className="gap-2 px-6 shrink-0 shadow-md"
+                          onClick={() => {
+                            setShowSlideshow(true);
+                            setWatchedModules(prev => new Set(prev).add(activeModule));
+                          }}
+                        >
+                          <Play className="h-4 w-4" />
+                          {watchedModules.has(activeModule) ? "Watch Again" : "Watch Presentation"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Already completed — smaller replay button */}
+                {isModuleComplete(currentModule.id) && (
+                  <Button variant="outline" className="gap-2" onClick={() => setShowSlideshow(true)}>
+                    <Presentation className="h-4 w-4" /> Replay Presentation
                   </Button>
-                </CardContent>
-              </Card>
+                )}
+
+                {/* Reading content (collapsible) */}
+                <Card>
+                  <button
+                    className="w-full flex items-center justify-between px-5 py-4 text-left"
+                    onClick={() => setShowReadingContent(!showReadingContent)}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BookOpen className="h-4 w-4 text-accent" />
+                      <span className="text-sm font-semibold text-text-primary">Reading Material</span>
+                      <span className="text-xs text-text-muted">{watchedModules.has(activeModule) || isModuleComplete(currentModule.id) ? "" : "— watch presentation first"}</span>
+                    </div>
+                    {showReadingContent ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+                  </button>
+                  {showReadingContent && (
+                    <CardContent className="pt-0 px-5 pb-5">
+                      <div className="prose prose-sm max-w-none border-t border-border pt-4">
+                        {currentModule.content.split("\n").map((line: string, i: number) => {
+                          const t = line.trim();
+                          if (t.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-text-primary mt-5 mb-2">{t.slice(3)}</h2>;
+                          if (t.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-text-primary mt-4 mb-1">{t.slice(4)}</h3>;
+                          if (t.startsWith("- ")) return <li key={i} className="text-sm text-text-secondary ml-4">{t.slice(2)}</li>;
+                          if (t.startsWith("**") && t.endsWith("**")) return <p key={i} className="text-sm font-bold text-text-primary">{t.replace(/\*\*/g, "")}</p>;
+                          if (t.length === 0) return <div key={i} className="h-3" />;
+                          return <p key={i} className="text-sm text-text-secondary leading-relaxed">{t.replace(/\*\*/g, "")}</p>;
+                        })}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+
+                {/* Quiz CTA */}
+                <Card className={cn(
+                  "transition-all",
+                  !watchedModules.has(activeModule) && !isModuleComplete(currentModule.id) ? "opacity-60" : ""
+                )}>
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                      isModuleComplete(currentModule.id) ? "bg-success/10" : "bg-gold/10"
+                    )}>
+                      <Trophy className={cn("h-5 w-5", isModuleComplete(currentModule.id) ? "text-success" : "text-gold")} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {isModuleComplete(currentModule.id) ? "Quiz Completed" : "Ready to test your knowledge?"}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        {isModuleComplete(currentModule.id)
+                          ? "You've already passed this module's quiz."
+                          : `Pass with ${currentModule.passingScore || 80}% to complete this module and earn 100 XP.`}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => { setShowQuiz(true); setAnswers({}); setQuizResult(null); }}
+                      disabled={!watchedModules.has(activeModule) && !isModuleComplete(currentModule.id)}
+                      className="gap-1.5 shrink-0"
+                    >
+                      {isModuleComplete(currentModule.id) ? "Retake Quiz" : "Take Quiz"} <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
             ) : (
               <Card>
                 <CardHeader>
