@@ -10,6 +10,7 @@ import {
   unique,
   index,
   primaryKey,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -1494,3 +1495,17 @@ export const cronRuns = pgTable("cron_runs", {
   errorMessage: text("error_message"),
   durationMs: integer("duration_ms"),
 });
+
+// ─── USER EVENT ANALYTICS ────────────────────────────────────────
+export const userEvents = pgTable("user_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  eventName: text("event_name").notNull(),
+  properties: jsonb("properties").default({}),
+  occurredAt: timestamp("occurred_at").defaultNow(),
+  sessionId: text("session_id"),
+}, (table) => ({
+  tenantEventIdx: index("user_events_tenant_event_idx").on(table.tenantId, table.eventName),
+  userTimeIdx: index("user_events_user_time_idx").on(table.userId, table.occurredAt),
+}));

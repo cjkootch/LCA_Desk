@@ -53,6 +53,7 @@ import {
 import { eq, and, gte, lte, or, sql, desc, asc, isNull, type InferInsertModel } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
 import { entitySchema, type EntityInput, type ExpenditureInput, type EmploymentInput, type CapacityInput } from "@/server/schemas";
+import { trackEvent } from "@/lib/analytics";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
   notifyApplicationStatus as unifiedNotifyAppStatus,
@@ -199,7 +200,7 @@ type CapacityInsert = InferInsertModel<typeof capacityDevelopmentRecords>;
 export async function addEntity(data: EntityInput & Record<string, unknown>) {
   const validated = entitySchema.safeParse(data);
   if (!validated.success) throw new Error(`Invalid entity data: ${validated.error.issues.map(i => i.message).join(", ")}`);
-  const { tenantId, tenant, plan } = await getSessionTenant();
+  const { tenantId, userId, tenant, plan } = await getSessionTenant();
   // Check entity limit
   const existing = await db.select({ id: entities.id }).from(entities).where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)));
   const limit = getPlan(plan).entityLimit;
@@ -214,6 +215,21 @@ export async function addEntity(data: EntityInput & Record<string, unknown>) {
       ...mapEntityData(data),
     })
     .returning();
+
+  // Analytics: entity_created — look up jurisdiction code for the property
+  await (async () => {
+    try {
+      const [jur] = await db.select({ code: jurisdictions.code })
+        .from(jurisdictions)
+        .where(eq(jurisdictions.id, tenant.jurisdictionId!))
+        .limit(1);
+      await trackEvent(userId, tenantId, "entity_created", {
+        entityType: String(data.company_type || "unknown"),
+        jurisdictionCode: jur?.code || "GY",
+      });
+    } catch {}
+  })();
+
   return entity;
 }
 
@@ -506,6 +522,17 @@ export async function attestAndSubmit(periodId: string, attestationText: string,
   // Qualify referral on first submission
   try { qualifyReferral(userId); } catch {}
 
+  // Analytics: report_submitted
+  await trackEvent(userId, tenantId, "report_submitted", {
+    daysBeforeDeadline: Math.ceil((new Date(current.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    completenessScore: Math.round(
+      ((expenditures.length > 0 ? 1 : 0) +
+        (employment.length > 0 ? 1 : 0) +
+        (capacity.length > 0 ? 1 : 0) +
+        (narratives.length > 0 ? 1 : 0)) * 25
+    ),
+  });
+
   return updated;
 }
 
@@ -655,6 +682,14 @@ export async function addExpenditure(
   // Validate critical fields
   if (!data.supplier_name || typeof data.supplier_name !== "string") throw new Error("Supplier name is required");
   const { tenantId, userId } = await getSessionTenant();
+
+  // Check before insert: is this the tenant's first expenditure?
+  const [{ existingCount }] = await db
+    .select({ existingCount: sql<number>`cast(count(*) as int)` })
+    .from(expenditureRecords)
+    .where(eq(expenditureRecords.tenantId, tenantId));
+  const isFirstExpenditure = existingCount === 0;
+
   const [record] = await db
     .insert(expenditureRecords)
     .values({
@@ -678,6 +713,14 @@ export async function addExpenditure(
     })
     .returning();
   await logAudit({ tenantId, userId, action: "create", entityType: "expenditure_record", entityId: record.id, reportingPeriodId: periodId, newValue: `${data.supplier_name}: ${data.actual_payment}` });
+
+  if (isFirstExpenditure) {
+    await trackEvent(userId, tenantId, "first_expenditure_added", {
+      category: String(data.type_of_item_procured || "unknown"),
+      amount: Number(data.actual_payment) || 0,
+    });
+  }
+
   return record;
 }
 
@@ -741,6 +784,14 @@ export async function addEmployment(
 ) {
   if (!data.employment_category || typeof data.employment_category !== "string") throw new Error("Employment category is required");
   const { tenantId, userId } = await getSessionTenant();
+
+  // Check before insert: is this the tenant's first employment record?
+  const [{ existingEmpCount }] = await db
+    .select({ existingEmpCount: sql<number>`cast(count(*) as int)` })
+    .from(employmentRecords)
+    .where(eq(employmentRecords.tenantId, tenantId));
+  const isFirstEmployment = existingEmpCount === 0;
+
   const [record] = await db
     .insert(employmentRecords)
     .values({
@@ -762,6 +813,13 @@ export async function addEmployment(
     })
     .returning();
   await logAudit({ tenantId, userId, action: "create", entityType: "employment_record", entityId: record.id, reportingPeriodId: periodId, newValue: `${data.job_title}: ${data.total_employees} employees` });
+
+  if (isFirstEmployment) {
+    await trackEvent(userId, tenantId, "first_employment_added", {
+      category: String(data.employment_category),
+    });
+  }
+
   return record;
 }
 
@@ -892,7 +950,7 @@ export async function saveNarrative(
   section: string,
   content: string
 ) {
-  const { tenantId } = await getSessionTenant();
+  const { tenantId, userId } = await getSessionTenant();
 
   const [existing] = await db
     .select()
@@ -907,11 +965,13 @@ export async function saveNarrative(
     .limit(1);
 
   if (existing) {
+    const wasEdited = existing.draftContent !== content;
     const [updated] = await db
       .update(narrativeDrafts)
       .set({ draftContent: content, modelUsed: "claude-sonnet-4-6" })
       .where(eq(narrativeDrafts.id, existing.id))
       .returning();
+    await trackEvent(userId, tenantId, "narrative_approved", { section, wasEdited });
     return updated;
   }
 
@@ -927,6 +987,8 @@ export async function saveNarrative(
       promptVersion: "1.0",
     })
     .returning();
+  // First save — treat as approval with no prior draft to compare against
+  await trackEvent(userId, tenantId, "narrative_approved", { section, wasEdited: false });
   return created;
 }
 

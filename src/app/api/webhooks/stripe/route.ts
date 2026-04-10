@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users, stripeEvents } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { qualifyReferral } from "@/server/actions";
+import { trackEvent } from "@/lib/analytics";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -144,6 +145,10 @@ export async function POST(req: NextRequest) {
       const plan = session.metadata?.plan;
       const userId = session.metadata?.userId;
       if (tenantId && plan) {
+        // Fetch tenant before updating to capture the "from" plan
+        const [tenantBefore] = await db.select({ plan: tenants.plan, createdAt: tenants.createdAt })
+          .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
         await db.update(tenants).set({
           plan,
           stripeSubscriptionId: session.subscription as string,
@@ -159,6 +164,18 @@ export async function POST(req: NextRequest) {
           } catch (err) {
             console.error("qualifyReferral failed for userId", userId, err);
           }
+        }
+
+        // Analytics: plan_upgraded
+        if (userId && tenantBefore && tenantBefore.plan !== plan) {
+          const daysSinceTrialStart = tenantBefore.createdAt
+            ? Math.floor((Date.now() - new Date(tenantBefore.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          trackEvent(userId, tenantId, "plan_upgraded", {
+            from: tenantBefore.plan || "lite",
+            to: plan,
+            daysSinceTrialStart,
+          }).catch(() => {});
         }
 
         // Sync payment to HubSpot
@@ -186,6 +203,7 @@ export async function POST(req: NextRequest) {
         .where(eq(tenants.stripeCustomerId, customerId)).limit(1);
 
       if (tenant) {
+        const previousPlan = tenant.plan;
         await db.update(tenants).set({
           plan,
           stripeSubscriptionId: subscription.id,
@@ -193,6 +211,22 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionStatus: subscription.status,
           trialEndsAt: null,
         }).where(eq(tenants.id, tenant.id));
+
+        // Analytics: plan_upgraded (only when plan actually changed)
+        if (previousPlan !== plan) {
+          const [owner] = await db.select({ userId: tenantMembers.userId })
+            .from(tenantMembers).where(eq(tenantMembers.tenantId, tenant.id)).limit(1);
+          if (owner) {
+            const daysSinceTrialStart = tenant.createdAt
+              ? Math.floor((Date.now() - new Date(tenant.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+            trackEvent(owner.userId, tenant.id, "plan_upgraded", {
+              from: previousPlan || "lite",
+              to: plan,
+              daysSinceTrialStart,
+            }).catch(() => {});
+          }
+        }
       }
       break;
     }

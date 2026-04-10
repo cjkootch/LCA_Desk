@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { notifyWelcome } from "@/lib/email/unified-notify";
 import { acceptPendingInvites } from "@/server/actions";
+import { trackEvent } from "@/lib/analytics";
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -226,6 +227,9 @@ export async function POST(req: NextRequest) {
         const { syncSignup } = await import("@/lib/hubspot-sync");
         await syncSignup(email, name, companyName || name, "filer");
       } catch {}
+
+      // Analytics: trial_started
+      trackEvent(user.id, tenant.id, "trial_started", { plan: "lite" }).catch(() => {});
 
       return NextResponse.json({
         success: true,
