@@ -22,6 +22,7 @@ export function ReferralsPageContent() {
   const [editingCode, setEditingCode] = useState(false);
   const [customCode, setCustomCode] = useState("");
   const [savingCode, setSavingCode] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(1);
 
   useEffect(() => {
     fetchMyReferralInfo()
@@ -54,6 +55,14 @@ export function ReferralsPageContent() {
     setCopied(true);
     toast.success("Referral link copied!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyImage = () => {
+    const link = document.createElement("a");
+    link.href = `/referral-${selectedImage}.png`;
+    link.download = `lca-desk-referral-${selectedImage}.png`;
+    link.click();
+    toast.success("Image downloaded!");
   };
 
   const handleSaveCode = async () => {
@@ -114,6 +123,21 @@ export function ReferralsPageContent() {
             {/* Share buttons */}
             <div>
               <label className="text-xs text-text-muted font-medium mb-1.5 block">Share Via</label>
+              {/* Image selector */}
+              <div className="flex gap-2 mb-3">
+                {[1, 2].map(n => (
+                  <button key={n} onClick={() => setSelectedImage(n)}
+                    className={cn("rounded-lg overflow-hidden border-2 transition-all w-24 h-24",
+                      selectedImage === n ? "border-accent shadow-md" : "border-border-light opacity-60 hover:opacity-100"
+                    )}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/referral-${n}.png`} alt={`Referral image ${n}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+                <div className="flex-1 flex items-center">
+                  <p className="text-xs text-text-muted">Choose an image to share with your post</p>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={shareToLinkedIn}
@@ -135,6 +159,13 @@ export function ReferralsPageContent() {
                 >
                   <Mail className="h-4 w-4" />
                   Email
+                </button>
+                <button
+                  onClick={handleCopyImage}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-bg-primary text-text-secondary hover:text-text-primary transition-colors text-xs font-medium"
+                >
+                  <Copy className="h-4 w-4" />
+                  Download Image
                 </button>
               </div>
             </div>
