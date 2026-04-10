@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { qualifyReferral } from "@/server/actions";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -130,6 +131,7 @@ export async function POST(req: NextRequest) {
       // Standard subscription checkout (upgrade from billing page)
       const tenantId = session.metadata?.tenantId;
       const plan = session.metadata?.plan;
+      const userId = session.metadata?.userId;
       if (tenantId && plan) {
         await db.update(tenants).set({
           plan,
@@ -138,6 +140,15 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionStatus: "active",
           trialEndsAt: null,
         }).where(eq(tenants.id, tenantId));
+
+        // Mark referral as qualified now that the subscription is active
+        if (userId) {
+          try {
+            await qualifyReferral(userId);
+          } catch (err) {
+            console.error("qualifyReferral failed for userId", userId, err);
+          }
+        }
 
         // Sync payment to HubSpot
         try {

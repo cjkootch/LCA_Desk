@@ -949,6 +949,11 @@ export async function fetchUserContext() {
     with: { tenant: { with: { jurisdiction: true } } },
   });
 
+  const plan = membership?.tenant?.plan || "lite";
+  const trialEndsAt = membership?.tenant?.trialEndsAt ?? null;
+  const stripeSubId = membership?.tenant?.stripeSubscriptionId ?? null;
+  const stripeSubStatus = membership?.tenant?.stripeSubscriptionStatus ?? null;
+
   return {
     user: session.user,
     tenant: membership?.tenant ? {
@@ -957,6 +962,14 @@ export async function fetchUserContext() {
     } : null,
     role: membership?.role || null,
     isSuperAdmin: user?.isSuperAdmin ?? false,
+    trialEndsAt,
+    stripeSubscriptionId: stripeSubId,
+    stripeSubscriptionStatus: stripeSubStatus,
+    billingAccess: getBillingAccess(plan, trialEndsAt, stripeSubId, stripeSubStatus),
+    isInTrial: isInTrial(trialEndsAt) || stripeSubStatus === "trialing",
+    isTrialExpired: isTrialExpired(trialEndsAt, stripeSubId),
+    trialDaysRemaining: getTrialDaysRemaining(trialEndsAt),
+    effectivePlan: getEffectivePlan(plan, trialEndsAt).code,
   };
 }
 
@@ -6641,6 +6654,21 @@ export async function reviewCertApplication(id: string, data: {
       }
     }
   }
+}
+
+// ─── REFERRALS ──────────────────────────────────────────────────
+
+/**
+ * Marks the referral for userId as qualified (i.e. the referred user converted
+ * to a paid subscription). Called from the Stripe webhook on checkout.session.completed.
+ *
+ * TODO: implement referral reward logic — update the referrals table, credit the
+ * referring affiliate, and trigger any downstream notifications.
+ */
+export async function qualifyReferral(userId: string): Promise<void> {
+  // Implementation pending — stub exists so the webhook call compiles and the
+  // wiring is in place. Fill in referral-table update logic here.
+  void userId;
 }
 
 // ─── INDUSTRY NEWS ──────────────────────────────────────────────

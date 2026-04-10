@@ -13,6 +13,7 @@ export default auth((req) => {
   const isSeekerRoute = nextUrl.pathname.startsWith("/seeker");
   const isSupplierRoute = nextUrl.pathname.startsWith("/supplier-portal");
   const isSecretariatRoute = nextUrl.pathname.startsWith("/secretariat");
+  const isAffiliateRoute = nextUrl.pathname.startsWith("/affiliate");
 
   // Protect compliance dashboard — requires filer or super_admin role
   if (isDashboard) {
@@ -58,6 +59,32 @@ export default auth((req) => {
     }
   }
 
+  // Protect affiliate portal — requires affiliate role
+  if (isAffiliateRoute) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    }
+    const canAccess =
+      roles.includes("affiliate") ||
+      roles.includes("super_admin") ||
+      (session?.user as any)?.isSuperAdmin;
+    if (!canAccess) {
+      if (roles.includes("filer")) {
+        return NextResponse.redirect(new URL("/dashboard", nextUrl));
+      }
+      if (roles.includes("job_seeker")) {
+        return NextResponse.redirect(new URL("/seeker/dashboard", nextUrl));
+      }
+      if (roles.includes("supplier")) {
+        return NextResponse.redirect(new URL("/supplier-portal/dashboard", nextUrl));
+      }
+      if (roles.includes("secretariat")) {
+        return NextResponse.redirect(new URL("/secretariat/dashboard", nextUrl));
+      }
+      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    }
+  }
+
   if (isSeekerRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/auth/login?role=job_seeker", nextUrl));
   }
@@ -73,5 +100,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/seeker/:path*", "/supplier-portal/:path*", "/secretariat/:path*"],
+  matcher: ["/dashboard/:path*", "/seeker/:path*", "/supplier-portal/:path*", "/secretariat/:path*", "/affiliate/:path*"],
 };
