@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, DollarSign, Gift, Settings, LogOut, X, Menu, GraduationCap, Image } from "lucide-react";
+import { LayoutDashboard, DollarSign, Gift, Settings, LogOut, X, Menu, GraduationCap, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { label: "Referrals", href: "/affiliate/referrals", icon: Gift },
   { label: "Earnings", href: "/affiliate/earnings", icon: DollarSign },
   { label: "Training", href: "/affiliate/training", icon: GraduationCap },
-  { label: "Marketing Assets", href: "/affiliate/assets", icon: Image },
+  { label: "Marketing Assets", href: "/affiliate/assets", icon: ImageIcon },
   { label: "Settings", href: "/affiliate/settings", icon: Settings },
 ];
 
