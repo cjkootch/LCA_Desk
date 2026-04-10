@@ -418,7 +418,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       </div>
 
       {/* Slide content */}
-      <div className="relative flex-1 flex items-center justify-center px-4 sm:px-8 overflow-y-auto" key={animKey}>
+      <div className="relative flex-1 flex items-start justify-center px-4 sm:px-8 overflow-y-auto pt-8" key={animKey}>
         <div className={cn(
           "max-w-2xl w-full py-10 animate-[slideContentIn_0.5s_ease_forwards]",
           isIntro ? "text-center" : ""
