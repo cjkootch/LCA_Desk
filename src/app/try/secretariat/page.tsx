@@ -6,19 +6,19 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 /**
- * Auto-logs in as the demo filer user and redirects to /dashboard.
+ * Auto-logs in as the demo secretariat user and redirects to /secretariat/dashboard.
  * Only works when NEXT_PUBLIC_DEMO_PASSWORD is set.
  */
-export default function TryPage() {
+export default function TrySecretariatPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch("/api/demo/public-login?role=filer");
+        const res = await fetch("/api/demo/public-login?role=secretariat");
         if (!res.ok) {
-          setError("Demo is not available right now. Please sign up for a free trial.");
+          setError("Demo is not available right now. Please contact us to schedule a live demo.");
           return;
         }
         const { email, password } = await res.json() as { email: string; password: string };
@@ -27,7 +27,7 @@ export default function TryPage() {
           setError("Could not log in to demo account. Please try again.");
           return;
         }
-        router.replace("/dashboard");
+        router.replace("/secretariat/dashboard");
       } catch {
         setError("Something went wrong. Please try again.");
       }
@@ -41,21 +41,21 @@ export default function TryPage() {
       {error ? (
         <div className="text-center space-y-4">
           <p className="text-sm text-text-secondary max-w-sm">{error}</p>
-          <a href="/auth/signup" className="text-accent hover:underline text-sm font-medium">
-            Start your free trial →
+          <a href="/contact" className="text-accent hover:underline text-sm font-medium">
+            Contact us →
           </a>
         </div>
       ) : (
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto" />
-          <p className="text-sm text-text-muted">Loading your demo...</p>
+          <p className="text-sm text-text-muted">Loading the Secretariat demo...</p>
         </div>
       )}
       <div className="mt-10 text-center space-y-2 text-sm text-text-muted">
         <p>
-          Are you a regulator?{" "}
-          <a href="/try/secretariat" className="text-accent hover:underline font-medium">
-            Try the Secretariat demo →
+          Are you a filer?{" "}
+          <a href="/try" className="text-accent hover:underline font-medium">
+            Try the Filer demo →
           </a>
         </p>
         <p>

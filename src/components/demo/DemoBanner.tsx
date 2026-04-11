@@ -33,9 +33,13 @@ export function DemoBanner() {
     email.includes("filer-pro") ? "Filer (Pro)" :
     email.includes("filer-trial") ? "Filer (Trial)" :
     email.includes("filer-expired") ? "Filer (Expired Trial)" :
+    email.includes("secretariat") ? "Secretariat" :
     email.includes("seeker") ? "Job Seeker" :
     email.includes("supplier") ? "Supplier" :
     email.includes("admin") ? "Super Admin" : "Demo";
+
+  const isSecretariat = email.includes("secretariat");
+  const isSeeker = email.includes("seeker") && !email.includes("secretariat");
 
   const effectivePlan = planData ? getEffectivePlan(planData.plan, planData.trialEndsAt) : null;
   const inTrial = planData ? isInTrial(planData.trialEndsAt) : false;
@@ -56,7 +60,17 @@ export function DemoBanner() {
         </span>
       </div>
 
-      {expanded && effectivePlan && (
+      {expanded && (isSecretariat || isSeeker) && (
+        <div className="fixed top-7 right-4 z-[100] w-72 bg-white border border-border rounded-xl shadow-xl overflow-hidden text-xs">
+          <div className="px-4 py-3 text-text-secondary leading-relaxed">
+            {isSecretariat
+              ? "You're viewing a demo of the Secretariat portal. All data is sample data."
+              : "You're viewing a demo of the Job Seeker portal. All data is sample data."}
+          </div>
+        </div>
+      )}
+
+      {expanded && !isSecretariat && !isSeeker && effectivePlan && (
         <div className="fixed top-7 right-4 z-[100] w-80 bg-white border border-border rounded-xl shadow-xl overflow-hidden text-xs">
           <div className="bg-bg-primary px-4 py-2 border-b border-border">
             <div className="flex items-center justify-between">
