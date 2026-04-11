@@ -175,37 +175,49 @@ export default function SecretariatDashboardPage() {
     <div className="p-4 sm:p-6 max-w-6xl space-y-5">
       <AnnouncementBanner userRole="secretariat" />
 
-      {/* Platform Briefing welcome card */}
+      {/* Platform Briefing welcome card — prominent hero */}
       {showBriefingCard && !briefingActive && (
-        <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-accent/10 shrink-0">
-              <Shield className="h-6 w-6 text-accent" />
+        <div className="rounded-2xl border-2 border-accent bg-gradient-to-br from-[#19544c] to-[#0d3830] p-8 text-white shadow-xl shadow-accent/10 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur shrink-0">
+              <Play className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-heading font-bold text-text-primary mb-1">
-                Welcome to LCA Desk
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-accent-light bg-white/10 px-2.5 py-1 rounded-full">
+                  3-Minute Audio Tour
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-2">
+                Welcome to Your Secretariat Dashboard
               </h2>
-              <p className="text-sm text-text-secondary mb-4">
-                Take a 3-minute guided briefing to learn how the platform works — with audio narration.
+              <p className="text-sm text-white/70 mb-6 leading-relaxed max-w-lg">
+                Take a guided briefing with audio narration to learn how to review filings, monitor compliance, and manage the LCS Register.
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setBriefingActive(true)}
-                  className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-all hover:shadow-lg hover:shadow-accent/20"
+                  className="flex items-center gap-2 bg-white text-[#19544c] px-6 py-3 rounded-xl text-sm font-bold hover:bg-white/90 transition-all hover:shadow-lg"
+                  style={{ animation: "pulse 2s ease-in-out infinite" }}
                 >
                   <Play className="h-4 w-4" />
                   Start Platform Briefing
                 </button>
                 <button
                   onClick={completeBriefing}
-                  className="text-sm text-text-muted hover:text-text-secondary transition-colors"
+                  className="text-sm text-white/50 hover:text-white/80 transition-colors"
                 >
-                  I&apos;ll explore on my own
+                  Skip for now
                 </button>
               </div>
             </div>
           </div>
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+              50% { box-shadow: 0 0 20px 4px rgba(255,255,255,0.15); }
+            }
+          `}</style>
         </div>
       )}
 
