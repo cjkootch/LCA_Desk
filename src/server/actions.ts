@@ -7976,3 +7976,41 @@ export async function fetchDemoAccessLog() {
 
   return logs;
 }
+
+export async function fetchTenantUsers(tenantId: string) {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  const members = await db.select({
+    userId: tenantMembers.userId,
+    role: tenantMembers.role,
+    userName: users.name,
+    userEmail: users.email,
+    isDemo: users.isDemo,
+    createdAt: users.createdAt,
+  }).from(tenantMembers)
+    .innerJoin(users, eq(tenantMembers.userId, users.id))
+    .where(eq(tenantMembers.tenantId, tenantId));
+
+  return members;
+}
+
+export async function toggleUserDemo(userId: string, isDemo: boolean) {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  await db.update(users).set({ isDemo }).where(eq(users.id, userId));
+
+  // Sync tenant isDemo flag
+  const [membership] = await db.select({ tenantId: tenantMembers.tenantId })
+    .from(tenantMembers).where(eq(tenantMembers.userId, userId)).limit(1);
+  if (membership) {
+    const tenantUsers = await db.select({ isDemo: users.isDemo })
+      .from(tenantMembers)
+      .innerJoin(users, eq(tenantMembers.userId, users.id))
+      .where(eq(tenantMembers.tenantId, membership.tenantId));
+    const allDemo = tenantUsers.every(u => u.isDemo);
+    await db.update(tenants).set({ isDemo: allDemo })
+      .where(eq(tenants.id, membership.tenantId));
+  }
+}

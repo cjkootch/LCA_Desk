@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog } from "@/server/actions";
+import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 
 type PlgData = Awaited<ReturnType<typeof fetchPlgStats>>;
 type DemoLog = Awaited<ReturnType<typeof fetchDemoAccessLog>>[number];
+type TenantUser = Awaited<ReturnType<typeof fetchTenantUsers>>[number];
 
 // Cole's known IP — update this if your IP changes
 const COLE_IP = "";
@@ -79,6 +80,130 @@ function daysColor(days: number | null | undefined) {
   return "text-success";
 }
 
+function TenantUserRow({
+  user,
+  onToggle,
+}: {
+  user: TenantUser;
+  onToggle: (userId: string, newValue: boolean) => Promise<void>;
+}) {
+  const [toggling, setToggling] = useState(false);
+
+  async function handleToggle() {
+    setToggling(true);
+    try {
+      await onToggle(user.userId, !user.isDemo);
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  return (
+    <tr className="border-b border-border-light last:border-0">
+      <td className="py-2 px-4 text-sm text-text-primary">{user.userName || "—"}</td>
+      <td className="py-2 px-4 text-sm text-text-muted">{user.userEmail}</td>
+      <td className="py-2 px-4">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-border text-text-muted">
+          {user.role}
+        </span>
+      </td>
+      <td className="py-2 px-4">
+        {user.isDemo ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gold/15 text-gold">
+            Demo
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-bg-primary text-text-muted border border-border">
+            Real
+          </span>
+        )}
+      </td>
+      <td className="py-2 px-4">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleToggle}
+          disabled={toggling}
+          className="h-6 text-xs px-2"
+        >
+          {toggling ? "..." : user.isDemo ? "Unmark Demo" : "Flag as Demo"}
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+function TenantDrillDown({
+  tenantId,
+  onUserToggle,
+}: {
+  tenantId: string;
+  onUserToggle: (tenantId: string, userId: string, newValue: boolean) => void;
+}) {
+  const [users, setUsers] = useState<TenantUser[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTenantUsers(tenantId).then(setUsers).finally(() => setLoading(false));
+  }, [tenantId]);
+
+  async function handleToggle(userId: string, newValue: boolean) {
+    await toggleUserDemo(userId, newValue);
+    setUsers(prev =>
+      prev
+        ? prev.map(u => u.userId === userId ? { ...u, isDemo: newValue } : u)
+        : prev
+    );
+    onUserToggle(tenantId, userId, newValue);
+  }
+
+  if (loading) {
+    return (
+      <tr>
+        <td colSpan={10} className="py-4 px-4">
+          <div className="flex items-center gap-2 text-xs text-text-muted">
+            <div className="animate-spin rounded-full h-3 w-3 border-b border-accent" />
+            Loading users…
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (!users || users.length === 0) {
+    return (
+      <tr>
+        <td colSpan={10} className="py-3 px-4 text-xs text-text-muted italic">No users found for this tenant.</td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr>
+      <td colSpan={10} className="p-0">
+        <div className="bg-bg-primary border-b border-border mx-2 mb-2 rounded-lg overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-bg-secondary border-b border-border">
+                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Name</th>
+                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Email</th>
+                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Role</th>
+                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Demo?</th>
+                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <TenantUserRow key={u.userId} user={u} onToggle={handleToggle} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function PlgPage() {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -87,6 +212,7 @@ export default function PlgPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showAllTenants, setShowAllTenants] = useState(false);
+  const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
   const router = useRouter();
 
   const load = useCallback(async (isRefresh = false) => {
@@ -110,6 +236,15 @@ export default function PlgPage() {
       load().finally(() => setLoading(false));
     }).catch(() => router.replace("/dashboard"));
   }, [router, load]);
+
+  function handleTenantClick(tenantId: string) {
+    setExpandedTenant(prev => prev === tenantId ? null : tenantId);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleUserToggle(_tenantId: string, _userId: string, _newValue: boolean) {
+    // Local state is updated within TenantDrillDown; nothing needed at page level
+  }
 
   if (loading || !authorized) {
     return (
@@ -151,7 +286,7 @@ export default function PlgPage() {
         </div>
 
         {/* ── KPI Strip ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-2">
           {[
             { label: "Active Trials", value: data.activeTrials, cls: "text-accent" },
             { label: "Expired", value: data.expiredTrials, cls: "text-warning" },
@@ -168,6 +303,9 @@ export default function PlgPage() {
             </Card>
           ))}
         </div>
+        <p className="text-xs text-text-muted mb-6">
+          Stats exclude demo accounts. Flag users as demo from the tenant drill-down to keep data clean.
+        </p>
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
           {/* ── Activation Funnel ─────────────────────────────────────── */}
@@ -251,6 +389,7 @@ export default function PlgPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 text-xs text-text-muted font-medium w-6" />
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Company</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Plan</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Days Left</th>
@@ -260,21 +399,37 @@ export default function PlgPage() {
                   </thead>
                   <tbody>
                     {data.trialList.map(t => (
-                      <tr key={t.id} className="border-b border-border-light hover:bg-bg-primary/50">
-                        <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
-                        <td className="py-2 px-3">
-                          <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
-                            {t.plan || "lite"}
-                          </Badge>
-                        </td>
-                        <td className={cn("py-2 px-3 tabular-nums", daysColor(t.daysRemaining))}>
-                          {t.daysRemaining !== null && t.daysRemaining !== undefined ? `${t.daysRemaining}d` : "—"}
-                        </td>
-                        <td className="py-2 px-3 text-text-muted text-xs">
-                          {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-2 px-3">{stateBadge(t.billingState)}</td>
-                      </tr>
+                      <>
+                        <tr
+                          key={t.id}
+                          className="border-b border-border-light hover:bg-bg-primary/50 cursor-pointer"
+                          onClick={() => handleTenantClick(t.id)}
+                        >
+                          <td className="py-2 px-3 text-text-muted">
+                            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedTenant === t.id && "rotate-180")} />
+                          </td>
+                          <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
+                          <td className="py-2 px-3">
+                            <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
+                              {t.plan || "lite"}
+                            </Badge>
+                          </td>
+                          <td className={cn("py-2 px-3 tabular-nums", daysColor(t.daysRemaining))}>
+                            {t.daysRemaining !== null && t.daysRemaining !== undefined ? `${t.daysRemaining}d` : "—"}
+                          </td>
+                          <td className="py-2 px-3 text-text-muted text-xs">
+                            {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="py-2 px-3">{stateBadge(t.billingState)}</td>
+                        </tr>
+                        {expandedTenant === t.id && (
+                          <TenantDrillDown
+                            key={`drill-${t.id}`}
+                            tenantId={t.id}
+                            onUserToggle={handleUserToggle}
+                          />
+                        )}
+                      </>
                     ))}
                   </tbody>
                 </table>
@@ -372,6 +527,7 @@ export default function PlgPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 text-xs text-text-muted font-medium w-6" />
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Company</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Plan</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">State</th>
@@ -382,24 +538,40 @@ export default function PlgPage() {
                   </thead>
                   <tbody>
                     {data.allTenants.map(t => (
-                      <tr key={t.id} className="border-b border-border-light hover:bg-bg-primary/50">
-                        <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
-                        <td className="py-2 px-3">
-                          <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
-                            {t.plan || "lite"}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-3">{stateBadge(t.billingState)}</td>
-                        <td className={cn("py-2 px-3 tabular-nums text-xs", daysColor(t.daysRemaining))}>
-                          {t.daysRemaining !== null && t.daysRemaining !== undefined ? `${t.daysRemaining}d` : "—"}
-                        </td>
-                        <td className="py-2 px-3 text-text-muted text-xs">
-                          {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="py-2 px-3 text-text-muted text-xs font-mono truncate max-w-[140px]">
-                          {t.stripeSubscriptionId || "—"}
-                        </td>
-                      </tr>
+                      <>
+                        <tr
+                          key={t.id}
+                          className="border-b border-border-light hover:bg-bg-primary/50 cursor-pointer"
+                          onClick={() => handleTenantClick(t.id)}
+                        >
+                          <td className="py-2 px-3 text-text-muted">
+                            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedTenant === t.id && "rotate-180")} />
+                          </td>
+                          <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
+                          <td className="py-2 px-3">
+                            <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
+                              {t.plan || "lite"}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-3">{stateBadge(t.billingState)}</td>
+                          <td className={cn("py-2 px-3 tabular-nums text-xs", daysColor(t.daysRemaining))}>
+                            {t.daysRemaining !== null && t.daysRemaining !== undefined ? `${t.daysRemaining}d` : "—"}
+                          </td>
+                          <td className="py-2 px-3 text-text-muted text-xs">
+                            {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="py-2 px-3 text-text-muted text-xs font-mono truncate max-w-[140px]">
+                            {t.stripeSubscriptionId || "—"}
+                          </td>
+                        </tr>
+                        {expandedTenant === t.id && (
+                          <TenantDrillDown
+                            key={`drill-${t.id}`}
+                            tenantId={t.id}
+                            onUserToggle={handleUserToggle}
+                          />
+                        )}
+                      </>
                     ))}
                   </tbody>
                 </table>
