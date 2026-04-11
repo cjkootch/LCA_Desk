@@ -228,6 +228,10 @@ function MermaidDiagram({ chart }: { chart: string }) {
           const svgEl = containerRef.current.querySelector("svg");
           if (svgEl) {
             svgEl.style.backgroundColor = "transparent";
+            svgEl.style.width = "100%";
+            svgEl.style.maxWidth = "100%";
+            svgEl.style.height = "auto";
+            svgEl.style.minHeight = "200px";
             svgEl.querySelectorAll("rect").forEach(rect => {
               const fill = rect.getAttribute("fill");
               // Make background rects transparent
@@ -261,7 +265,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
     return () => { cancelled = true; };
   }, [chart]);
 
-  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-2xl p-5 [&_.node_rect]:rx-[12] [&_.node_rect]:ry-[12] [&_.label]:font-medium [&_text]:!font-sans" />;
+  return <div ref={containerRef} className="my-8 flex justify-center overflow-x-auto rounded-2xl p-6 w-full min-w-0 [&_.node_rect]:rx-[12] [&_.node_rect]:ry-[12] [&_.label]:font-medium [&_text]:!font-sans" />;
 }
 
 // Strip any quiz-like or interactive-test content before it reaches the slideshow renderer.
@@ -513,10 +517,10 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
               pieStrokeColor: "#ffffff",
               pieStrokeWidth: "2px",
               // Rounded nodes
-              fontSize: "14px",
+              fontSize: "18px",
               fontFamily: "'DM Mono', monospace",
             },
-            flowchart: { curve: "basis", padding: 15, nodeSpacing: 30, rankSpacing: 40, htmlLabels: true },
+            flowchart: { curve: "basis", padding: 20, nodeSpacing: 50, rankSpacing: 60, htmlLabels: true },
             mindmap: { padding: 16 },
             timeline: { padding: 10 },
           });
@@ -739,7 +743,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       {/* Slide content */}
       <div className="relative flex-1 flex items-start justify-center px-4 sm:px-8 overflow-y-auto pt-8" key={animKey}>
         <div className={cn(
-          "max-w-2xl w-full py-6 animate-[slideContentIn_0.5s_ease_forwards]",
+          "max-w-4xl w-full py-6 animate-[slideContentIn_0.5s_ease_forwards]",
           isIntro ? "text-center" : ""
         )}>
           {!isIntro && (
