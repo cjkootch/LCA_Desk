@@ -4346,6 +4346,14 @@ export async function fetchCourseWithModules(courseSlug: string) {
   const [course] = await db.select().from(courses).where(eq(courses.slug, courseSlug)).limit(1);
   if (!course) return null;
 
+  // Block access to unpublished courses for regular users
+  if (!course.isPublished) {
+    const session = await auth();
+    const isSuperAdmin = session?.user?.id ? await checkSuperAdmin() : false;
+    const isSecretariat = session?.user?.id ? await checkSecretariatMember(session.user.id) : false;
+    if (!isSuperAdmin && !isSecretariat) return null;
+  }
+
   const modules = await db.select().from(courseModules)
     .where(eq(courseModules.courseId, course.id))
     .orderBy(courseModules.orderIndex);
