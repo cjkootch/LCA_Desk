@@ -253,7 +253,7 @@ function DemoContactFloat() {
       {open && (
         <div className="mb-3 w-[280px] rounded-2xl border border-border bg-bg-card shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in duration-200">
           <div className="flex items-center gap-3 mb-3">
-            <img src="/founder.png" alt="Cole Kutschinski" className="h-10 w-10 rounded-full object-cover" />
+            <img src="/founder-new.png" alt="Cole Kutschinski" className="h-10 w-10 rounded-full object-cover" />
             <div>
               <p className="text-sm font-semibold text-text-primary">Cole Kutschinski</p>
               <p className="text-[11px] text-text-muted">Founder, LCA Desk</p>
