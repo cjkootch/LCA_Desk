@@ -157,7 +157,7 @@ const TOUR_STEPS: TourStep[] = [
           <p className="text-sm font-medium text-text-primary">Your referral link is ready</p>
         </div>
         <p className="text-xs text-text-secondary">Find it in <strong>Dashboard → Referrals</strong>. Share it with any company that files Local Content reports.</p>
-        <p className="text-xs text-text-muted">You earn a commission for every customer who signs up and pays through your link.</p>
+        <p className="text-xs text-text-muted">Both you and your referral get 14 extra trial days when they file their first report.</p>
       </div>
     ),
   },
