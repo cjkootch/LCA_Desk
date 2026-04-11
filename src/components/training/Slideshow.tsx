@@ -34,6 +34,57 @@ function parseSlides(markdown: string): { heading: string; body: string }[] {
   });
 }
 
+function autoSplitSlides(slides: { heading: string; body: string }[]): { heading: string; body: string }[] {
+  const MAX_CHARS = 500;
+  const result: { heading: string; body: string }[] = [];
+
+  for (const slide of slides) {
+    if (slide.body.length <= MAX_CHARS) {
+      result.push(slide);
+      continue;
+    }
+
+    // Split on ### sub-headings first
+    const subSections = slide.body.split(/(?=^### )/m);
+
+    if (subSections.length > 1) {
+      let currentBody = "";
+      let partNum = 0;
+
+      for (const section of subSections) {
+        if ((currentBody + section).length > MAX_CHARS && currentBody.length > 0) {
+          result.push({ heading: slide.heading, body: currentBody.trim() });
+          currentBody = section;
+          partNum++;
+        } else {
+          currentBody += (currentBody ? "\n\n" : "") + section;
+        }
+      }
+      if (currentBody.trim()) {
+        result.push({ heading: slide.heading, body: currentBody.trim() });
+      }
+    } else {
+      // No sub-headings — split on paragraph breaks
+      const paragraphs = slide.body.split(/\n\n+/);
+      let currentBody = "";
+
+      for (const para of paragraphs) {
+        if ((currentBody + "\n\n" + para).length > MAX_CHARS && currentBody.length > 0) {
+          result.push({ heading: slide.heading, body: currentBody.trim() });
+          currentBody = para;
+        } else {
+          currentBody += (currentBody ? "\n\n" : "") + para;
+        }
+      }
+      if (currentBody.trim()) {
+        result.push({ heading: slide.heading, body: currentBody.trim() });
+      }
+    }
+  }
+
+  return result;
+}
+
 function stripMarkdown(text: string): string {
   return text
     .replace(/#{1,6}\s?/g, "")
@@ -183,7 +234,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
 }
 
 export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, onComplete, isModuleComplete }: SlideshowProps) {
-  const contentSlides = parseSlides(content);
+  const contentSlides = autoSplitSlides(parseSlides(content));
 
   const topicList = contentSlides
     .map(s => s.heading)
@@ -391,44 +442,84 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   // Compute estimated timings for progressive reveal synced to voice
   const lineTimings = slide ? estimateLineTimings(slide.heading, slide.body) : [];
 
-  // Render markdown body with voice-synced progressive reveal
+  // Render markdown body with voice-synced progressive reveal + visual trimming
   const renderBody = (body: string) => {
-    const parts = body.split(/(```mermaid\n[\s\S]*?```|:::scenario\n[\s\S]*?:::)/g);
+    const MAX_VISIBLE_ITEMS = 5;
+
+    // Pre-process: split into mixed parts (mermaid, scenario, text)
+    const rawParts = body.split(/(```mermaid\n[\s\S]*?```|:::scenario\n[\s\S]*?:::)/g);
+
+    // Count total content items to decide whether to trim
+    let totalContentItems = 0;
+    for (const part of rawParts) {
+      if (part.match(/^```mermaid/) || part.match(/^:::scenario/)) {
+        totalContentItems++; // each special block counts as 1
+      } else {
+        const ls = part.split("\n").filter(Boolean);
+        for (const l of ls) {
+          const t = l.trim();
+          if (t && !t.startsWith("### ") && !t.startsWith("```")) totalContentItems++;
+        }
+      }
+    }
+    const shouldTrim = totalContentItems > MAX_VISIBLE_ITEMS;
+
     const elements: React.ReactNode[] = [];
     let lineIndex = 0;
+    let shownItems = 0;
+    let hiddenCount = 0;
 
-    parts.forEach((part, pi) => {
+    for (let pi = 0; pi < rawParts.length; pi++) {
+      const part = rawParts[pi];
+
       const mermaidMatch = part.match(/^```mermaid\n([\s\S]*?)```$/);
       if (mermaidMatch) {
-        elements.push(<MermaidDiagram key={`m-${pi}`} chart={mermaidMatch[1].trim()} />);
-        return;
+        if (!shouldTrim || shownItems < MAX_VISIBLE_ITEMS) {
+          elements.push(<MermaidDiagram key={`m-${pi}`} chart={mermaidMatch[1].trim()} />);
+          shownItems++;
+        } else {
+          hiddenCount++;
+        }
+        continue;
       }
 
       const scenarioMatch = part.match(/^:::scenario\n([\s\S]*?):::$/);
       if (scenarioMatch) {
-        try {
-          const data = JSON.parse(scenarioMatch[1].trim());
-          elements.push(
-            <ScenarioCard
-              key={`s-${pi}`}
-              title={data.title}
-              scenario={data.scenario}
-              question={data.question}
-              options={data.options}
-              correctIndex={data.correctIndex}
-            />
-          );
-        } catch { /* skip malformed scenario */ }
-        return;
+        if (!shouldTrim || shownItems < MAX_VISIBLE_ITEMS) {
+          try {
+            const data = JSON.parse(scenarioMatch[1].trim());
+            elements.push(
+              <ScenarioCard
+                key={`s-${pi}`}
+                title={data.title}
+                scenario={data.scenario}
+                question={data.question}
+                options={data.options}
+                correctIndex={data.correctIndex}
+              />
+            );
+            shownItems++;
+          } catch { /* skip malformed scenario */ }
+        } else {
+          hiddenCount++;
+        }
+        continue;
       }
 
       const lines = part.split("\n").filter(Boolean);
-      lines.forEach((line, i) => {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const li = lineIndex++;
         const trimmed = line.trim();
+        const isHeading = trimmed.startsWith("### ");
+        const isContentItem = trimmed && !isHeading;
 
-        // When voice is enabled, sync animation to estimated speech timing
-        // When muted, use fast stagger so content appears quickly
+        // Always show headings; trim content items when over limit
+        if (shouldTrim && isContentItem && shownItems >= MAX_VISIBLE_ITEMS) {
+          hiddenCount++;
+          continue;
+        }
+
         const voiceDelay = voiceEnabled && lineTimings[li] !== undefined
           ? lineTimings[li] * 1000
           : 0;
@@ -436,42 +527,54 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
         const delay = `${voiceEnabled ? Math.max(200, voiceDelay) : fallbackDelay}ms`;
         const style = { animationDelay: delay };
 
-        if (trimmed.startsWith("### ")) {
+        if (isHeading) {
           elements.push(
-            <h3 key={`${pi}-${i}`} className="text-xl font-bold text-[#19544c] mt-8 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+            <h3 key={`${pi}-${i}`} className="text-xl font-bold text-[#19544c] mt-6 mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               {trimmed.slice(4)}
             </h3>
           );
         } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
           elements.push(
-            <div key={`${pi}-${i}`} className="flex items-start gap-3 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+            <div key={`${pi}-${i}`} className="flex items-start gap-3 mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               <div className="h-2 w-2 rounded-full bg-[#71b59a] mt-2.5 shrink-0" />
               <span className="text-[#475569] text-base sm:text-lg leading-relaxed">
                 {trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
               </span>
             </div>
           );
+          shownItems++;
         } else if (trimmed.startsWith('"') || trimmed.startsWith('\u201c')) {
           elements.push(
-            <blockquote key={`${pi}-${i}`} className="border-l-4 border-[#71b59a] pl-5 py-2 my-5 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+            <blockquote key={`${pi}-${i}`} className="border-l-4 border-[#71b59a] pl-5 py-2 my-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               <p className="text-[#334155] italic text-base sm:text-lg">{trimmed}</p>
             </blockquote>
           );
+          shownItems++;
         } else if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
           elements.push(
             <p key={`${pi}-${i}`} className="text-[#19544c] font-semibold text-base sm:text-lg mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               {trimmed.replace(/\*\*/g, "")}
             </p>
           );
+          shownItems++;
         } else {
           elements.push(
             <p key={`${pi}-${i}`} className="text-[#475569] text-base sm:text-lg mb-3 leading-relaxed animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               {trimmed.replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
             </p>
           );
+          shownItems++;
         }
-      });
-    });
+      }
+    }
+
+    if (hiddenCount > 0) {
+      elements.push(
+        <p key="more" className="text-xs text-[#19544c]/50 italic mt-3 animate-[fadeIn_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "800ms" }}>
+          Voice continues with {hiddenCount} more point{hiddenCount !== 1 ? "s" : ""}…
+        </p>
+      );
+    }
 
     return elements;
   };
@@ -549,7 +652,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       {/* Slide content */}
       <div className="relative flex-1 flex items-start justify-center px-4 sm:px-8 overflow-y-auto pt-8" key={animKey}>
         <div className={cn(
-          "max-w-2xl w-full py-10 animate-[slideContentIn_0.5s_ease_forwards]",
+          "max-w-2xl w-full py-6 animate-[slideContentIn_0.5s_ease_forwards]",
           isIntro ? "text-center" : ""
         )}>
           {!isIntro && (
