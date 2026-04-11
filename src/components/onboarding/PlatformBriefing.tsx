@@ -207,6 +207,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
     }
 
     if (!mountedRef.current || !blob) { setSpeaking(false); return; }
+    try {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audioRef.current = audio;
