@@ -351,6 +351,14 @@ export default function SecretariatDashboardPage() {
             {/* Action buttons */}
             <div className="space-y-2">
               <a
+                href="/proposal"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border-2 border-accent text-accent text-sm font-semibold hover:bg-accent hover:text-white transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                View My Proposal
+              </a>
+
+              <a
                 href="https://teams.microsoft.com/l/chat/0/0?users=Cole@lcadesk.com&message=Hi%20Cole%2C%20I%27d%20like%20to%20schedule%20a%20demo%20meeting."
                 target="_blank"
                 rel="noopener noreferrer"
