@@ -4350,7 +4350,7 @@ export async function fetchCourseWithModules(courseSlug: string) {
   if (!course.isPublished) {
     const session = await auth();
     const isSuperAdmin = session?.user?.id ? await checkSuperAdmin() : false;
-    const isSecretariat = session?.user?.id ? await checkSecretariatMember(session.user.id) : false;
+    const isSecretariat = session?.user?.id ? await _checkSecretariatMember(session.user.id) : false;
     if (!isSuperAdmin && !isSecretariat) return null;
   }
 
