@@ -136,6 +136,8 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   const pathname = usePathname();
 
   const [current, setCurrent] = useState(0);
+  const currentRef = useRef(0);
+  useEffect(() => { currentRef.current = current; }, [current]);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [speaking, setSpeaking] = useState(false);
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
@@ -243,6 +245,12 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
         URL.revokeObjectURL(url);
         if (!mountedRef.current) return;
         setSpeaking(false);
+        // Auto-advance to next step after audio ends
+        if (currentRef.current < steps.length - 1) {
+          setTimeout(() => {
+            if (mountedRef.current) setCurrent(c => Math.min(c + 1, steps.length - 1));
+          }, 1500);
+        }
       };
       audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
       audio.play().catch(() => { setSpeaking(false); });
@@ -250,6 +258,24 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
       if (mountedRef.current) setSpeaking(false);
     }
   }, [audioEnabled, current, steps]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-measure spotlight on scroll (user might scroll while on a step)
+  useEffect(() => {
+    if (!spotlightRect) return;
+    const step = steps[current];
+    if (!step?.target) return;
+    const handler = () => {
+      try {
+        const el = document.querySelector(step.target!);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) setSpotlightRect(rect);
+        }
+      } catch {}
+    };
+    window.addEventListener("scroll", handler, true);
+    return () => window.removeEventListener("scroll", handler, true);
+  }, [current, spotlightRect, steps]);
 
   // Speak on step change + prefetch next
   useEffect(() => {
