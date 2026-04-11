@@ -20,15 +20,11 @@ export default function TryPage() {
   if (status === "error") {
     return (
       <div className="min-h-screen bg-[#0B1B18] flex flex-col items-center justify-center gap-4 px-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-12 w-12 rounded-xl bg-[#19544c] flex items-center justify-center">
-            <span className="text-xl font-extrabold text-[#71b59a]">LC</span>
-          </div>
-          <span className="text-2xl font-bold text-white tracking-tight">LCA Desk</span>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-white.svg" alt="LCA Desk" width={160} height={40} className="mb-2" />
         <p className="text-white/60 text-center max-w-md">
           Demo is currently unavailable.{" "}
-          <a href="https://lcadesk.com/demo" className="text-[#71b59a] hover:underline">Request a live demo →</a>
+          <a href="https://lcadesk.com/demo" className="text-[#71b59a] hover:underline">Request a live demo \u2192</a>
         </p>
       </div>
     );
@@ -36,12 +32,8 @@ export default function TryPage() {
 
   return (
     <div className="min-h-screen bg-[#0B1B18] flex flex-col items-center justify-center gap-6">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-[#19544c] flex items-center justify-center">
-          <span className="text-xl font-extrabold text-[#71b59a]">LC</span>
-        </div>
-        <span className="text-2xl font-bold text-white tracking-tight">LCA Desk</span>
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-white.svg" alt="LCA Desk" width={160} height={40} />
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#71b59a]" />
       <p className="text-white/50 text-sm">Preparing your demo...</p>
     </div>
