@@ -404,7 +404,9 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
     prefetchingSet.current.add(idx);
     const slide = slides[idx];
-    const text = buildSpeechText(slide.heading, slide.body);
+    const prevSlide = idx > 0 ? slides[idx - 1] : null;
+    const isContinuation = prevSlide && prevSlide.heading === slide.heading;
+    const text = buildSpeechText(slide.heading, slide.body, isContinuation);
     if (!text) { prefetchingSet.current.delete(idx); return; }
 
     try {
@@ -425,7 +427,10 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   useEffect(() => {
     const slide = slides[current];
     if (slide && voiceEnabled) {
-      const speechText = buildSpeechText(slide.heading, slide.body);
+      // Skip reading the heading if it's the same as previous slide (continuation from auto-split)
+      const prevSlide = current > 0 ? slides[current - 1] : null;
+      const isContinuation = prevSlide && prevSlide.heading === slide.heading;
+      const speechText = buildSpeechText(slide.heading, slide.body, isContinuation);
       speak(speechText, current);
       prefetchSlide(current + 1);
     }
@@ -659,7 +664,9 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
             </button>
           ) : (
             <button onClick={() => {
-              const speechText = buildSpeechText(slide.heading, slide.body);
+              const prevSlide = current > 0 ? slides[current - 1] : null;
+              const isContinuation = prevSlide && prevSlide.heading === slide.heading;
+              const speechText = buildSpeechText(slide.heading, slide.body, isContinuation);
               speak(speechText, current);
             }} className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
               <Play className="h-4 w-4" />
