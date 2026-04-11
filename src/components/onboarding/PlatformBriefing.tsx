@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { X, ChevronRight, ChevronLeft, Volume2, VolumeX, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,7 @@ export interface BriefingStep {
   narration: string;
   bullets: string[];
   target?: string;
+  navigateTo?: string;
   position?: "left" | "right" | "top" | "bottom" | "center";
 }
 
@@ -35,6 +37,7 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Open to review, approve, or request corrections",
       "Status badges show where each filing stands",
     ],
+    navigateTo: "/secretariat/dashboard",
     target: "[data-briefing='submissions']",
     position: "right",
   },
@@ -48,7 +51,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Narrative: AI-generated, review for accuracy",
       "Yellow flags = potential compliance issues to investigate",
     ],
-    target: '[href="/secretariat/compliance"], [href="/secretariat/reports"]',
+    navigateTo: "/secretariat/compliance",
+    target: "[data-section='compliance']",
     position: "right",
   },
   {
@@ -61,7 +65,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Red = missed deadline or below thresholds",
       "Click any entity to see their full history",
     ],
-    target: '[href="/secretariat/compliance"]',
+    navigateTo: "/secretariat/compliance",
+    target: "[data-section='compliance']",
     position: "right",
   },
   {
@@ -74,7 +79,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "LCSR numbers link suppliers to filing data",
       "Expired certificates are flagged automatically",
     ],
-    target: '[href="/secretariat/suppliers"], [href="/secretariat/applications"]',
+    navigateTo: "/secretariat/suppliers",
+    target: "[data-section='suppliers']",
     position: "right",
   },
   {
@@ -87,7 +93,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Published courses appear for all users in your market",
       "Use templates: Compliance Overview, Practical Guide, and more",
     ],
-    target: '[href="/secretariat/courses"], [href="/secretariat/training"]',
+    navigateTo: "/secretariat/courses",
+    target: "[data-section='courses']",
     position: "right",
   },
   {
@@ -99,7 +106,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Control who can approve, manage register, create courses",
       "Only the owner can change roles",
     ],
-    target: '[href="/secretariat/team"]',
+    navigateTo: "/secretariat/team",
+    target: "[data-section='team']",
     position: "right",
   },
   {
@@ -112,6 +120,7 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Explore the dashboard — (i) icons explain each section",
       "Switch demo views anytime from the banner above",
     ],
+    navigateTo: "/secretariat/dashboard",
     target: "[data-briefing='contact-card']",
     position: "left",
   },
@@ -123,6 +132,9 @@ interface PlatformBriefingProps {
 }
 
 export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: PlatformBriefingProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [current, setCurrent] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [speaking, setSpeaking] = useState(false);
@@ -144,30 +156,44 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   const isLast = current === steps.length - 1;
   const progress = ((current + 1) / steps.length) * 100;
 
-  // Find and measure the spotlight target
-  useEffect(() => {
-    if (!step.target) { setSpotlightRect(null); return; }
-    // Small delay to ensure layout is settled after step change
-    const timer = setTimeout(() => {
-      if (!step.target) return;
+  // Try each comma-separated selector until one matches a visible element
+  const findAndSetSpotlight = useCallback((target?: string) => {
+    if (!target) { setSpotlightRect(null); return; }
+    const selectors = target.split(",").map(s => s.trim());
+    for (const sel of selectors) {
       try {
-        const el = document.querySelector(step.target);
+        const el = document.querySelector(sel);
         if (el) {
           const rect = el.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0) {
             setSpotlightRect(rect);
-            // Scroll element into view
-            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
           }
         }
       } catch {}
-      setSpotlightRect(null);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [step.target, current]);
+    }
+    setSpotlightRect(null);
+  }, []);
 
-  // Speak the narration
+  // Navigate if needed, then find spotlight target
+  useEffect(() => {
+    const needsNav = step.navigateTo && pathname !== step.navigateTo;
+    if (needsNav) {
+      router.push(step.navigateTo!);
+      // Wait for the new page to render before measuring
+      const timer = setTimeout(() => {
+        if (mountedRef.current) findAndSetSpotlight(step.target);
+      }, 1500);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => {
+        if (mountedRef.current) findAndSetSpotlight(step.target);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Prefetch the next step's audio
   const prefetchStep = useCallback(async (idx: number) => {
     if (idx < 0 || idx >= steps.length || prefetchCache.current.has(idx)) return;
@@ -210,31 +236,24 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
 
     if (!mountedRef.current || !blob) { setSpeaking(false); return; }
     try {
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
       audio.onended = () => {
-          URL.revokeObjectURL(url);
-          if (!mountedRef.current) return;
-          setSpeaking(false);
-          // Auto-advance to next step after a brief pause
-          if (current < steps.length - 1) {
-            setTimeout(() => {
-              if (mountedRef.current) setCurrent(c => Math.min(c + 1, steps.length - 1));
-            }, 1500);
-          }
-        };
+        URL.revokeObjectURL(url);
+        if (!mountedRef.current) return;
+        setSpeaking(false);
+      };
       audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
       audio.play().catch(() => { setSpeaking(false); });
     } catch {
       if (mountedRef.current) setSpeaking(false);
     }
-  }, [audioEnabled, current, steps]);
+  }, [audioEnabled, current, steps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Speak on step change + prefetch next
   useEffect(() => {
     speak(step.narration);
-    // Prefetch next step's audio while this one plays
     prefetchStep(current + 1);
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
@@ -242,7 +261,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
     };
   }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Prefetch step 1 audio immediately on mount for fast first transition
+  // Prefetch step 1 audio immediately on mount
   useEffect(() => { prefetchStep(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount

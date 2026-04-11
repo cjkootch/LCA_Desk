@@ -39,7 +39,7 @@ export default function SupplierDirectoryPage() {
   const isExpired = (d: string | null) => d && new Date(d) < new Date();
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl">
+    <div data-section="suppliers" className="p-4 sm:p-6 max-w-6xl">
       <div className="flex items-center gap-3 mb-4">
         <Building2 className="h-6 w-6 text-gold" />
         <div>

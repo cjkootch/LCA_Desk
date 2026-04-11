@@ -84,7 +84,7 @@ export default function CompliancePage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl">
+    <div data-section="compliance" className="p-4 sm:p-6 max-w-5xl">
       <div className="flex items-center gap-2 mb-1">
         <h1 className="text-xl font-heading font-bold text-text-primary">Filing Compliance</h1>
         <InfoTooltip title="Filing Compliance" content="All registered entities (contractors, sub-contractors, licensees) in your jurisdiction and their filing status for the selected period. Click any entity to see their full filing history and compliance details." />

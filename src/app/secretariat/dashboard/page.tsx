@@ -14,7 +14,6 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download, Play,
 } from "lucide-react";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
-import { PlatformBriefing } from "@/components/onboarding/PlatformBriefing";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests, fetchSecretariatOfficeSettings } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardIdentity, DashboardStats, StatusCard } from "@/components/dashboard/shared/DashboardTemplate";
@@ -39,9 +38,8 @@ function formatCurrency(amount: number): string {
 export default function SecretariatDashboardPage() {
   const { data: session } = useSession();
 
-  // Briefing state
+  // Welcome card state — hidden once briefing completes or user dismisses
   const [showBriefingCard, setShowBriefingCard] = useState(false);
-  const [briefingActive, setBriefingActive] = useState(false);
 
   useEffect(() => {
     const completed = localStorage.getItem("secretariat-briefing-completed");
@@ -49,12 +47,12 @@ export default function SecretariatDashboardPage() {
     if (!completed || isDemo) setShowBriefingCard(true);
   }, [session]);
 
-  const completeBriefing = () => {
-    localStorage.setItem("secretariat-briefing-completed", "true");
-    setBriefingActive(false);
-    setShowBriefingCard(false);
-    window.dispatchEvent(new CustomEvent("open-contact-card"));
-  };
+  // Hide welcome card when briefing completes (Shell dispatches this event)
+  useEffect(() => {
+    const handler = () => setShowBriefingCard(false);
+    window.addEventListener("briefing-complete", handler);
+    return () => window.removeEventListener("briefing-complete", handler);
+  }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
@@ -176,7 +174,7 @@ export default function SecretariatDashboardPage() {
       <AnnouncementBanner userRole="secretariat" />
 
       {/* Platform Briefing welcome card — prominent hero */}
-      {showBriefingCard && !briefingActive && (
+      {showBriefingCard && (
         <div className="rounded-2xl border-2 border-accent bg-gradient-to-br from-[#19544c] to-[#0d3830] p-8 text-white shadow-xl shadow-accent/10 animate-in fade-in slide-in-from-top-2 duration-500">
           <div className="flex flex-col sm:flex-row items-start gap-6">
             <div className="p-4 rounded-2xl bg-white/10 backdrop-blur shrink-0">
@@ -196,7 +194,7 @@ export default function SecretariatDashboardPage() {
               </p>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setBriefingActive(true)}
+                  onClick={() => window.dispatchEvent(new CustomEvent("start-briefing"))}
                   className="flex items-center gap-2 bg-white text-[#19544c] px-6 py-3 rounded-xl text-sm font-bold hover:bg-white/90 transition-all hover:shadow-lg"
                   style={{ animation: "pulse 2s ease-in-out infinite" }}
                 >
@@ -204,7 +202,10 @@ export default function SecretariatDashboardPage() {
                   Start Platform Briefing
                 </button>
                 <button
-                  onClick={completeBriefing}
+                  onClick={() => {
+                    localStorage.setItem("secretariat-briefing-completed", "true");
+                    setShowBriefingCard(false);
+                  }}
                   className="text-sm text-white/50 hover:text-white/80 transition-colors"
                 >
                   Skip for now
@@ -219,11 +220,6 @@ export default function SecretariatDashboardPage() {
             }
           `}</style>
         </div>
-      )}
-
-      {/* Platform Briefing overlay */}
-      {briefingActive && (
-        <PlatformBriefing onComplete={completeBriefing} />
       )}
 
       {/* Identity */}

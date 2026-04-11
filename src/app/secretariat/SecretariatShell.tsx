@@ -8,6 +8,7 @@ import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart
   Mail,
 } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
+import { PlatformBriefing } from "@/components/onboarding/PlatformBriefing";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,6 +70,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [briefingActive, setBriefingActive] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobileDevice(window.innerWidth < 768);
@@ -76,6 +78,20 @@ function Shell({ children }: { children: React.ReactNode }) {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Listen for start-briefing event dispatched by the dashboard welcome card
+  useEffect(() => {
+    const handler = () => setBriefingActive(true);
+    window.addEventListener("start-briefing", handler);
+    return () => window.removeEventListener("start-briefing", handler);
+  }, []);
+
+  const completeBriefing = () => {
+    localStorage.setItem("secretariat-briefing-completed", "true");
+    setBriefingActive(false);
+    window.dispatchEvent(new CustomEvent("briefing-complete"));
+    window.dispatchEvent(new CustomEvent("open-contact-card"));
+  };
 
   // Block demo-secretariat users on mobile — this portal needs tablet+ screen
   const isDemo = profile?.email?.includes("demo-");
@@ -201,6 +217,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </main>
+      {briefingActive && <PlatformBriefing onComplete={completeBriefing} />}
       <SecretariatTour />
       <FloatingChatWidget
         endpoint="/api/ai/secretariat-chat"
