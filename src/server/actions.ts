@@ -52,7 +52,7 @@ import {
   userEvents,
   cronRuns,
 } from "@/server/db/schema";
-import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, desc, asc, isNull, ne } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
 import { trackEvent } from "@/lib/analytics";
 import { entitySchema } from "@/server/schemas";
@@ -7662,6 +7662,15 @@ export async function fetchCourseModulesByAdmin(courseId: string) {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
+  // Secretariat cannot access affiliate course modules
+  if (isSecretary && !isSuperAdmin) {
+    const [course] = await db.select({ audience: courses.audience })
+      .from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (course?.audience === "affiliate") {
+      throw new Error("Unauthorized — affiliate courses are managed by administrators only");
+    }
+  }
+
   return db.select({
     id: courseModules.id,
     courseId: courseModules.courseId,
@@ -7680,7 +7689,7 @@ export async function fetchAdminCourses() {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
-  const allCourses = await db.select({
+  const selectFields = {
     id: courses.id,
     slug: courses.slug,
     title: courses.title,
@@ -7695,17 +7704,21 @@ export async function fetchAdminCourses() {
     active: courses.active,
     isPublished: courses.isPublished,
     createdBy: courses.createdBy,
-  }).from(courses).orderBy(asc(courses.title));
+  };
 
-  // Secretariat users cannot see affiliate courses; only see their own drafts + all published
-  const userId = session.user?.id;
-  if (!isSuperAdmin) {
-    return allCourses.filter(c =>
-      c.audience !== "affiliate" &&
-      (c.createdBy === userId || c.isPublished === true)
-    );
+  if (isSuperAdmin) {
+    return db.select(selectFields).from(courses).orderBy(asc(courses.title));
   }
-  return allCourses;
+
+  // Secretariat: never see affiliate courses — enforced at DB level
+  const userId = session.user?.id;
+  const allVisible = await db.select(selectFields)
+    .from(courses)
+    .where(ne(courses.audience, "affiliate"))
+    .orderBy(asc(courses.title));
+
+  // Further filter: only own drafts + published courses
+  return allVisible.filter(c => c.createdBy === userId || c.isPublished === true);
 }
 
 export async function createCourse(input: {
@@ -7768,11 +7781,12 @@ export async function updateCourse(courseId: string, input: {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
-  // Secretariat can only update courses they created
+  // Secretariat cannot touch affiliate courses; can only update courses they created
   if (isSecretary && !isSuperAdmin) {
-    const [existing] = await db.select({ createdBy: courses.createdBy })
+    const [existing] = await db.select({ createdBy: courses.createdBy, audience: courses.audience })
       .from(courses).where(eq(courses.id, courseId)).limit(1);
     if (!existing) throw new Error("Course not found");
+    if (existing.audience === "affiliate") throw new Error("Unauthorized — affiliate courses are managed by administrators only");
     if (existing.createdBy !== session.user.id) throw new Error("You can only update courses you created");
   }
 
@@ -7842,6 +7856,13 @@ export async function addModule(courseId: string, input: {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
+  // Secretariat cannot add modules to affiliate courses
+  if (isSecretary && !isSuperAdmin) {
+    const [course] = await db.select({ audience: courses.audience })
+      .from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (course?.audience === "affiliate") throw new Error("Unauthorized — affiliate courses are managed by administrators only");
+  }
+
   const existing = await db.select({ orderIndex: courseModules.orderIndex }).from(courseModules).where(eq(courseModules.courseId, courseId)).orderBy(desc(courseModules.orderIndex)).limit(1);
   const nextOrder = existing.length > 0 ? existing[0].orderIndex + 1 : 1;
 
@@ -7871,6 +7892,17 @@ export async function updateModule(moduleId: string, input: {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
+  // Secretariat cannot edit modules belonging to affiliate courses
+  if (isSecretary && !isSuperAdmin) {
+    const [mod] = await db.select({ courseId: courseModules.courseId })
+      .from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
+    if (mod) {
+      const [course] = await db.select({ audience: courses.audience })
+        .from(courses).where(eq(courses.id, mod.courseId)).limit(1);
+      if (course?.audience === "affiliate") throw new Error("Unauthorized — affiliate courses are managed by administrators only");
+    }
+  }
+
   const [updated] = await db.update(courseModules).set({ ...input }).where(eq(courseModules.id, moduleId)).returning();
   return updated;
 }
@@ -7884,6 +7916,13 @@ export async function deleteModule(moduleId: string) {
 
   const [mod] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
   if (!mod) throw new Error("Module not found");
+
+  // Secretariat cannot delete modules from affiliate courses
+  if (isSecretary && !isSuperAdmin) {
+    const [course] = await db.select({ audience: courses.audience })
+      .from(courses).where(eq(courses.id, mod.courseId)).limit(1);
+    if (course?.audience === "affiliate") throw new Error("Unauthorized — affiliate courses are managed by administrators only");
+  }
 
   await db.delete(courseModules).where(eq(courseModules.id, moduleId));
 

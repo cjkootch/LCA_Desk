@@ -105,10 +105,19 @@ export default function SecretariatCourseModulesPage() {
     try {
       const all = await fetchAdminCourses();
       const course = all.find(c => c.id === courseId);
-      if (course) setCourseTitle(course.title);
+      if (!course) {
+        // Course not found in accessible list — either doesn't exist or is an affiliate course
+        toast.error("Course not accessible");
+        router.replace("/secretariat/courses");
+        return;
+      }
+      setCourseTitle(course.title);
       const mods = await fetchCourseModulesByAdmin(courseId);
       setModules(mods as unknown as Module[]);
-    } catch { toast.error("Failed to load"); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load");
+      router.replace("/secretariat/courses");
+    }
     finally { setLoading(false); }
   }
 
