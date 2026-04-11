@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, Presentation, X, SkipForward, CheckCircle, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, Presentation, X, SkipForward, CheckCircle, ArrowRight, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -353,6 +353,14 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   const isLastSlide = current === slides.length - 1;
   const isIntro = current === 0;
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const clearAdvanceTimer = useCallback(() => {
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current);
@@ -612,7 +620,22 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       const mermaidMatch = part.match(/^```mermaid\n([\s\S]*?)```$/);
       if (mermaidMatch) {
         if (!shouldTrim || shownItems < MAX_VISIBLE_ITEMS) {
-          elements.push(<MermaidDiagram key={`m-${pi}`} chart={mermaidMatch[1].trim()} />);
+          if (isMobile) {
+            const firstLine = mermaidMatch[1].trim().split("\n")[0] || "Diagram";
+            elements.push(
+              <div key={`m-${pi}`} className="my-6 flex items-center gap-3 rounded-xl border border-[#19544c]/20 bg-[#19544c]/5 p-4">
+                <div className="p-2 rounded-lg bg-[#19544c]/10 shrink-0">
+                  <GitBranch className="h-5 w-5 text-[#19544c]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#19544c]">Diagram</p>
+                  <p className="text-xs text-[#475569] mt-0.5">{firstLine}</p>
+                </div>
+              </div>
+            );
+          } else {
+            elements.push(<MermaidDiagram key={`m-${pi}`} chart={mermaidMatch[1].trim()} />);
+          }
           shownItems++;
         } else {
           hiddenCount++;
@@ -752,35 +775,39 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
       {/* Top bar */}
       <div className="relative flex items-center justify-between h-12 px-4 sm:px-6 bg-[#19544c]">
-        <div className="flex items-center gap-3">
-          <Presentation className="h-4 w-4 text-[#71b59a]" />
+        <div className="flex items-center gap-3 min-w-0">
+          <Presentation className="h-4 w-4 text-[#71b59a] shrink-0" />
           <span className="text-sm font-medium text-white/90 truncate">{title}</span>
-          <span className="text-xs text-white/50">Slide {current + 1} of {slides.length}</span>
+          {!isMobile && <span className="text-xs text-white/50 shrink-0">Slide {current + 1} of {slides.length}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setAutoPlay(!autoPlay); if (!autoPlay) clearAdvanceTimer(); }}
-            className={cn("p-1.5 rounded-lg transition-colors", autoPlay ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
-            title={autoPlay ? "Disable auto-advance" : "Enable auto-advance"}>
-            <SkipForward className="h-4 w-4" />
-          </button>
-          <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (voiceEnabled) stopSpeech(); }}
-            className={cn("p-1.5 rounded-lg transition-colors", voiceEnabled ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
-            title={voiceEnabled ? "Mute voiceover" : "Enable voiceover"}>
-            {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </button>
-          {speaking ? (
-            <button onClick={stopSpeech} className="p-1.5 rounded-lg text-[#71b59a] hover:text-[#71b59a]/80" style={{ animation: "pulseGlow 2s ease-in-out infinite" }}>
-              <Pause className="h-4 w-4" />
-            </button>
-          ) : (
-            <button onClick={() => {
-              const prevSlide = current > 0 ? slides[current - 1] : null;
-              const isContinuation = prevSlide && prevSlide.heading === slide.heading;
-              const speechText = buildSpeechText(slide.heading, slide.body, isContinuation);
-              speak(speechText, current);
-            }} className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
-              <Play className="h-4 w-4" />
-            </button>
+          {!isMobile && (
+            <>
+              <button onClick={() => { setAutoPlay(!autoPlay); if (!autoPlay) clearAdvanceTimer(); }}
+                className={cn("p-1.5 rounded-lg transition-colors", autoPlay ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
+                title={autoPlay ? "Disable auto-advance" : "Enable auto-advance"}>
+                <SkipForward className="h-4 w-4" />
+              </button>
+              <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (voiceEnabled) stopSpeech(); }}
+                className={cn("p-1.5 rounded-lg transition-colors", voiceEnabled ? "text-[#71b59a] hover:text-[#71b59a]/80" : "text-white/30 hover:text-white/50")}
+                title={voiceEnabled ? "Mute voiceover" : "Enable voiceover"}>
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+              {speaking ? (
+                <button onClick={stopSpeech} className="p-1.5 rounded-lg text-[#71b59a] hover:text-[#71b59a]/80" style={{ animation: "pulseGlow 2s ease-in-out infinite" }}>
+                  <Pause className="h-4 w-4" />
+                </button>
+              ) : (
+                <button onClick={() => {
+                  const prevSlide = current > 0 ? slides[current - 1] : null;
+                  const isContinuation = prevSlide && prevSlide.heading === slide.heading;
+                  const speechText = buildSpeechText(slide.heading, slide.body, isContinuation);
+                  speak(speechText, current);
+                }} className="p-1.5 rounded-lg text-white/50 hover:text-white/80">
+                  <Play className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
           <button onClick={() => { stopSpeech(); onClose(); }} className="p-1.5 rounded-lg text-white/50 hover:text-white">
             <X className="h-4 w-4" />
@@ -794,7 +821,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       </div>
 
       {/* Slide content */}
-      <div className="relative flex-1 flex items-start justify-center px-4 sm:px-8 overflow-y-auto pt-8" key={animKey}>
+      <div className={cn("relative flex-1 flex items-start justify-center px-4 sm:px-8 overflow-y-auto pt-8", isMobile && "pb-6")} key={animKey}>
         <div className={cn(
           "max-w-4xl w-full py-6 animate-[slideContentIn_0.5s_ease_forwards]",
           isIntro ? "text-center" : ""
@@ -858,40 +885,72 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       </div>
 
       {/* Navigation */}
-      <div className="relative flex items-center justify-between h-16 px-4 sm:px-8 bg-[#19544c]">
-        <Button
-          variant="ghost"
-          onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.max(0, current - 1)); }}
-          disabled={current === 0}
-          className="text-white/70 hover:text-white disabled:opacity-30 gap-1.5"
-        >
-          <ChevronLeft className="h-4 w-4" /> Previous
-        </Button>
-        <div className="flex gap-1.5">
-          {slides.map((_, i) => (
-            <button key={i} onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(i); }}
-              className={cn("h-2 rounded-full transition-all duration-300",
-                i === current ? "w-8 bg-[#71b59a]" : i < current ? "w-2 bg-[#71b59a]/50" : "w-2 bg-white/20"
-              )} />
-          ))}
-        </div>
-        {isLastSlide && onComplete && !isModuleComplete ? (
-          <Button
-            onClick={() => { stopSpeech(); onComplete(); }}
-            className="gap-1.5 bg-[#71b59a] hover:bg-[#71b59a]/90 text-white"
-          >
-            Take Quiz <ArrowRight className="h-4 w-4" />
-          </Button>
-        ) : (
+      <div className={cn("relative flex flex-col justify-center px-4 sm:px-8 bg-[#19544c]", isMobile ? "h-20 gap-1" : "h-16")}>
+        {/* Mobile audio controls row */}
+        {isMobile && (
+          <div className="flex items-center justify-center gap-4 pb-1">
+            <button onClick={() => { setAutoPlay(!autoPlay); if (!autoPlay) clearAdvanceTimer(); }}
+              className={cn("p-1.5 rounded-lg transition-colors", autoPlay ? "text-[#71b59a]" : "text-white/30")}
+              title={autoPlay ? "Disable auto-advance" : "Enable auto-advance"}>
+              <SkipForward className="h-4 w-4" />
+            </button>
+            <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (voiceEnabled) stopSpeech(); }}
+              className={cn("p-1.5 rounded-lg transition-colors", voiceEnabled ? "text-[#71b59a]" : "text-white/30")}
+              title={voiceEnabled ? "Mute voiceover" : "Enable voiceover"}>
+              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            {speaking ? (
+              <button onClick={stopSpeech} className="p-1.5 rounded-lg text-[#71b59a]" style={{ animation: "pulseGlow 2s ease-in-out infinite" }}>
+                <Pause className="h-5 w-5" />
+              </button>
+            ) : (
+              <button onClick={() => {
+                const prevSlide = current > 0 ? slides[current - 1] : null;
+                const isContinuation = prevSlide && prevSlide.heading === slide.heading;
+                const speechText = buildSpeechText(slide.heading, slide.body, isContinuation);
+                speak(speechText, current);
+              }} className="p-1.5 rounded-lg text-white/70">
+                <Play className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        )}
+        {/* Nav row */}
+        <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.min(slides.length - 1, current + 1)); }}
-            disabled={isLastSlide}
+            onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.max(0, current - 1)); }}
+            disabled={current === 0}
             className="text-white/70 hover:text-white disabled:opacity-30 gap-1.5"
           >
-            Next <ChevronRight className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" /> {!isMobile && "Previous"}
           </Button>
-        )}
+          <div className="flex gap-1.5">
+            {slides.map((_, i) => (
+              <button key={i} onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(i); }}
+                className={cn("h-2 rounded-full transition-all duration-300",
+                  i === current ? "w-8 bg-[#71b59a]" : i < current ? "w-2 bg-[#71b59a]/50" : "w-2 bg-white/20"
+                )} />
+            ))}
+          </div>
+          {isLastSlide && onComplete && !isModuleComplete ? (
+            <Button
+              onClick={() => { stopSpeech(); onComplete(); }}
+              className="gap-1.5 bg-[#71b59a] hover:bg-[#71b59a]/90 text-white"
+            >
+              {!isMobile && "Take Quiz "}<ArrowRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => { clearAdvanceTimer(); stopSpeech(); setCurrent(Math.min(slides.length - 1, current + 1)); }}
+              disabled={isLastSlide}
+              className="text-white/70 hover:text-white disabled:opacity-30 gap-1.5"
+            >
+              {!isMobile && "Next "}<ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

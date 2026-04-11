@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { SecretariatShell } from "@/app/secretariat/SecretariatShell";
 import { CourseWizard } from "@/components/training/CourseWizard";
+import { DesktopOnlyGate } from "@/components/shared/DesktopOnlyGate";
 import { useAuth } from "@/hooks/useAuth";
 
 type Course = {
@@ -117,6 +118,7 @@ export default function SecretariatCoursesPage() {
   const published = courses.filter(c => c.isPublished);
 
   return (
+    <DesktopOnlyGate>
     <SecretariatShell>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-center justify-between">
@@ -236,5 +238,6 @@ export default function SecretariatCoursesPage() {
         />
       )}
     </SecretariatShell>
+    </DesktopOnlyGate>
   );
 }

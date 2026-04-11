@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { CourseWizard } from "@/components/training/CourseWizard";
+import { DesktopOnlyGate } from "@/components/shared/DesktopOnlyGate";
 
 type Course = {
   id: string;
@@ -129,6 +130,7 @@ export default function AdminCoursesPage() {
   const published = courses.filter(c => c.isPublished);
 
   return (
+    <DesktopOnlyGate>
     <>
       <TopBar title="Course Management" />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
@@ -233,5 +235,6 @@ export default function AdminCoursesPage() {
         />
       )}
     </>
+    </DesktopOnlyGate>
   );
 }

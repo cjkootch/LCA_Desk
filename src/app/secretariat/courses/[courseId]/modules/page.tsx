@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { SecretariatShell } from "@/app/secretariat/SecretariatShell";
 import { ImageUpload } from "@/components/training/ImageUpload";
+import { DesktopOnlyGate } from "@/components/shared/DesktopOnlyGate";
 
 type Module = {
   id: string;
@@ -151,6 +152,7 @@ export default function SecretariatCourseModulesPage() {
   }
 
   return (
+    <DesktopOnlyGate>
     <SecretariatShell>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-center justify-between">
@@ -218,5 +220,6 @@ export default function SecretariatCourseModulesPage() {
         )}
       </div>
     </SecretariatShell>
+    </DesktopOnlyGate>
   );
 }
