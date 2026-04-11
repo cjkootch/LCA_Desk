@@ -258,9 +258,7 @@ function stripQuizContent(markdown: string): string {
 export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, onComplete, isModuleComplete }: SlideshowProps) {
   const contentSlides = autoSplitSlides(parseSlides(stripQuizContent(content)));
 
-  const topicList = contentSlides
-    .map(s => s.heading)
-    .filter(Boolean)
+  const topicList = [...new Set(contentSlides.map(s => s.heading).filter(Boolean))]
     .map(h => `• ${h}`)
     .join("\n");
 
@@ -593,9 +591,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     if (hiddenCount > 0) {
       elements.push(
         <p key="more" className="text-xs text-[#19544c]/50 italic mt-3 animate-[fadeIn_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "800ms" }}>
-          Voice continues with {hiddenCount} more point{hiddenCount !== 1 ? "s" : ""}…
         </p>
-      );
     }
 
     return elements;
