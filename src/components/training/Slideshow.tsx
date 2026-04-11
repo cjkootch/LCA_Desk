@@ -224,9 +224,22 @@ function MermaidDiagram({ chart }: { chart: string }) {
         const { svg } = await w.mermaid.render(idRef.current, chart);
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
-          // Remove white background rect from mermaid SVG
-          const bgRect = containerRef.current.querySelector("svg > rect");
-          if (bgRect) bgRect.setAttribute("fill", "transparent");
+          // Remove ALL white/opaque background rects from mermaid SVG
+          const svgEl = containerRef.current.querySelector("svg");
+          if (svgEl) {
+            svgEl.style.backgroundColor = "transparent";
+            // Remove background rects (mermaid adds them at various nesting levels)
+            svgEl.querySelectorAll("rect").forEach(rect => {
+              const fill = rect.getAttribute("fill");
+              if (fill === "#ffffff" || fill === "white" || fill === "#fff" || rect.classList.contains("er")) {
+                rect.setAttribute("fill", "transparent");
+              }
+              // Also check if it's the first rect (usually the background)
+              if (rect === svgEl.querySelector("rect") && !rect.closest(".node")) {
+                rect.setAttribute("fill", "transparent");
+              }
+            });
+          }
         }
       } catch { /* silent */ }
     }
@@ -235,7 +248,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
     return () => { cancelled = true; };
   }, [chart]);
 
-  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-lg bg-white/60 p-4" />;
+  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-lg p-4" />;
 }
 
 // Strip any quiz-like or interactive-test content before it reaches the slideshow renderer.
