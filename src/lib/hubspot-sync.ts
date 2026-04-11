@@ -166,3 +166,45 @@ export async function syncChurn(email: string) {
     churnDate: new Date().toISOString().slice(0, 10),
   });
 }
+
+// Sync a key behavioral event to HubSpot contact properties.
+// Finds or creates the contact by email and sets event-specific date fields,
+// which can trigger lifecycle workflows in HubSpot.
+export async function syncBehavioralEvent(
+  email: string,
+  eventName: "entity_created" | "first_expenditure_added" | "report_submitted" | "trial_started",
+  eventProperties?: Record<string, string>
+) {
+  if (!process.env.HUBSPOT_ACCESS_TOKEN) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const eventPropertyMap: Record<string, Record<string, string>> = {
+    entity_created: { lca_desk_entity_created: today },
+    first_expenditure_added: { lca_desk_first_expenditure_date: today },
+    report_submitted: { lca_desk_first_report_submitted: today },
+    trial_started: {
+      trial_start_date: today,
+      ...(eventProperties?.trialEndsAt ? { trial_end_date: eventProperties.trialEndsAt.slice(0, 10) } : {}),
+    },
+  };
+
+  const properties: Record<string, string> = {
+    email,
+    lca_desk_last_event: eventName,
+    lca_desk_last_event_date: today,
+    ...eventPropertyMap[eventName],
+  };
+
+  // Find existing contact and update, or create a new one
+  const search = await hubspotClient.crm.contacts.searchApi.doSearch({
+    filterGroups: [{ filters: [{ propertyName: "email", operator: "EQ" as never, value: email }] }],
+    properties: ["email"],
+    limit: 1,
+  });
+
+  if (search.results.length > 0) {
+    await hubspotClient.crm.contacts.basicApi.update(search.results[0].id, { properties });
+  } else {
+    await hubspotClient.crm.contacts.basicApi.create({ properties });
+  }
+}

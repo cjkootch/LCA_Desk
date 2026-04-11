@@ -55,6 +55,7 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
   if (data.isInTrial && data.trialDaysRemaining !== null) {
     const days = data.trialDaysRemaining;
     const urgent = days <= 3;
+    const canDismiss = days > 7;
 
     return (
       <div className={cn(
@@ -73,7 +74,9 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
                 {days === 0 ? "Trial ends today" : `Professional Trial — ${days} day${days !== 1 ? "s" : ""} left`}
               </p>
               <p className="text-xs text-text-muted mt-0.5 hidden sm:block">
-                {urgent ? "Upgrade to keep AI drafting, unlimited reports, and marketplace." : "Full Professional access. Upgrade before it ends."}
+                {urgent
+                  ? `Only ${days === 0 ? "today" : `${days} day${days !== 1 ? "s" : ""}`} left — AI narrative drafting, compliance scanner, and unlimited reports will be locked when your trial ends.`
+                  : "AI narrative drafting, compliance scanner, and unlimited reports — all locked when trial ends."}
               </p>
             </div>
           </div>
@@ -83,9 +86,11 @@ export function UsageBanner({ billingAccess }: UsageBannerProps) {
                 <Sparkles className="h-3 w-3" /> Upgrade
               </Button>
             </Link>
-            <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary p-1">
-              <X className="h-3.5 w-3.5" />
-            </button>
+            {canDismiss && (
+              <button onClick={() => setDismissed(true)} className="text-text-muted hover:text-text-secondary p-1">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>

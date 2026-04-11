@@ -69,6 +69,7 @@ export const users = pgTable("users", {
   affiliateCommissionRate: integer("affiliate_commission_rate"), // percentage, e.g. 20 = 20%
   notificationPreferences: text("notification_preferences"),
   lastLoginAt: timestamp("last_login_at"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -42,9 +42,9 @@ function ActivateContent() {
 
         <Card className="overflow-hidden">
           <div className="bg-gradient-to-r from-accent to-accent/80 px-6 py-5 text-white">
-            <h1 className="text-xl font-heading font-bold">Start Your 30-Day Free Trial</h1>
+            <h1 className="text-xl font-heading font-bold">Unlock Your Full 30-Day Trial</h1>
             <p className="text-sm text-white/80 mt-1">
-              Full access to Professional features. Cancel anytime.
+              Add a payment method to extend to 30 days of Professional access. No charge until your trial ends.
             </p>
           </div>
 
@@ -53,7 +53,7 @@ function ActivateContent() {
               <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
                 <p className="text-sm text-text-primary font-medium">Checkout was canceled</p>
                 <p className="text-xs text-text-muted mt-0.5">
-                  No worries — you can start your trial whenever you're ready.
+                  No worries — you can add your payment method whenever you're ready.
                 </p>
               </div>
             )}
@@ -64,7 +64,10 @@ function ActivateContent() {
                   <Sparkles className="h-4 w-4 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-text-primary">30 days of Professional features</p>
+                  <div className="inline-flex items-center gap-1.5 mb-1">
+                    <span className="text-xs font-semibold bg-accent/10 text-accent px-2 py-0.5 rounded-full">Professional Trial</span>
+                  </div>
+                  <p className="text-sm font-medium text-text-primary">30 days of full Professional access (from 14 days free)</p>
                   <p className="text-xs text-text-muted">AI narrative drafting, compliance scans, full marketplace access, and more.</p>
                 </div>
               </div>
@@ -75,7 +78,7 @@ function ActivateContent() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-text-primary">You won't be charged today</p>
-                  <p className="text-xs text-text-muted">We collect payment info to start your trial. Your first charge is in 30 days.</p>
+                  <p className="text-xs text-text-muted">We collect payment info to extend your trial. Your first charge is after 30 days.</p>
                 </div>
               </div>
 
@@ -94,8 +97,8 @@ function ActivateContent() {
                   <Shield className="h-4 w-4 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Essentials plan at $199/mo after trial</p>
-                  <p className="text-xs text-text-muted">You can upgrade or change plans at any time from Settings.</p>
+                  <p className="text-sm font-medium text-text-primary">Choose your plan after trial: Essentials $199/mo or Professional $399/mo — upgrade or downgrade anytime</p>
+                  <p className="text-xs text-text-muted">You select your plan before your trial ends. Change at any time from Settings.</p>
                 </div>
               </div>
             </div>
@@ -103,13 +106,18 @@ function ActivateContent() {
             <div className="pt-2 space-y-3">
               <Button className="w-full" size="lg" onClick={handleStartTrial} loading={loading}>
                 <CreditCard className="h-4 w-4 mr-2" />
-                Add Payment Method & Start Trial
+                Add Payment Method & Extend to 30 Days
               </Button>
 
               <p className="text-xs text-text-muted text-center leading-relaxed">
-                By starting your trial, you agree to be charged $199/month after 30 days
-                unless you cancel. Secure payment processed by Stripe.
+                You select your plan before your trial ends. No charge until then. Cancel anytime. Secure payment by Stripe.
               </p>
+
+              <div className="text-center">
+                <a href="/dashboard" className="text-xs text-text-muted hover:text-text-secondary transition-colors underline underline-offset-2">
+                  Skip for now
+                </a>
+              </div>
             </div>
           </CardContent>
         </Card>

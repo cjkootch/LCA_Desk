@@ -318,8 +318,17 @@ export function getBillingAccess(
     };
   }
 
-  // Trial expired — had a trial, it ended, never paid
+  // Free trial — trialEndsAt set by registration, no Stripe subscription yet
   if (trialEndsAt && !stripeSubscriptionId) {
+    const days = getTrialDaysRemaining(trialEndsAt) ?? 0;
+    if (days > 0) {
+      return {
+        state: "trial",
+        canAccess: true,
+        showWarning: true,
+        warningUrgency: days <= 3 ? "critical" : days <= 7 ? "high" : "low",
+      };
+    }
     return {
       state: "trial_expired",
       canAccess: false,

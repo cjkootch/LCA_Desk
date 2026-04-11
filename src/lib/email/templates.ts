@@ -208,12 +208,24 @@ export function welcomeEmail(params: {
     supplier: "You can now manage your supplier profile, verify your LCS certification, and explore filing opportunities.",
   };
 
+  const referralSection = params.role === "filer" ? `
+    <tr><td style="padding:0 32px 20px;">
+      <table style="width:100%;background:#F0FDF4;border-radius:8px;border:1px solid #BBF7D0;padding:16px;" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:16px;">
+          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#047857;">💰 Earn with the Referral Program</p>
+          <p style="margin:0;font-size:13px;color:#475569;">Know other companies with a filing obligation? Find your referral link in <strong>Dashboard → Referrals</strong> and earn a commission for every customer you bring in.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  ` : "";
+
   return layout(`
     ${heading("Welcome to LCA Desk")}
     ${paragraph(`Hi ${params.userName},`)}
     ${paragraph("Your account has been created successfully.")}
     ${paragraph(roleMessages[params.role] || roleMessages.filer)}
     ${btn("Get Started", params.loginUrl)}
+    ${referralSection}
     ${divider()}
     ${paragraph("If you have any questions, reply to this email and we'll help you get set up.")}
   `, `Welcome to LCA Desk, ${params.userName}`);

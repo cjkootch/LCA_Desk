@@ -31,3 +31,18 @@ Both `attestAndSubmit` and `submitWithUpload` (in `src/server/actions.ts`) fetch
 
 ### Billing guard on submission
 Both `attestAndSubmit` and `submitWithUpload` call `getBillingAccess(...)` and throw if `canAccess` is false. This prevents locked/past-due accounts from submitting without going through billing first.
+
+### Free 14-day no-CC trial
+New filer registrations get `trialEndsAt = now + 14 days` set directly on the tenant (no Stripe required). `getBillingAccess` in `src/lib/plans.ts` handles this case: `trialEndsAt && !stripeSubscriptionId` → `state: "trial"` when days > 0, `state: "trial_expired"` after. Users can extend to 30 days by adding a payment method via `/dashboard/activate`. The register route now redirects to `/dashboard` instead of `/auth/login`, and the signup page no longer routes through `/dashboard/activate`.
+
+### /try — public demo route
+`src/app/try/page.tsx` auto-logs in as the demo filer user (first `isDemo=true` user in the DB) and redirects to `/dashboard`. Only works when `NEXT_PUBLIC_DEMO_PASSWORD` env var is set. The credentials are vended by `src/app/api/demo/public-login/route.ts`. A "Try the live demo →" link appears on the signup page when the env var is set.
+
+### HubSpot behavioral event sync
+`trackEvent()` in `src/lib/analytics.ts` now syncs key lifecycle events (`entity_created`, `first_expenditure_added`, `report_submitted`, `trial_started`) to HubSpot via `syncBehavioralEvent()` in `src/lib/hubspot-sync.ts`. This sets custom date properties on the HubSpot contact to trigger enrollment workflows. HubSpot sync is always fire-and-forget — never blocks the main flow.
+
+### Upgrade prompt snooze
+`useUpgradePrompt` checks `localStorage` for a per-reason snooze key (`upgrade_snooze_{reason}`) before showing the modal. The "Remind me in 3 days" button sets the snooze expiry. `UpgradeModal` fires `upgrade_prompt_viewed` and `upgrade_prompt_dismissed` events to `/api/analytics/event`.
+
+### Onboarding tour server-side completion
+`markOnboardingComplete()` in `src/server/actions.ts` sets `users.onboardingCompletedAt` and fires an analytics event. Called on tour skip and final step. Requires a migration for the new `onboarding_completed_at` column — run `npx drizzle-kit generate` interactively and commit the generated SQL.

@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites, referrals } from "@/server/db/schema";
+import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites, referrals, notifications } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -127,6 +127,14 @@ export async function POST(req: NextRequest) {
             referredEmail: email,
             status: "signed_up",
           });
+          // Notify the referrer that someone signed up via their link
+          await db.insert(notifications).values({
+            userId: referrer.id,
+            type: "referral_signup",
+            title: "Someone signed up via your referral link!",
+            message: `A new user just created an account using your referral link. You'll earn a commission when they become a paying customer.`,
+            link: "/dashboard/referrals",
+          }).catch(() => {}); // best-effort
         }
       } catch {} // Don't block registration if referral tracking fails
     }
@@ -193,7 +201,8 @@ export async function POST(req: NextRequest) {
         .replace(/[\s_]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-      // Trial starts after Stripe checkout (CC required) — trialEndsAt set by webhook
+      // 14-day free trial — no CC required. Users can extend to 30 days via /dashboard/activate.
+      const freeTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
       const [tenant] = await db
         .insert(tenants)
         .values({
@@ -202,6 +211,7 @@ export async function POST(req: NextRequest) {
           jurisdictionId: guyana?.id,
           plan: "lite",
           planEntityLimit: accountType === "others" ? 5 : 1,
+          trialEndsAt: freeTrialEndsAt,
         })
         .returning();
 
@@ -225,17 +235,17 @@ export async function POST(req: NextRequest) {
       // Sync filer to HubSpot
       try {
         const { syncSignup } = await import("@/lib/hubspot-sync");
-        await syncSignup(email, name, companyName || name, "filer");
+        await syncSignup(email, name, companyName || name, "filer", freeTrialEndsAt);
       } catch {}
 
       // Analytics: trial_started
-      trackEvent(user.id, tenant.id, "trial_started", { plan: "lite" }).catch(() => {});
+      trackEvent(user.id, tenant.id, "trial_started", { plan: "lite", trialType: "free_14day", trialEndsAt: freeTrialEndsAt.toISOString() }).catch(() => {});
 
       return NextResponse.json({
         success: true,
         userId: user.id,
         role: "filer",
-        redirectTo: "/auth/login",
+        redirectTo: "/dashboard",
       }, { headers: cors });
     }
 

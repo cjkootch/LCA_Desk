@@ -1,6 +1,7 @@
 "use client";
 
-import { X, Sparkles, Check, ArrowRight, Zap } from "lucide-react";
+import { useEffect } from "react";
+import { X, Sparkles, Check, ArrowRight, Zap, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLANS, getPlan } from "@/lib/plans";
 import Link from "next/link";
@@ -82,6 +83,16 @@ const PLAN_FEATURE_HIGHLIGHTS: Record<"pro" | "enterprise", string[]> = {
   ],
 };
 
+function fireUpgradeEvent(eventName: string, reason: string) {
+  fetch("/api/analytics/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventName, properties: { reason } }),
+  }).catch(() => {});
+}
+
+const SNOOZE_KEY_PREFIX = "upgrade_snooze_";
+
 export function UpgradeModal({ reason, currentLimit, usedCount, onClose }: UpgradeModalProps) {
   const config = REASON_CONFIG[reason] ?? {
     title: "Upgrade Required",
@@ -95,10 +106,27 @@ export function UpgradeModal({ reason, currentLimit, usedCount, onClose }: Upgra
 
   const showUsage = currentLimit !== undefined && usedCount !== undefined;
 
+  // Fire viewed event on mount
+  useEffect(() => {
+    fireUpgradeEvent("upgrade_prompt_viewed", reason);
+  }, [reason]);
+
+  const handleDismiss = () => {
+    fireUpgradeEvent("upgrade_prompt_dismissed", reason);
+    onClose();
+  };
+
+  const handleSnooze = () => {
+    const snoozeUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
+    localStorage.setItem(`${SNOOZE_KEY_PREFIX}${reason}`, String(snoozeUntil));
+    fireUpgradeEvent("upgrade_prompt_snoozed", reason);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleDismiss} />
 
       {/* Modal */}
       <div className="relative w-full max-w-md bg-bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
@@ -115,7 +143,7 @@ export function UpgradeModal({ reason, currentLimit, usedCount, onClose }: Upgra
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleDismiss}
               className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-white transition-colors"
             >
               <X className="h-4 w-4" />
@@ -181,10 +209,17 @@ export function UpgradeModal({ reason, currentLimit, usedCount, onClose }: Upgra
               </Button>
             </Link>
             <button
-              onClick={onClose}
-              className="w-full py-2 text-sm text-text-muted hover:text-text-secondary transition-colors"
+              onClick={handleSnooze}
+              className="w-full py-2 text-sm text-text-muted hover:text-text-secondary transition-colors flex items-center justify-center gap-1.5"
             >
-              Maybe Later
+              <Clock className="h-3.5 w-3.5" />
+              Remind me in 3 days
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="w-full py-1 text-xs text-text-muted/60 hover:text-text-muted transition-colors"
+            >
+              Dismiss
             </button>
           </div>
         </div>

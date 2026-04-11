@@ -21,6 +21,11 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<UpgradePromptState>({ open: false, reason: "" });
 
   const showUpgradePrompt = useCallback((reason: string, currentLimit?: number, usedCount?: number) => {
+    // Check if this reason is snoozed
+    const snoozeUntil = typeof window !== "undefined"
+      ? localStorage.getItem(`upgrade_snooze_${reason}`)
+      : null;
+    if (snoozeUntil && Date.now() < Number(snoozeUntil)) return;
     setState({ open: true, reason, currentLimit, usedCount });
   }, []);
 

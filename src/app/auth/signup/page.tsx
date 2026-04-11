@@ -80,7 +80,7 @@ function SignupContent() {
         else if (role === "supplier") window.location.href = "/supplier-portal/dashboard";
         else if (role === "secretariat") window.location.href = "/secretariat/dashboard";
         else if (role === "affiliate") window.location.href = "/affiliate/dashboard";
-        else window.location.href = inviteToken ? "/auth/login?registered=1" : "/dashboard/activate";
+        else window.location.href = inviteToken ? "/auth/login?registered=1" : "/dashboard";
       }
     } catch {
       toast.error("Registration failed");
@@ -234,16 +234,10 @@ function SignupContent() {
                 )}
 
                 <Button type="submit" className="w-full" loading={loading}>
-                  {role === "filer" ? "Start 30-Day Free Trial" : "Create Account"}
+                  Create Your Account
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </form>
-
-              {role === "filer" && (
-                <p className="text-xs text-text-muted text-center mt-3">
-                  30-day Professional trial. Cancel anytime — you won't be charged during the trial.
-                </p>
-              )}
             </>
           )}
 
@@ -253,6 +247,14 @@ function SignupContent() {
               Sign in
             </Link>
           </p>
+          {process.env.NEXT_PUBLIC_DEMO_PASSWORD && (
+            <p className="text-xs text-text-muted text-center mt-3">
+              Just exploring?{" "}
+              <Link href="/try" className="text-accent hover:underline font-medium">
+                Try the live demo →
+              </Link>
+            </p>
+          )}
           </div>
         </div>
       </div>

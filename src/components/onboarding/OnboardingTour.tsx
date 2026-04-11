@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ChevronRight, ChevronLeft, Sparkles, Building2, FileText, Calendar, MessageSquare, Settings, CheckCircle, GripHorizontal } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Sparkles, Building2, FileText, Calendar, MessageSquare, Settings, CheckCircle, GripHorizontal, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { markOnboardingComplete } from "@/server/actions";
 
 interface TourStep {
   title: string;
@@ -146,19 +147,31 @@ const TOUR_STEPS: TourStep[] = [
     navigateTo: "/dashboard/settings",
   },
   {
-    title: "You're All Set!",
-    description: "Add your first entity and start filing. The LCA Expert is always in the sidebar if you need help.",
-    icon: CheckCircle,
-    navigateTo: "/dashboard",
+    title: "Refer & Earn",
+    description: "Know other companies with a filing obligation? Refer them and earn a commission for every paying customer you bring in.",
+    icon: Gift,
     extra: (
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-accent-light p-2.5 text-center">
-          <Building2 className="h-4 w-4 text-accent mx-auto mb-1" />
-          <p className="text-xs font-medium text-accent">Add Entity</p>
+      <div className="mt-4 rounded-lg border border-accent/20 bg-accent-light p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Gift className="h-4 w-4 text-accent shrink-0" />
+          <p className="text-sm font-medium text-text-primary">Your referral link is ready</p>
         </div>
-        <div className="rounded-lg bg-accent-light p-2.5 text-center">
-          <FileText className="h-4 w-4 text-accent mx-auto mb-1" />
-          <p className="text-xs font-medium text-accent">Start Report</p>
+        <p className="text-xs text-text-secondary">Find it in <strong>Dashboard → Referrals</strong>. Share it with any company that files Local Content reports.</p>
+        <p className="text-xs text-text-muted">You earn a commission for every customer who signs up and pays through your link.</p>
+      </div>
+    ),
+  },
+  {
+    title: "You're All Set!",
+    description: "Start by adding your first entity — it only takes 2 minutes. The LCA Expert is always in the sidebar if you need help.",
+    icon: CheckCircle,
+    navigateTo: "/dashboard/entities/new",
+    extra: (
+      <div className="mt-4">
+        <div className="rounded-lg bg-accent p-4 text-center cursor-pointer hover:bg-accent-hover transition-colors">
+          <Building2 className="h-6 w-6 text-white mx-auto mb-2" />
+          <p className="text-sm font-semibold text-white">Add Your First Entity</p>
+          <p className="text-xs text-white/80 mt-0.5">Register the company you&apos;re filing for</p>
         </div>
       </div>
     ),
@@ -204,13 +217,18 @@ export function OnboardingTour() {
   }, [dragging]);
 
   useEffect(() => {
-    // Check if tour was already completed
+    // Check localStorage first for immediate suppression
     const completed = localStorage.getItem(STORAGE_KEY);
-    if (!completed) {
-      // Show tour after a brief delay so the page loads first
-      const timer = setTimeout(() => setActive(true), 1500);
-      return () => clearTimeout(timer);
-    }
+    if (completed) return;
+    // Show tour after a brief delay so the page loads first
+    const timer = setTimeout(() => setActive(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, "true");
+    setActive(false);
+    markOnboardingComplete().catch(() => {});
   }, []);
 
   const handleNext = useCallback(() => {
@@ -221,11 +239,11 @@ export function OnboardingTour() {
       }
       setStep(step + 1);
     } else {
-      // Tour complete
-      localStorage.setItem(STORAGE_KEY, "true");
-      setActive(false);
+      // Tour complete — navigate to entity creation
+      completeOnboarding();
+      router.push("/dashboard/entities/new");
     }
-  }, [step, router]);
+  }, [step, router, completeOnboarding]);
 
   const handlePrev = useCallback(() => {
     if (step > 0) {
@@ -238,10 +256,9 @@ export function OnboardingTour() {
   }, [step, router]);
 
   const handleSkip = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, "true");
-    setActive(false);
+    completeOnboarding();
     router.push("/dashboard");
-  }, [router]);
+  }, [router, completeOnboarding]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

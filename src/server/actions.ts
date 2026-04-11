@@ -7460,3 +7460,20 @@ export async function fetchAnalyticsFunnel(days: number = 30) {
     days,
   };
 }
+
+// ─── ONBOARDING ──────────────────────────────────────────────────
+export async function markOnboardingComplete() {
+  "use server";
+  const session = await (await import("@/auth")).auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const userId = session.user.id;
+  const now = new Date();
+  await db.update(users).set({ onboardingCompletedAt: now }).where(eq(users.id, userId));
+  // Best-effort analytics — get tenantId if available
+  try {
+    const membership = await db.query.tenantMembers.findFirst({ where: eq(tenantMembers.userId, userId) });
+    if (membership) {
+      await trackEvent(userId, membership.tenantId, "onboarding_completed", { completedAt: now.toISOString() });
+    }
+  } catch {}
+}
