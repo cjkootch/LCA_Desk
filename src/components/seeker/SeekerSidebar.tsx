@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles, GraduationCap, Bell, Briefcase, Gift } from "lucide-react";
+import { LayoutDashboard, Search, FileText, Megaphone, Bookmark, User, Settings, LogOut, X, Sparkles, GraduationCap, Bell, Briefcase, Gift, LifeBuoy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
