@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, DollarSign, Gift, Settings, LogOut, X, Menu, GraduationCap, Image as ImageIcon   LifeBuoy,
+import { LayoutDashboard, DollarSign, Gift, Settings, LogOut, X, Menu, GraduationCap, Image as ImageIcon, LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
