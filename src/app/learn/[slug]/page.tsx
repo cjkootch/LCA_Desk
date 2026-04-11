@@ -411,6 +411,20 @@ export default function CoursePage() {
                     </Button>
                   </CardContent>
                 </Card>
+
+                {/* Skip quiz — only shown after watching, when module not yet complete */}
+                {watchedModules.has(activeModule) && !isModuleComplete(currentModule.id) && (
+                  <p className="text-xs text-text-muted">
+                    Not ready?{" "}
+                    <button
+                      onClick={() => setWatchedModules(prev => { const s = new Set(prev); s.delete(activeModule); return s; })}
+                      className="underline hover:text-text-secondary transition-colors"
+                    >
+                      Skip quiz — I&apos;ll come back later
+                    </button>
+                    {" "}— quiz skipped, no completion credit until you pass.
+                  </p>
+                )}
               </>
             ) : (
               <Card>
@@ -508,11 +522,20 @@ export default function CoursePage() {
                       )}
                     </div>
                   ) : (
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setShowQuiz(false)}>Back</Button>
-                      <Button onClick={handleSubmitQuiz} loading={submitting} disabled={Object.keys(answers).length < quizQuestions.length}>
-                        Submit Answers ({Object.keys(answers).length}/{quizQuestions.length})
-                      </Button>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setShowQuiz(false)}>Back</Button>
+                        <Button onClick={handleSubmitQuiz} loading={submitting} disabled={Object.keys(answers).length < quizQuestions.length}>
+                          Submit Answers ({Object.keys(answers).length}/{quizQuestions.length})
+                        </Button>
+                      </div>
+                      <button
+                        onClick={() => { setShowQuiz(false); setAnswers({}); setQuizResult(null); }}
+                        className="text-sm text-text-muted hover:text-text-secondary underline text-left transition-colors w-fit"
+                      >
+                        Skip quiz — I&apos;ll come back later
+                      </button>
+                      <p className="text-xs text-text-muted -mt-1">Quiz skipped — complete the quiz to earn your badge and XP.</p>
                     </div>
                   )}
                 </CardContent>
