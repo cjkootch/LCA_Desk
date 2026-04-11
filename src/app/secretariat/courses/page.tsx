@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Plus, BookOpen, Clock, ChevronRight, Trash2, Send, EyeOff } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchAdminCourses, createCourse, addModule, deleteCourse, publishCourse, unpublishCourse } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,10 @@ export default function SecretariatCoursesPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-text-primary">Courses</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-heading font-bold text-text-primary">Courses</h1>
+              <InfoTooltip title="Training Courses" content="Create and manage compliance training courses for your jurisdiction. Courses you publish here become available to all users in your market. Use the AI course builder to generate module content quickly, then review and publish." />
+            </div>
             <p className="text-sm text-text-muted mt-1">
               {drafts.length} draft{drafts.length !== 1 ? "s" : ""} · {published.length} published
             </p>

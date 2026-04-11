@@ -11,6 +11,7 @@ import {
   Search, Building2, Shield, Mail, Phone, Globe, MapPin,
   CheckCircle, AlertTriangle, Calendar, ExternalLink,
 } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchSecretariatSupplierDirectory } from "@/server/actions";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,10 @@ export default function SupplierDirectoryPage() {
       <div className="flex items-center gap-3 mb-4">
         <Building2 className="h-6 w-6 text-gold" />
         <div>
-          <h1 className="text-xl font-heading font-bold text-text-primary">LCS Supplier Directory</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-heading font-bold text-text-primary">LCS Supplier Directory</h1>
+            <InfoTooltip title="LCS Supplier Directory" content="The Local Content Services Register — all certified suppliers in your jurisdiction. Contractors must spend a minimum 50% of their total expenditure with active LCS-registered companies. Expired certificates indicate the supplier's registration has lapsed and expenditure with them may not count toward the LC Rate." />
+          </div>
           <p className="text-sm text-text-secondary">
             {data ? `${data.total} registered · ${data.active} active · ${data.expired} expired` : "Loading..."}
           </p>

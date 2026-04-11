@@ -9,6 +9,7 @@ import {
   DollarSign, Users, Clock, TrendingUp, Briefcase, Shield,
   GraduationCap, Building2, FileText, PieChart, Sparkles, Copy,
 } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchSecretariatAnalytics, fetchSecretariatDashboard, fetchSecretariatMarketIntel } from "@/server/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -181,7 +182,10 @@ Write in formal government report style. Open with the headline metric (LC rate)
         <div className="flex items-center gap-3">
           <BarChart3 className="h-6 w-6 text-gold" />
           <div>
-            <h1 className="text-xl font-heading font-bold text-text-primary">Sector Report</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-heading font-bold text-text-primary">Sector Report</h1>
+              <InfoTooltip title="Sector Report" content="Aggregated compliance and economic impact metrics across all companies in your jurisdiction. Use Configure to show or hide widgets, then Export PDF to generate a shareable report for stakeholders." />
+            </div>
             <p className="text-sm text-text-secondary">Customizable compliance and impact metrics</p>
           </div>
         </div>

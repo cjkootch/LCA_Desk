@@ -11,6 +11,7 @@ import {
   ChevronRight, ExternalLink, Shield, Mail, Phone, Globe,
   FileText, TrendingUp,
 } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchFilingCompliance, fetchEntityFilingProfile } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,10 @@ export default function CompliancePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl">
-      <h1 className="text-xl font-heading font-bold text-text-primary mb-1">Filing Compliance</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <h1 className="text-xl font-heading font-bold text-text-primary">Filing Compliance</h1>
+        <InfoTooltip title="Filing Compliance" content="All registered entities (contractors, sub-contractors, licensees) in your jurisdiction and their filing status for the selected period. Click any entity to see their full filing history and compliance details." />
+      </div>
       <p className="text-sm text-text-secondary mb-4">Track which companies have filed and who is overdue</p>
 
       {/* Filters */}

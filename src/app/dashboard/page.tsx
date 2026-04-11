@@ -117,6 +117,7 @@ export default function DashboardPage() {
           {/* Compliance status card */}
           <StatusCard
             title="LCS Compliance Status"
+            info="Your overall compliance rating based on Local Content Rate (expenditure with LCS-certified suppliers), employment percentages, and filing timeliness. Green means you're meeting all requirements."
             status={lcRate >= 50 ? "Compliant" : overdueCount > 0 ? "Action Required" : "Below Target"}
             statusVariant={lcRate >= 50 && overdueCount === 0 ? "success" : overdueCount > 0 ? "danger" : "warning"}
             details={[
@@ -160,7 +161,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-3">
-              <DashboardSection title="Your Entities" action={
+              <DashboardSection title="Your Entities" info="Each entity represents a company or project that files separately with the Secretariat. Most contractors have one entity, but if you operate multiple subsidiaries each may need its own filing." action={
                 <Link href="/dashboard/entities/new">
                   <Button size="sm" variant="outline" className="gap-1"><Plus className="h-3.5 w-3.5" /> Add Entity</Button>
                 </Link>
@@ -174,7 +175,7 @@ export default function DashboardPage() {
 
               {/* Upcoming deadlines */}
               {upcomingDeadlines.length > 0 && (
-                <DashboardSection title="Upcoming Deadlines" action={
+                <DashboardSection title="Upcoming Deadlines" info="Filing deadlines for the current and next reporting period. H1 covers January–June (due July 30), H2 covers July–December (due January 30). Click any deadline to start your report." action={
                   <Link href="/dashboard/calendar" className="text-xs text-accent hover:text-accent-hover flex items-center gap-1">
                     View Calendar <ArrowRight className="h-3 w-3" />
                   </Link>

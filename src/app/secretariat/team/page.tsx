@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Users, Plus, Shield, Mail } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchSecretariatDashboard, addSecretariatMember } from "@/server/actions";
 import { toast } from "sonner";
 
@@ -55,7 +56,10 @@ export default function SecretariatTeamPage() {
       <div className="flex items-center gap-3 mb-4">
         <Users className="h-6 w-6 text-gold" />
         <div>
-          <h1 className="text-xl font-heading font-bold text-text-primary">Team Management</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-heading font-bold text-text-primary">Team Management</h1>
+            <InfoTooltip title="Team Management" content="Manage your Secretariat team members. Add reviewers by email — they'll receive an invitation to join. Role changes take effect after the user logs out and back in." />
+          </div>
           <p className="text-sm text-text-secondary">Manage who can review and acknowledge submissions</p>
         </div>
       </div>

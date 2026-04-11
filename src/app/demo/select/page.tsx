@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { Building2, Shield, Search, ArrowRight } from "lucide-react";
+import { Building2, Shield, Search, ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DEMO_ROLES = [
@@ -68,6 +68,18 @@ export default function DemoSelectPage() {
           <p className="text-sm text-text-secondary">
             Explore LCA Desk from any perspective. Switch between roles anytime using the demo bar.
           </p>
+        </div>
+
+        <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-text-primary">Interactive Demo</p>
+              <p className="text-xs text-text-secondary mt-1">
+                This is a live demo with sample data. Look for <Info className="h-3 w-3 inline text-text-muted" /> icons throughout — they explain what each section does. You can switch between views anytime using the banner at the top.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-3">

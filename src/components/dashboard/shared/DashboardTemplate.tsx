@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 
 // ─── Company/User Identity Header ─────────────────────────────
 interface IdentityProps {
@@ -85,20 +86,24 @@ export function DashboardStats({ items }: { items: StatItem[] }) {
 // ─── Status Card (like LegalZoom's compliance status) ──────────
 interface StatusCardProps {
   title: string;
+  info?: string;
   status: string;
   statusVariant: "success" | "warning" | "danger";
   details?: { label: string; value: string; benchmark?: string; met?: boolean }[];
   footer?: string;
 }
 
-export function StatusCard({ title, status, statusVariant, details, footer }: StatusCardProps) {
+export function StatusCard({ title, info, status, statusVariant, details, footer }: StatusCardProps) {
   const dotColor = statusVariant === "success" ? "bg-success" : statusVariant === "warning" ? "bg-warning" : "bg-danger";
   const textColor = statusVariant === "success" ? "text-success" : statusVariant === "warning" ? "text-warning" : "text-danger";
 
   return (
     <Card className="mb-3">
       <CardContent className="p-4">
-        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{title}</p>
+        <div className="flex items-center gap-1.5 mb-2">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">{title}</p>
+          {info && <InfoTooltip content={info} />}
+        </div>
         <div className="flex items-center gap-2 mb-2">
           <div className={cn("h-3 w-3 rounded-full", dotColor)} />
           <span className={cn("text-lg font-bold", textColor)}>{status}</span>
@@ -123,15 +128,19 @@ export function StatusCard({ title, status, statusVariant, details, footer }: St
 }
 
 // ─── Section Header ────────────────────────────────────────────
-export function DashboardSection({ title, action, children }: {
+export function DashboardSection({ title, info, action, children }: {
   title: string;
+  info?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1.5">
-        <h2 className="text-base font-heading font-semibold text-text-primary">{title}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-base font-heading font-semibold text-text-primary">{title}</h2>
+          {info && <InfoTooltip content={info} />}
+        </div>
         {action}
       </div>
       {children}

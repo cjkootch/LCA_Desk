@@ -12,6 +12,7 @@ import {
   FileText, CheckCircle, Search, Shield, Eye,
   AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
 } from "lucide-react";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests, fetchSecretariatOfficeSettings } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardIdentity, DashboardStats, StatusCard } from "@/components/dashboard/shared/DashboardTemplate";
@@ -176,6 +177,7 @@ export default function SecretariatDashboardPage() {
       {analytics && (
         <StatusCard
           title="Sector Compliance Overview"
+          info="A snapshot of aggregate compliance across all companies in your jurisdiction. LC Rate is the percentage of total expenditure spent with LCS-certified local suppliers. Red means the sector average is below the 50% minimum requirement."
           status={analytics.overallLcRate >= 50 ? "Meeting Target" : "Below Target"}
           statusVariant={analytics.overallLcRate >= 50 ? "success" : "warning"}
           details={[
@@ -192,7 +194,10 @@ export default function SecretariatDashboardPage() {
       {/* ── Submission Queue ─────────────────────────────────── */}
       <section>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-heading font-semibold text-text-primary">Submission Queue</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-heading font-semibold text-text-primary">Submission Queue</h2>
+          <InfoTooltip title="Submission Queue" content="These are Half-Yearly Reports submitted by contractors and sub-contractors awaiting your review. Click any submission to open the full report, verify data, and approve or request corrections." />
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full bg-warning animate-pulse" />
