@@ -224,20 +224,33 @@ function MermaidDiagram({ chart }: { chart: string }) {
         const { svg } = await w.mermaid.render(idRef.current, chart);
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
-          // Remove ALL white/opaque background rects from mermaid SVG
+          // Style the rendered SVG — transparent bg, rounded corners
           const svgEl = containerRef.current.querySelector("svg");
           if (svgEl) {
             svgEl.style.backgroundColor = "transparent";
-            // Remove background rects (mermaid adds them at various nesting levels)
             svgEl.querySelectorAll("rect").forEach(rect => {
               const fill = rect.getAttribute("fill");
+              // Make background rects transparent
               if (fill === "#ffffff" || fill === "white" || fill === "#fff" || rect.classList.contains("er")) {
                 rect.setAttribute("fill", "transparent");
               }
-              // Also check if it's the first rect (usually the background)
               if (rect === svgEl.querySelector("rect") && !rect.closest(".node")) {
                 rect.setAttribute("fill", "transparent");
               }
+              // Round ALL node rects
+              if (rect.closest(".node") || rect.closest(".cluster")) {
+                rect.setAttribute("rx", "12");
+                rect.setAttribute("ry", "12");
+              }
+            });
+            // Round cluster/group backgrounds
+            svgEl.querySelectorAll(".cluster rect").forEach(rect => {
+              rect.setAttribute("rx", "16");
+              rect.setAttribute("ry", "16");
+            });
+            // Style text
+            svgEl.querySelectorAll("text").forEach(t => {
+              t.style.fontFamily = "'DM Mono', monospace";
             });
           }
         }
@@ -248,7 +261,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
     return () => { cancelled = true; };
   }, [chart]);
 
-  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-lg p-4" />;
+  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-2xl p-5 [&_.node_rect]:rx-[12] [&_.node_rect]:ry-[12] [&_.label]:font-medium [&_text]:!font-sans" />;
 }
 
 // Strip any quiz-like or interactive-test content before it reaches the slideshow renderer.
@@ -466,7 +479,47 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     script.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
     script.onload = () => {
       const w = window as typeof window & { mermaid?: { initialize: (c: object) => void } };
-      w.mermaid?.initialize({ startOnLoad: false, theme: "base", themeVariables: { background: "transparent", primaryColor: "#19544c", primaryTextColor: "#ffffff", lineColor: "#71b59a", nodeBorder: "#19544c" } });
+      w.mermaid?.initialize({
+            startOnLoad: false,
+            theme: "base",
+            themeVariables: {
+              background: "transparent",
+              primaryColor: "#19544c",
+              primaryTextColor: "#ffffff",
+              primaryBorderColor: "#19544c",
+              secondaryColor: "#71b59a",
+              secondaryTextColor: "#ffffff",
+              secondaryBorderColor: "#4d9a7e",
+              tertiaryColor: "#E8E4DF",
+              tertiaryTextColor: "#19544c",
+              tertiaryBorderColor: "#c8c4b8",
+              lineColor: "#71b59a",
+              textColor: "#1a1a1a",
+              mainBkg: "#19544c",
+              nodeBorder: "#19544c",
+              nodeTextColor: "#ffffff",
+              // Pie chart colors
+              pie1: "#19544c",
+              pie2: "#71b59a",
+              pie3: "#8b6914",
+              pie4: "#D4AF37",
+              pie5: "#4d9a7e",
+              pie6: "#2d7a5f",
+              pie7: "#a07820",
+              pie8: "#c8c4b8",
+              pieTextColor: "#ffffff",
+              pieSectionTextColor: "#ffffff",
+              pieTitleTextColor: "#1a1a1a",
+              pieStrokeColor: "#ffffff",
+              pieStrokeWidth: "2px",
+              // Rounded nodes
+              fontSize: "14px",
+              fontFamily: "'DM Mono', monospace",
+            },
+            flowchart: { curve: "basis", padding: 15, nodeSpacing: 30, rankSpacing: 40, htmlLabels: true },
+            mindmap: { padding: 16 },
+            timeline: { padding: 10 },
+          });
     };
     document.head.appendChild(script);
   }, []);
