@@ -7,16 +7,16 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { ComplianceHealthWidget } from "@/components/dashboard/ComplianceHealthWidget";
 import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
+import { EmptyDashboard } from "@/components/dashboard/EmptyDashboard";
 import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
-import { EmptyState } from "@/components/shared/EmptyState";
 import { ActivationChecklist } from "@/components/shared/ActivationChecklist";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-import { Building2, Plus, GraduationCap, ArrowRight, FileText } from "lucide-react";
+import { Building2, Plus, ArrowRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
 import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
@@ -38,6 +38,7 @@ export default function DashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ctx, setCtx] = useState<any>(null);
   const [isPro, setIsPro] = useState(false);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -50,7 +51,10 @@ export default function DashboardPage() {
       setLoading(false);
       fetchComplianceHealth().then(setHealth).catch(() => {});
       fetchUserContext().then(setCtx).catch(() => {});
-      fetchPlanAndUsage().then(p => setIsPro(p.effectivePlan === "pro" || p.effectivePlan === "enterprise")).catch(() => {});
+      fetchPlanAndUsage().then(p => {
+        setIsPro(p.effectivePlan === "pro" || p.effectivePlan === "enterprise");
+        setTrialDaysRemaining(p.trialDaysRemaining ?? null);
+      }).catch(() => {});
     };
     load();
   }, []);
@@ -99,15 +103,7 @@ export default function DashboardPage() {
       />
 
       {entities.length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title="No entities yet"
-          description="Add your first company or entity to start tracking local content compliance."
-          actionLabel="Add Entity"
-          onAction={() => router.push("/dashboard/entities/new")}
-          secondaryLabel="Take the Onboarding Course"
-          secondaryOnAction={() => router.push("/dashboard/training")}
-        />
+        <EmptyDashboard trialDaysRemaining={trialDaysRemaining} />
       ) : (
         <>
           {/* KPI stats row */}

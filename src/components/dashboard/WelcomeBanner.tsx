@@ -23,8 +23,6 @@ export function WelcomeBanner({ entityCount, overdueCount, dueSoonCount }: Welco
     summaryText = `You have ${overdueCount} overdue report${overdueCount > 1 ? "s" : ""} that need${overdueCount === 1 ? "s" : ""} immediate attention.`;
   } else if (dueSoonCount > 0) {
     summaryText = `${dueSoonCount} report${dueSoonCount > 1 ? "s" : ""} due within the next 14 days.`;
-  } else if (entityCount === 0) {
-    summaryText = "Get started by adding your first entity.";
   }
 
   return (
