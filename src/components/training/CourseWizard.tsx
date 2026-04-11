@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Slideshow } from "@/components/training/Slideshow";
 import { cn } from "@/lib/utils";
-import { X, Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Eye, Edit2 } from "lucide-react";
+import {
+  X, Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Eye, Edit2,
+  CheckCircle, Sparkles, Users, Briefcase, Building2, GraduationCap,
+  GripVertical, Scale, BookOpen, Globe, Zap, FileText, Trophy,
+} from "lucide-react";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -17,13 +21,8 @@ interface CourseWizardProps {
   jurisdictionCode?: string;
   lockJurisdiction?: boolean;
   onSave: (data: {
-    title: string;
-    slug: string;
-    description: string;
-    audience: string;
-    jurisdictionCode: string;
-    badgeLabel: string;
-    badgeColor: string;
+    title: string; slug: string; description: string; audience: string;
+    jurisdictionCode: string; badgeLabel: string; badgeColor: string;
     estimatedMinutes: number;
     modules: Array<{ title: string; content: string; quizQuestions: string }>;
   }) => Promise<void>;
@@ -37,21 +36,35 @@ interface GeneratedModule {
 }
 
 // ---------------------------------------------------------------------------
-// Template defaults
+// Static data
 // ---------------------------------------------------------------------------
 
 const TEMPLATE_TOPICS: Record<string, string[]> = {
-  compliance_overview: ["Legal framework", "Filing obligations", "Penalties", "Compliance cycle", "Enforcement"],
-  practical_guide: ["Getting started", "Data entry", "Common mistakes", "Tips & tricks", "Submission process"],
-  industry_orientation: ["Sector overview", "Key players", "Career paths", "Opportunities", "Getting started"],
-  skills_training: ["Fundamentals", "Core techniques", "Practice exercises", "Advanced topics", "Assessment"],
+  compliance_overview: ["Legal framework", "Filing obligations", "Penalties & enforcement", "Compliance cycle", "Key definitions"],
+  practical_guide: ["Getting started", "Data entry step-by-step", "Common mistakes", "Tips & tricks", "Submission process"],
+  industry_orientation: ["Sector overview", "Key players & regulators", "Career pathways", "Business opportunities", "Getting registered"],
+  skills_training: ["Core fundamentals", "Essential techniques", "Practical exercises", "Advanced application", "Assessment & review"],
 };
 
 const TEMPLATES = [
-  { value: "compliance_overview", label: "Compliance Overview", description: "Regulation deep-dive" },
-  { value: "practical_guide", label: "Practical Guide", description: "Step-by-step" },
-  { value: "industry_orientation", label: "Industry Orientation", description: "Sector overview" },
-  { value: "skills_training", label: "Skills Training", description: "Skill development" },
+  { value: "compliance_overview", label: "Compliance Overview", description: "Regulation deep-dive with legal references", icon: Scale, recommended: true },
+  { value: "practical_guide", label: "Practical Guide", description: "Step-by-step how-to for practitioners", icon: BookOpen, recommended: false },
+  { value: "industry_orientation", label: "Industry Orientation", description: "Sector overview for newcomers", icon: Globe, recommended: false },
+  { value: "skills_training", label: "Skills Training", description: "Targeted skill development with exercises", icon: Zap, recommended: false },
+];
+
+const AUDIENCES = [
+  { value: "all", label: "All Users", description: "General petroleum sector", icon: Users },
+  { value: "filer", label: "Filers", description: "Compliance professionals", icon: FileText },
+  { value: "seeker", label: "Job Seekers", description: "Entering the sector", icon: GraduationCap },
+  { value: "supplier", label: "Suppliers", description: "LCS certification", icon: Building2 },
+];
+
+const JURISDICTIONS = [
+  { value: "GY", label: "Guyana", sub: "Local Content Act 2021" },
+  { value: "NG", label: "Nigeria", sub: "NOGICD Act 2010" },
+  { value: "NA", label: "Namibia", sub: "NAMCOR oversight" },
+  { value: "SR", label: "Suriname", sub: "Emerging framework" },
 ];
 
 const BADGE_COLORS = [
@@ -61,39 +74,35 @@ const BADGE_COLORS = [
   { value: "danger", label: "Red", hex: "#EF4444" },
 ];
 
+const STEP_LABELS = ["Course Details", "Topics", "Generate", "Review & Publish"];
+
 // ---------------------------------------------------------------------------
 // Step indicator
 // ---------------------------------------------------------------------------
 
-function StepIndicator({ current, total }: { current: number; total: number }) {
-  const labels = ["Settings", "Topics", "Generating", "Review"];
+function StepIndicator({ step }: { step: number }) {
   return (
-    <div className="flex items-center gap-2">
-      {Array.from({ length: total }).map((_, i) => {
-        const step = i + 1;
-        const isActive = step === current;
-        const isDone = step < current;
+    <div className="flex items-center gap-1 sm:gap-2">
+      {STEP_LABELS.map((label, i) => {
+        const done = i + 1 < step;
+        const active = i + 1 === step;
         return (
-          <div key={step} className="flex items-center gap-2">
-            <div
-              className={cn(
-                "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
-                isActive && "bg-accent border-accent text-white",
-                isDone && "bg-accent/20 border-accent text-accent",
-                !isActive && !isDone && "bg-bg-surface border-border text-text-muted"
-              )}
-            >
-              {step}
+          <div key={i} className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+            <div className={cn(
+              "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all",
+              done ? "bg-accent text-white" :
+              active ? "bg-accent text-white ring-4 ring-accent/20" :
+              "bg-bg-surface border border-border text-text-muted"
+            )}>
+              {done ? <CheckCircle className="h-3.5 w-3.5" /> : i + 1}
             </div>
-            <span
-              className={cn(
-                "text-xs font-medium hidden sm:block",
-                isActive ? "text-text-primary" : "text-text-muted"
-              )}
-            >
-              {labels[i]}
-            </span>
-            {step < total && <div className="w-8 h-px bg-border hidden sm:block" />}
+            <span className={cn(
+              "text-xs font-medium hidden sm:block truncate",
+              active ? "text-text-primary" : done ? "text-text-secondary" : "text-text-muted"
+            )}>{label}</span>
+            {i < 3 && (
+              <div className={cn("flex-1 h-0.5 rounded min-w-2", done ? "bg-accent" : "bg-border")} />
+            )}
           </div>
         );
       })}
@@ -102,13 +111,18 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main wizard component
+// Main wizard
 // ---------------------------------------------------------------------------
 
-export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", lockJurisdiction = false, onSave, onClose }: CourseWizardProps) {
+export function CourseWizard({
+  jurisdictionCode: defaultJurisdiction = "GY",
+  lockJurisdiction = false,
+  onSave,
+  onClose,
+}: CourseWizardProps) {
   const [step, setStep] = useState(1);
 
-  // Step 1 state
+  // Step 1
   const [settings, setSettings] = useState({
     title: "",
     description: "",
@@ -118,21 +132,23 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
     template: "compliance_overview",
   });
 
-  // Step 2 state
-  const [topics, setTopics] = useState<string[]>(TEMPLATE_TOPICS["compliance_overview"]);
+  // Step 2
+  const [topics, setTopics] = useState<string[]>(TEMPLATE_TOPICS.compliance_overview);
+  const [aiSuggestedIndices, setAiSuggestedIndices] = useState<Set<number>>(new Set());
+  const [suggestingTopics, setSuggestingTopics] = useState(false);
 
-  // Step 3 state
+  // Step 3
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [genStage, setGenStage] = useState("Initialising...");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Step 4 state
+  // Step 4
   const [modules, setModules] = useState<GeneratedModule[]>([]);
   const [expandedModule, setExpandedModule] = useState<number | null>(0);
   const [editingContent, setEditingContent] = useState<Set<number>>(new Set());
   const [editingQuiz, setEditingQuiz] = useState<Set<number>>(new Set());
-  const [slideshowModule, setSlideshowModule] = useState<number | null>(null);
   const [showFullContent, setShowFullContent] = useState<Set<number>>(new Set());
   const [showBadgeSettings, setShowBadgeSettings] = useState(false);
   const [badgeLabel, setBadgeLabel] = useState("");
@@ -140,32 +156,61 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
   const [estimatedMinutes, setEstimatedMinutes] = useState(75);
   const [saving, setSaving] = useState(false);
   const [regeneratingQuiz, setRegeneratingQuiz] = useState<Set<number>>(new Set());
+  const [slideshowModule, setSlideshowModule] = useState<number | null>(null);
 
-  // Sync estimatedMinutes when moduleCount changes
+  // Sync est. minutes from module count
   useEffect(() => {
     setEstimatedMinutes(settings.moduleCount * 15);
   }, [settings.moduleCount]);
 
-  // Update topics when template changes
+  // ---------------------------------------------------------------------------
+  // Template change — update topics to defaults
+  // ---------------------------------------------------------------------------
+
   function handleTemplateChange(template: string) {
     setSettings(s => ({ ...s, template }));
     setTopics(TEMPLATE_TOPICS[template] ?? []);
+    setAiSuggestedIndices(new Set());
   }
 
   // ---------------------------------------------------------------------------
-  // Step 1 → 2
+  // Step 1 → 2: call AI to suggest topics
   // ---------------------------------------------------------------------------
 
-  function goToTopics() {
-    if (!settings.title.trim()) {
-      toast.error("Please enter a course title");
-      return;
-    }
+  async function goToTopics() {
+    if (!settings.title.trim()) { toast.error("Please enter a course title"); return; }
     setStep(2);
+    setSuggestingTopics(true);
+
+    try {
+      const res = await fetch("/api/ai/suggest-topics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: settings.title,
+          description: settings.description,
+          audience: settings.audience,
+          jurisdictionCode: settings.jurisdictionCode,
+          template: settings.template,
+          moduleCount: settings.moduleCount,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { topics: string[] };
+        if (data.topics?.length > 0) {
+          setTopics(data.topics);
+          setAiSuggestedIndices(new Set(data.topics.map((_, i) => i)));
+        }
+      }
+    } catch {
+      // Silently fall back to template defaults — already set above
+    } finally {
+      setSuggestingTopics(false);
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Step 2 → 3 (generate)
+  // Step 2 → 3: generate course
   // ---------------------------------------------------------------------------
 
   async function generate() {
@@ -174,10 +219,29 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
     setGenError(null);
     setProgress(0);
 
-    // Fake progress up to 95%
+    const stages = [
+      "Generating module outlines...",
+      "Writing slide content...",
+      "Creating diagrams...",
+      "Building quiz questions...",
+      "Finalising course structure...",
+    ];
+    let stageIdx = 0;
+    setGenStage(stages[0]);
+
     progressRef.current = setInterval(() => {
-      setProgress(p => (p < 95 ? p + 2 : p));
-    }, 500);
+      setProgress(p => {
+        if (p >= 95) return p;
+        const next = p + 2;
+        // Advance stage label at thresholds
+        const newStageIdx = Math.min(Math.floor(next / 20), stages.length - 1);
+        if (newStageIdx !== stageIdx) {
+          stageIdx = newStageIdx;
+          setGenStage(stages[stageIdx]);
+        }
+        return next;
+      });
+    }, 600);
 
     try {
       const res = await fetch("/api/ai/course-builder", {
@@ -193,16 +257,10 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || "Generation failed");
-      }
+      if (!res.ok) throw new Error((await res.text()) || "Generation failed");
 
       const data = (await res.json()) as { modules: GeneratedModule[] };
-
-      if (!data.modules || !Array.isArray(data.modules)) {
-        throw new Error("Invalid response from AI");
-      }
+      if (!data.modules || !Array.isArray(data.modules)) throw new Error("Invalid AI response");
 
       setModules(data.modules);
       setProgress(100);
@@ -211,10 +269,7 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
-      if (progressRef.current) {
-        clearInterval(progressRef.current);
-        progressRef.current = null;
-      }
+      if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
       setGenerating(false);
     }
   }
@@ -226,17 +281,14 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
   function updateModuleTitle(idx: number, title: string) {
     setModules(prev => prev.map((m, i) => i === idx ? { ...m, title } : m));
   }
-
   function updateModuleContent(idx: number, content: string) {
     setModules(prev => prev.map((m, i) => i === idx ? { ...m, content } : m));
   }
-
   function updateModuleQuiz(idx: number, quizStr: string) {
     try {
       const parsed = JSON.parse(quizStr) as unknown[];
       setModules(prev => prev.map((m, i) => i === idx ? { ...m, quiz: parsed } : m));
     } catch {
-      // Keep raw string in quiz field as-is — will be serialized as string later
       setModules(prev => prev.map((m, i) => i === idx ? { ...m, quiz: quizStr as unknown as unknown[] } : m));
     }
   }
@@ -244,7 +296,6 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
   async function regenerateQuiz(idx: number) {
     const mod = modules[idx];
     if (!mod) return;
-
     setRegeneratingQuiz(prev => new Set(prev).add(idx));
     try {
       const res = await fetch("/api/ai/quiz-builder", {
@@ -257,36 +308,18 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
       setModules(prev => prev.map((m, i) => i === idx ? { ...m, quiz: data.questions } : m));
       toast.success("Quiz regenerated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to regenerate quiz");
+      toast.error(err instanceof Error ? err.message : "Regeneration failed");
     } finally {
-      setRegeneratingQuiz(prev => {
-        const next = new Set(prev);
-        next.delete(idx);
-        return next;
-      });
+      setRegeneratingQuiz(prev => { const s = new Set(prev); s.delete(idx); return s; });
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Save
-  // ---------------------------------------------------------------------------
-
   async function handleSave() {
-    if (!settings.title.trim()) {
-      toast.error("Course title is required");
-      return;
-    }
-    if (modules.length === 0) {
-      toast.error("No modules to save");
-      return;
-    }
+    if (!settings.title.trim()) { toast.error("Course title required"); return; }
+    if (modules.length === 0) { toast.error("No modules to save"); return; }
     setSaving(true);
     try {
-      const slug = settings.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-
+      const slug = settings.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       await onSave({
         title: settings.title,
         slug,
@@ -303,7 +336,7 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
         })),
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save course");
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -314,233 +347,346 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 bg-bg-primary overflow-auto" style={{ top: "var(--demo-banner-h, 0px)" }}>
-      {/* Header */}
-      <div className="sticky z-10 bg-bg-primary border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between" style={{ top: 0 }}>
-        <StepIndicator current={step} total={4} />
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-bg-surface text-text-muted hover:text-text-primary transition-colors"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
+    <div
+      className="fixed inset-x-0 bottom-0 z-50 bg-bg-primary overflow-auto"
+      style={{ top: "var(--demo-banner-h, 0px)" }}
+    >
+      {/* Sticky header */}
+      <div
+        className="sticky z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-border px-4 sm:px-8 py-4"
+        style={{ top: 0 }}
+      >
+        <div className="max-w-3xl mx-auto flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <StepIndicator step={step} />
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-bg-surface text-text-muted hover:text-text-primary transition-colors shrink-0"
+            aria-label="Close wizard"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        {/* ------------------------------------------------------------------ */}
-        {/* Step 1 — Course Settings                                           */}
-        {/* ------------------------------------------------------------------ */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 pb-32">
+
+        {/* ================================================================ */}
+        {/* STEP 1 — Course Details                                          */}
+        {/* ================================================================ */}
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <h1 className="text-2xl font-heading font-bold text-text-primary">Course Settings</h1>
-              <p className="text-sm text-text-muted mt-1">Configure the basics for your new AI-generated course</p>
+              <h1 className="text-2xl font-heading font-bold text-text-primary">Create a New Course</h1>
+              <p className="text-sm text-text-muted mt-1">Tell the AI what to build — it handles the rest.</p>
             </div>
 
-            <div className="space-y-4">
+            {/* Title + description */}
+            <div className="rounded-xl border border-border bg-bg-card p-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-text-primary">Course Title *</label>
+                <label className="text-sm font-semibold text-text-primary">Course Title <span className="text-red-500">*</span></label>
                 <input
-                  className="input mt-1 w-full"
+                  className="input mt-1.5 w-full text-base"
                   value={settings.title}
                   onChange={e => setSettings(s => ({ ...s, title: e.target.value }))}
-                  placeholder="e.g. Local Content Compliance Fundamentals"
+                  placeholder="e.g. Advanced Compliance Reporting for Contractors"
                 />
               </div>
-
               <div>
-                <label className="text-sm font-medium text-text-primary">Description</label>
+                <label className="text-sm font-semibold text-text-primary">Description <span className="text-text-muted font-normal">(optional)</span></label>
                 <textarea
-                  className="input mt-1 w-full resize-none"
-                  rows={3}
+                  className="input mt-1.5 w-full resize-none"
+                  rows={2}
                   value={settings.description}
                   onChange={e => setSettings(s => ({ ...s, description: e.target.value }))}
-                  placeholder="Brief description of this course..."
+                  placeholder="What will learners be able to do after this course?"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-text-primary">Audience</label>
-                  <select
-                    className="input mt-1 w-full"
-                    value={settings.audience}
-                    onChange={e => setSettings(s => ({ ...s, audience: e.target.value }))}
-                  >
-                    <option value="all">All</option>
-                    <option value="filer">Filer</option>
-                    <option value="seeker">Seeker</option>
-                    <option value="supplier">Supplier</option>
-                  </select>
-                </div>
+            {/* Audience */}
+            <div>
+              <label className="text-sm font-semibold text-text-primary block mb-3">Target Audience</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {AUDIENCES.map(a => {
+                  const Icon = a.icon;
+                  const active = settings.audience === a.value;
+                  return (
+                    <button
+                      key={a.value}
+                      type="button"
+                      onClick={() => setSettings(s => ({ ...s, audience: a.value }))}
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                        active
+                          ? "border-accent bg-accent/5 shadow-sm"
+                          : "border-border bg-bg-card hover:border-accent/40 hover:bg-bg-surface"
+                      )}
+                    >
+                      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", active ? "bg-accent/10" : "bg-bg-primary")}>
+                        <Icon className={cn("h-5 w-5", active ? "text-accent" : "text-text-muted")} />
+                      </div>
+                      <div>
+                        <p className={cn("text-sm font-semibold", active ? "text-accent" : "text-text-primary")}>{a.label}</p>
+                        <p className="text-xs text-text-muted mt-0.5">{a.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                <div>
-                  <label className="text-sm font-medium text-text-primary">Jurisdiction</label>
-                  <select
-                    className="input mt-1 w-full"
-                    value={settings.jurisdictionCode}
-                    onChange={e => setSettings(s => ({ ...s, jurisdictionCode: e.target.value }))}
-                    disabled={lockJurisdiction}
-                  >
-                    <option value="GY">GY — Guyana</option>
-                    <option value="NG">NG — Nigeria</option>
-                    <option value="NA">NA — Namibia</option>
-                  </select>
+            {/* Jurisdiction */}
+            {!lockJurisdiction && (
+              <div>
+                <label className="text-sm font-semibold text-text-primary block mb-3">Jurisdiction</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {JURISDICTIONS.map(j => {
+                    const active = settings.jurisdictionCode === j.value;
+                    return (
+                      <button
+                        key={j.value}
+                        type="button"
+                        onClick={() => setSettings(s => ({ ...s, jurisdictionCode: j.value }))}
+                        className={cn(
+                          "flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all",
+                          active
+                            ? "border-accent bg-accent/5 shadow-sm"
+                            : "border-border bg-bg-card hover:border-accent/40 hover:bg-bg-surface"
+                        )}
+                      >
+                        <span className={cn("text-sm font-bold font-mono", active ? "text-accent" : "text-text-primary")}>{j.value}</span>
+                        <span className={cn("text-sm font-medium", active ? "text-text-primary" : "text-text-secondary")}>{j.label}</span>
+                        <span className="text-xs text-text-muted">{j.sub}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="text-sm font-medium text-text-primary">Number of Modules</label>
-                <input
-                  className="input mt-1 w-28"
-                  type="number"
-                  min={3}
-                  max={8}
-                  value={settings.moduleCount}
-                  onChange={e => setSettings(s => ({ ...s, moduleCount: Math.min(8, Math.max(3, Number(e.target.value))) }))}
-                />
-                <p className="text-xs text-text-muted mt-1">Between 3 and 8 modules</p>
+            {/* Module count slider */}
+            <div className="rounded-xl border border-border bg-bg-card p-6">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-text-primary">Number of Modules</label>
+                <span className="text-3xl font-bold text-accent tabular-nums">{settings.moduleCount}</span>
               </div>
+              <input
+                type="range"
+                min={3} max={8} step={1}
+                value={settings.moduleCount}
+                onChange={e => setSettings(s => ({ ...s, moduleCount: Number(e.target.value) }))}
+                className="w-full accent-accent"
+              />
+              <div className="flex justify-between text-xs text-text-muted mt-1">
+                <span>Quick (3)</span>
+                <span>~{settings.moduleCount * 15} min estimated</span>
+                <span>Comprehensive (8)</span>
+              </div>
+            </div>
 
-              <div>
-                <label className="text-sm font-medium text-text-primary mb-2 block">Template</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {TEMPLATES.map(t => (
+            {/* Template cards */}
+            <div>
+              <label className="text-sm font-semibold text-text-primary block mb-3">Course Template</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TEMPLATES.map(t => {
+                  const Icon = t.icon;
+                  const active = settings.template === t.value;
+                  return (
                     <button
                       key={t.value}
                       type="button"
                       onClick={() => handleTemplateChange(t.value)}
                       className={cn(
-                        "p-3 rounded-lg border-2 text-left transition-colors",
-                        settings.template === t.value
-                          ? "border-accent bg-accent/10"
-                          : "border-border bg-bg-surface hover:border-accent/40"
+                        "flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all",
+                        active
+                          ? "border-accent bg-accent/5 shadow-sm"
+                          : "border-border bg-bg-card hover:border-accent/40 hover:bg-bg-surface"
                       )}
                     >
-                      <div className="font-medium text-sm text-text-primary">{t.label}</div>
-                      <div className="text-xs text-text-muted mt-0.5">{t.description}</div>
+                      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5", active ? "bg-accent/10" : "bg-bg-primary")}>
+                        <Icon className={cn("h-5 w-5", active ? "text-accent" : "text-text-muted")} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-sm font-semibold", active ? "text-accent" : "text-text-primary")}>{t.label}</span>
+                          {t.recommended && <Badge variant="accent" className="text-[10px] px-1.5 py-0">Recommended</Badge>}
+                        </div>
+                        <p className="text-xs text-text-muted mt-0.5">{t.description}</p>
+                      </div>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={goToTopics} className="gap-2">
-                Next: Add Topics →
+            <div className="flex justify-end">
+              <Button onClick={goToTopics} className="gap-2 px-6">
+                Next: Topics <Sparkles className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Step 2 — Topics                                                    */}
-        {/* ------------------------------------------------------------------ */}
+        {/* ================================================================ */}
+        {/* STEP 2 — Topics                                                  */}
+        {/* ================================================================ */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-heading font-bold text-text-primary">Course Topics</h1>
-              <p className="text-sm text-text-muted mt-1">Add the topics you want to cover. The AI will generate content for each.</p>
+              <p className="text-sm text-text-muted mt-1">
+                {suggestingTopics
+                  ? "Asking AI to suggest topics based on your course details..."
+                  : "Edit, reorder, or add topics. The AI will generate one module per topic."}
+              </p>
             </div>
 
-            <div className="space-y-2">
-              {topics.map((topic, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted w-5 text-right">{idx + 1}.</span>
-                  <input
-                    className="input flex-1"
-                    value={topic}
-                    onChange={e => {
-                      const next = [...topics];
-                      next[idx] = e.target.value;
-                      setTopics(next);
-                    }}
-                    placeholder={`Topic ${idx + 1}`}
-                  />
+            {suggestingTopics ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full border-4 border-accent/20 border-t-accent animate-spin mx-auto" />
+                  <p className="text-sm text-text-secondary font-medium">Generating topic suggestions...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {aiSuggestedIndices.size > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/5 border border-accent/20 text-sm text-accent">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span>AI suggested these topics based on your course details. Edit freely.</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {topics.map((topic, idx) => {
+                    const isAI = aiSuggestedIndices.has(idx);
+                    return (
+                      <div key={idx} className="flex items-center gap-2 group">
+                        <GripVertical className="h-4 w-4 text-text-muted/40 shrink-0" />
+                        <div className="relative flex-1">
+                          <input
+                            className="input w-full pr-24"
+                            value={topic}
+                            onChange={e => {
+                              const next = [...topics];
+                              next[idx] = e.target.value;
+                              setTopics(next);
+                              // Clear AI flag when manually edited
+                              if (isAI) {
+                                setAiSuggestedIndices(prev => {
+                                  const s = new Set(prev); s.delete(idx); return s;
+                                });
+                              }
+                            }}
+                            placeholder={`Topic ${idx + 1}`}
+                          />
+                          {isAI && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                              AI
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTopics(topics.filter((_, i) => i !== idx));
+                            setAiSuggestedIndices(prev => {
+                              const s = new Set<number>();
+                              prev.forEach(n => { if (n < idx) s.add(n); else if (n > idx) s.add(n - 1); });
+                              return s;
+                            });
+                          }}
+                          className="p-1.5 rounded text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add topic */}
                   <button
                     type="button"
-                    onClick={() => setTopics(topics.filter((_, i) => i !== idx))}
-                    className="p-1.5 rounded hover:bg-bg-surface text-text-muted hover:text-red-500 transition-colors"
-                    aria-label="Remove topic"
+                    onClick={() => setTopics([...topics, ""])}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border hover:border-accent/40 hover:bg-accent/5 text-sm text-text-muted hover:text-accent transition-all mt-2"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-4 w-4" /> Add Topic
                   </button>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setTopics([...topics, ""])}
-                className="flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 transition-colors mt-1 font-medium"
-              >
-                <Plus className="h-4 w-4" /> Add topic
-              </button>
-            </div>
+
+                <p className="text-xs text-text-muted text-center">
+                  Drag to reorder · Edit any topic · AI will generate one module per topic
+                </p>
+              </>
+            )}
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(1)}>← Back</Button>
               <Button
                 onClick={generate}
-                disabled={topics.filter(t => t.trim()).length === 0}
-                className="gap-2"
+                disabled={suggestingTopics || topics.filter(t => t.trim()).length === 0}
+                className="gap-2 px-6"
               >
-                Generate with AI →
+                <Sparkles className="h-4 w-4" /> Generate Course
               </Button>
             </div>
           </div>
         )}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Step 3 — Generating                                                */}
-        {/* ------------------------------------------------------------------ */}
+        {/* ================================================================ */}
+        {/* STEP 3 — Generating                                              */}
+        {/* ================================================================ */}
         {step === 3 && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 text-center">
+          <div className="flex flex-col items-center justify-center min-h-[65vh] text-center space-y-8">
             {!genError ? (
               <>
                 <div className="relative">
-                  <div className="h-20 w-20 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
+                  <div className="h-24 w-24 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl">✨</span>
+                    <Sparkles className="h-10 w-10 text-accent" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-heading font-bold text-text-primary">Generating your course...</h2>
-                  <p className="text-text-muted text-sm max-w-sm">
-                    Claude is creating {settings.moduleCount} modules with slides, diagrams, and quizzes. This takes about 30 seconds.
-                  </p>
+
+                <div className="space-y-2 max-w-sm">
+                  <h2 className="text-xl font-heading font-bold text-text-primary">Building your course...</h2>
+                  <p className="text-sm text-text-muted">{genStage}</p>
+                  <p className="text-xs text-text-muted">Generating {settings.moduleCount} modules with slides, diagrams &amp; quizzes. Usually takes 30–60 seconds.</p>
                 </div>
-                <div className="w-full max-w-sm space-y-1">
-                  <Progress value={progress} className="h-2" />
-                  <p className="text-xs text-text-muted text-right">{progress}%</p>
+
+                <div className="w-full max-w-xs space-y-1.5">
+                  <Progress value={progress} className="h-2.5" />
+                  <p className="text-xs text-text-muted">{progress}% complete</p>
                 </div>
               </>
             ) : (
               <>
-                <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-                  <span className="text-2xl">⚠️</span>
+                <div className="h-20 w-20 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
+                  <X className="h-10 w-10 text-red-500" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-w-sm">
                   <h2 className="text-xl font-heading font-bold text-text-primary">Generation Failed</h2>
-                  <p className="text-text-muted text-sm max-w-sm">{genError}</p>
+                  <p className="text-sm text-text-muted">{genError}</p>
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setStep(2)}>← Back to Topics</Button>
-                  <Button onClick={generate}>Try Again</Button>
+                  <Button onClick={generate} className="gap-2"><RefreshCw className="h-4 w-4" /> Try Again</Button>
                 </div>
               </>
             )}
           </div>
         )}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Step 4 — Review & Edit                                             */}
-        {/* ------------------------------------------------------------------ */}
+        {/* ================================================================ */}
+        {/* STEP 4 — Review & Edit                                           */}
+        {/* ================================================================ */}
         {step === 4 && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-heading font-bold text-text-primary">Review &amp; Edit</h1>
+              <h1 className="text-2xl font-heading font-bold text-text-primary">Review &amp; Publish</h1>
               <p className="text-sm text-text-muted mt-1">
-                {modules.length} modules generated. Review and edit before publishing.
+                {modules.length} modules generated. Review, edit, then publish.
               </p>
             </div>
 
@@ -548,52 +694,54 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
             <div className="space-y-3">
               {modules.map((mod, idx) => {
                 const isExpanded = expandedModule === idx;
-                const isEditingContent = editingContent.has(idx);
-                const isEditingQuiz = editingQuiz.has(idx);
-                const isShowingFull = showFullContent.has(idx);
-                const quizCount = Array.isArray(mod.quiz) ? mod.quiz.length : 0;
+                const quizArr = Array.isArray(mod.quiz) ? mod.quiz : [];
+                const quizCount = quizArr.length;
+                const slideCount = (mod.content.match(/^## /gm) || []).length;
                 const isRegenerating = regeneratingQuiz.has(idx);
 
                 return (
-                  <div key={idx} className="border border-border rounded-lg overflow-hidden bg-bg-surface">
-                    {/* Accordion header */}
+                  <div key={idx} className={cn("rounded-xl border-2 overflow-hidden transition-all", isExpanded ? "border-accent/30 shadow-sm" : "border-border")}>
+                    {/* Header */}
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between p-4 hover:bg-bg-primary transition-colors"
+                      className="w-full flex items-center gap-3 p-4 hover:bg-bg-surface transition-colors text-left"
                       onClick={() => setExpandedModule(isExpanded ? null : idx)}
                     >
-                      <div className="flex items-center gap-3 min-w-0 text-left">
-                        <span className="h-6 w-6 rounded-full bg-accent/20 text-accent text-xs font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="font-medium text-text-primary truncate">{mod.title || `Module ${idx + 1}`}</span>
+                      <div className="h-8 w-8 rounded-full bg-gold/10 text-gold text-sm font-bold flex items-center justify-center shrink-0">
+                        {idx + 1}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        {quizCount > 0 && (
-                          <Badge variant="default" className="text-xs">{quizCount} Q</Badge>
-                        )}
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-text-primary truncate">{mod.title || `Module ${idx + 1}`}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {slideCount > 0 && <span className="text-xs text-text-muted">{slideCount} slides</span>}
+                          {quizCount > 0 && <span className="text-xs text-text-muted">{quizCount} quiz questions</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isExpanded
+                          ? <ChevronUp className="h-4 w-4 text-text-muted" />
+                          : <ChevronDown className="h-4 w-4 text-text-muted" />}
                       </div>
                     </button>
 
-                    {/* Accordion content */}
+                    {/* Body */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 space-y-4 border-t border-border">
-                        {/* Title edit */}
-                        <div className="pt-3">
-                          <label className="text-xs font-medium text-text-muted">Module Title</label>
+                      <div className="border-t border-border bg-bg-card px-4 pb-5 space-y-4">
+                        {/* Title */}
+                        <div className="pt-4">
+                          <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Module Title</label>
                           <input
-                            className="input mt-1 w-full"
+                            className="input mt-1 w-full font-medium"
                             value={mod.title}
                             onChange={e => updateModuleTitle(idx, e.target.value)}
                           />
                         </div>
 
-                        {/* Content section */}
+                        {/* Content */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-medium text-text-muted">Content</label>
-                            <div className="flex items-center gap-2">
+                            <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Content</label>
+                            <div className="flex items-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => setSlideshowModule(idx)}
@@ -604,82 +752,87 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
                               <button
                                 type="button"
                                 onClick={() => setEditingContent(prev => {
-                                  const next = new Set(prev);
-                                  if (next.has(idx)) next.delete(idx); else next.add(idx);
-                                  return next;
+                                  const s = new Set(prev);
+                                  if (s.has(idx)) s.delete(idx); else s.add(idx);
+                                  return s;
                                 })}
                                 className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary font-medium transition-colors"
                               >
-                                <Edit2 className="h-3.5 w-3.5" /> {isEditingContent ? "Collapse" : "Edit Content"}
+                                <Edit2 className="h-3.5 w-3.5" />
+                                {editingContent.has(idx) ? "Collapse" : "Edit"}
                               </button>
                             </div>
                           </div>
 
-                          {isEditingContent ? (
+                          {editingContent.has(idx) ? (
                             <textarea
-                              className="input w-full resize-y font-mono text-xs"
-                              rows={12}
+                              className="input w-full resize-y font-mono text-xs leading-relaxed"
+                              rows={14}
                               value={mod.content}
                               onChange={e => updateModuleContent(idx, e.target.value)}
                             />
                           ) : (
-                            <div className="bg-bg-primary rounded-lg p-3 text-sm text-text-secondary border border-border">
+                            <div className="bg-bg-primary rounded-lg p-3 text-xs text-text-secondary border border-border font-mono leading-relaxed">
                               <p className="whitespace-pre-wrap break-words">
-                                {isShowingFull ? mod.content : (mod.content.slice(0, 200) + (mod.content.length > 200 ? "..." : ""))}
+                                {showFullContent.has(idx)
+                                  ? mod.content
+                                  : mod.content.slice(0, 300) + (mod.content.length > 300 ? "…" : "")}
                               </p>
-                              {mod.content.length > 200 && (
+                              {mod.content.length > 300 && (
                                 <button
                                   type="button"
-                                  className="text-xs text-accent hover:text-accent/80 mt-1 font-medium transition-colors"
+                                  className="text-accent hover:text-accent/80 mt-2 font-sans font-medium transition-colors"
                                   onClick={() => setShowFullContent(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(idx)) next.delete(idx); else next.add(idx);
-                                    return next;
+                                    const s = new Set(prev);
+                                    if (s.has(idx)) s.delete(idx); else s.add(idx);
+                                    return s;
                                   })}
                                 >
-                                  {isShowingFull ? "Show less" : "Show full"}
+                                  {showFullContent.has(idx) ? "Show less" : "Show full content"}
                                 </button>
                               )}
                             </div>
                           )}
                         </div>
 
-                        {/* Quiz section */}
+                        {/* Quiz */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-medium text-text-muted">
-                              Quiz{" "}
-                              <Badge variant="default" className="text-xs ml-1">{quizCount} questions</Badge>
+                            <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                              Quiz <Badge variant="default" className="ml-1 text-[10px]">{quizCount} questions</Badge>
                             </label>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => regenerateQuiz(idx)}
                                 disabled={isRegenerating}
-                                className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1 text-xs text-text-muted hover:text-accent font-medium transition-colors disabled:opacity-40"
                               >
                                 <RefreshCw className={cn("h-3.5 w-3.5", isRegenerating && "animate-spin")} />
-                                {isRegenerating ? "Regenerating..." : "Regenerate Quiz"}
+                                {isRegenerating ? "Regenerating…" : "Regenerate"}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingQuiz(prev => {
-                                  const next = new Set(prev);
-                                  if (next.has(idx)) next.delete(idx); else next.add(idx);
-                                  return next;
+                                  const s = new Set(prev);
+                                  if (s.has(idx)) s.delete(idx); else s.add(idx);
+                                  return s;
                                 })}
                                 className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary font-medium transition-colors"
                               >
-                                <Edit2 className="h-3.5 w-3.5" /> {isEditingQuiz ? "Collapse" : "Edit JSON"}
+                                <Edit2 className="h-3.5 w-3.5" />
+                                {editingQuiz.has(idx) ? "Collapse" : "Edit JSON"}
                               </button>
                             </div>
                           </div>
 
-                          {isEditingQuiz && (
+                          {editingQuiz.has(idx) && (
                             <textarea
-                              className="input w-full resize-y font-mono text-xs"
-                              rows={8}
-                              value={typeof mod.quiz === "string" ? (mod.quiz as string) : JSON.stringify(mod.quiz, null, 2)}
+                              className="input w-full resize-y font-mono text-xs leading-relaxed"
+                              rows={10}
+                              value={typeof mod.quiz === "string"
+                                ? (mod.quiz as string)
+                                : JSON.stringify(mod.quiz, null, 2)}
                               onChange={e => updateModuleQuiz(idx, e.target.value)}
                             />
                           )}
@@ -692,19 +845,23 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
             </div>
 
             {/* Badge settings */}
-            <div className="border border-border rounded-lg overflow-hidden bg-bg-surface">
+            <div className="rounded-xl border border-border overflow-hidden">
               <button
                 type="button"
-                className="w-full flex items-center justify-between p-4 hover:bg-bg-primary transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-bg-surface transition-colors text-left"
                 onClick={() => setShowBadgeSettings(v => !v)}
               >
-                <span className="font-medium text-text-primary text-sm">Badge &amp; Completion Settings</span>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-gold" />
+                  <span className="text-sm font-semibold text-text-primary">Badge &amp; Completion Settings</span>
+                </div>
                 {showBadgeSettings ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
               </button>
+
               {showBadgeSettings && (
-                <div className="px-4 pb-4 space-y-4 border-t border-border">
-                  <div className="pt-3">
-                    <label className="text-xs font-medium text-text-muted">Badge Label</label>
+                <div className="border-t border-border px-4 pb-5 space-y-4">
+                  <div className="pt-4">
+                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Badge Label</label>
                     <input
                       className="input mt-1 w-full"
                       value={badgeLabel}
@@ -713,7 +870,7 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-text-muted block mb-2">Badge Color</label>
+                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wide block mb-2">Badge Color</label>
                     <div className="flex gap-3">
                       {BADGE_COLORS.map(c => (
                         <button
@@ -722,55 +879,65 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
                           onClick={() => setBadgeColor(c.value)}
                           className={cn(
                             "flex flex-col items-center gap-1.5 p-2 rounded-lg border-2 transition-colors",
-                            badgeColor === c.value ? "border-accent" : "border-transparent"
+                            badgeColor === c.value ? "border-accent shadow-sm" : "border-transparent hover:border-border"
                           )}
                         >
-                          <div className="h-6 w-6 rounded-full" style={{ backgroundColor: c.hex }} />
+                          <div className="h-7 w-7 rounded-full shadow-sm" style={{ backgroundColor: c.hex }} />
                           <span className="text-xs text-text-muted">{c.label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-text-muted">Estimated Minutes</label>
+                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">Estimated Minutes</label>
                     <input
-                      className="input mt-1 w-32"
-                      type="number"
-                      min={1}
+                      className="input mt-1 w-28"
+                      type="number" min={1}
                       value={estimatedMinutes}
                       onChange={e => setEstimatedMinutes(Number(e.target.value))}
                     />
+                    <p className="text-xs text-text-muted mt-1">Auto-calculated from module count</p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Bottom actions */}
-            <div className="flex items-center justify-between pt-2 pb-8">
-              <Button variant="outline" onClick={() => setStep(1)}>← Back to Settings</Button>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  loading={saving}
-                  disabled={saving || modules.length === 0}
-                >
-                  Save as Draft
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  loading={saving}
-                  disabled={saving || modules.length === 0}
-                >
-                  Save &amp; Publish
-                </Button>
-              </div>
-            </div>
+            {/* Spacer so sticky bar doesn't overlap last card */}
+            <div className="h-4" />
           </div>
         )}
       </div>
 
-      {/* Slideshow overlay */}
+      {/* Sticky bottom action bar — only on step 4 */}
+      {step === 4 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-bg-primary/95 backdrop-blur-sm px-4 sm:px-8 py-4">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+            <Button variant="outline" onClick={() => setStep(1)}>
+              ← Back to Settings
+            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                loading={saving}
+                disabled={saving || modules.length === 0}
+              >
+                Save as Draft
+              </Button>
+              <Button
+                onClick={handleSave}
+                loading={saving}
+                disabled={saving || modules.length === 0}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" /> Publish Course
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Slideshow preview overlay */}
       {slideshowModule !== null && modules[slideshowModule] && (
         <Slideshow
           content={modules[slideshowModule].content}

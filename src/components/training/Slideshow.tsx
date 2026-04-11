@@ -267,8 +267,8 @@ function MermaidDiagram({ chart }: { chart: string }) {
                   r.setAttribute("ry", "10");
                 });
                 node.querySelectorAll("text").forEach(t => {
-                  (t as HTMLElement).style.fill = "#ffffff";
-                  (t as HTMLElement).style.fontWeight = "500";
+                  (t as unknown as HTMLElement).style.fill = "#ffffff";
+                  (t as unknown as HTMLElement).style.fontWeight = "500";
                 });
               });
             }
@@ -330,7 +330,11 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
   };
 
   const slides = [introSlide, ...contentSlides];
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
   const [current, setCurrent] = useState(0);
+  const currentRef = useRef(0);
+  currentRef.current = current;
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [autoPlay, setAutoPlay] = useState(true);
@@ -371,15 +375,17 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     if (!mountedRef.current) return;
     setSpeaking(false);
     if (autoPlay) {
+      const hasDiagram = slidesRef.current[currentRef.current]?.body?.includes('```mermaid') ?? false;
+      const delay = hasDiagram ? 6000 : 2000;
       advanceTimerRef.current = setTimeout(() => {
         if (!mountedRef.current) return;
         setCurrent(prev => {
-          const totalSlides = contentSlides.length + 1;
+          const totalSlides = slidesRef.current.length;
           return prev < totalSlides - 1 ? prev + 1 : prev;
         });
-      }, 2000);
+      }, delay);
     }
-  }, [autoPlay, contentSlides.length]);
+  }, [autoPlay]);
 
   // Play a cached blob URL immediately
   const playFromUrl = useCallback((url: string, owned: boolean) => {

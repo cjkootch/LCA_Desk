@@ -7678,7 +7678,7 @@ export async function fetchAdminCourses() {
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
-  return db.select({
+  const allCourses = await db.select({
     id: courses.id,
     slug: courses.slug,
     title: courses.title,
@@ -7692,6 +7692,12 @@ export async function fetchAdminCourses() {
     mandatory: courses.mandatory,
     active: courses.active,
   }).from(courses).orderBy(asc(courses.title));
+
+  // Secretariat users cannot see affiliate courses
+  if (!isSuperAdmin) {
+    return allCourses.filter(c => c.audience !== "affiliate");
+  }
+  return allCourses;
 }
 
 export async function createCourse(input: {
@@ -7710,6 +7716,11 @@ export async function createCourse(input: {
   const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  // Secretariat users cannot create affiliate courses
+  if (!isSuperAdmin && input.audience === "affiliate") {
+    throw new Error("Secretariat users cannot create affiliate courses");
+  }
 
   const [course] = await db.insert(courses).values({
     slug: input.slug,
