@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EmptyState } from "@/components/shared/EmptyState";
 import {
   FileText, CheckCircle, Search, Shield, Eye,
-  AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download,
+  AlertTriangle, TrendingUp, TrendingDown, Plus, Trash2, Send, Clock, Download, Play,
 } from "lucide-react";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
+import { PlatformBriefing } from "@/components/onboarding/PlatformBriefing";
 import { fetchSecretariatDashboard, fetchSecretariatAnalytics, fetchSubmissionDetail, acknowledgeSubmission, fetchPeriodComparison, createAmendmentRequest, fetchAmendmentRequests, fetchSecretariatOfficeSettings } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
 import { DashboardIdentity, DashboardStats, StatusCard } from "@/components/dashboard/shared/DashboardTemplate";
@@ -35,6 +37,24 @@ function formatCurrency(amount: number): string {
 }
 
 export default function SecretariatDashboardPage() {
+  const { data: session } = useSession();
+
+  // Briefing state
+  const [showBriefingCard, setShowBriefingCard] = useState(false);
+  const [briefingActive, setBriefingActive] = useState(false);
+
+  useEffect(() => {
+    const completed = localStorage.getItem("secretariat-briefing-completed");
+    const isDemo = session?.user?.email?.includes("demo-");
+    if (!completed || isDemo) setShowBriefingCard(true);
+  }, [session]);
+
+  const completeBriefing = () => {
+    localStorage.setItem("secretariat-briefing-completed", "true");
+    setBriefingActive(false);
+    setShowBriefingCard(false);
+  };
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -154,6 +174,45 @@ export default function SecretariatDashboardPage() {
     <div className="p-4 sm:p-6 max-w-6xl space-y-5">
       <AnnouncementBanner userRole="secretariat" />
 
+      {/* Platform Briefing welcome card */}
+      {showBriefingCard && !briefingActive && (
+        <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-xl bg-accent/10 shrink-0">
+              <Shield className="h-6 w-6 text-accent" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-heading font-bold text-text-primary mb-1">
+                Welcome to LCA Desk
+              </h2>
+              <p className="text-sm text-text-secondary mb-4">
+                Take a 3-minute guided briefing to learn how the platform works — with audio narration.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setBriefingActive(true)}
+                  className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-all hover:shadow-lg hover:shadow-accent/20"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Platform Briefing
+                </button>
+                <button
+                  onClick={completeBriefing}
+                  className="text-sm text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  I&apos;ll explore on my own
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Platform Briefing overlay */}
+      {briefingActive && (
+        <PlatformBriefing onComplete={completeBriefing} />
+      )}
+
       {/* Identity */}
       <DashboardIdentity
         name={office?.name || "Local Content Secretariat"}
@@ -192,7 +251,7 @@ export default function SecretariatDashboardPage() {
       )}
 
       {/* ── Submission Queue ─────────────────────────────────── */}
-      <section>
+      <section data-briefing="submissions">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-heading font-semibold text-text-primary">Submission Queue</h2>

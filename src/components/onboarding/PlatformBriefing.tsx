@@ -1,0 +1,388 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, ChevronRight, ChevronLeft, Volume2, VolumeX, Shield } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export interface BriefingStep {
+  id: string;
+  title: string;
+  narration: string;
+  bullets: string[];
+  target?: string;
+  position?: "left" | "right" | "top" | "bottom" | "center";
+}
+
+export const SECRETARIAT_BRIEFING: BriefingStep[] = [
+  {
+    id: "welcome",
+    title: "Welcome to Your Secretariat Dashboard",
+    narration: "Welcome to LCA Desk. This is your command center for monitoring local content compliance across your jurisdiction. Over the next few minutes, I'll walk you through the key areas you'll use every day. You can pause or skip at any time.",
+    bullets: [
+      "This briefing covers 8 key areas of your dashboard",
+      "Takes about 3 minutes",
+      "Pause or skip anytime — you can replay from Support",
+    ],
+    position: "center",
+  },
+  {
+    id: "submissions",
+    title: "Submission Review Queue",
+    narration: "This is your submission queue. Every Half-Yearly Report filed by a contractor or sub-contractor in your jurisdiction appears here. Reports arrive with a pending review status. You'll open each one, verify the data against supporting documents, and either approve it or send it back with comments. The queue is sorted by deadline proximity, so the most urgent filings appear first.",
+    bullets: [
+      "Half-Yearly Reports land here when filed",
+      "Sorted by deadline — most urgent first",
+      "Open to review, approve, or request corrections",
+      "Status badges show where each filing stands",
+    ],
+    target: "[data-briefing='submissions']",
+    position: "right",
+  },
+  {
+    id: "review",
+    title: "Reviewing a Filing",
+    narration: "When you open a submission, you'll see the full filing broken into sections: expenditure records, employment data, capacity development, and the comparative analysis narrative. For expenditure, cross-reference supplier payments against LCS certificate numbers. For employment, verify that Guyanese percentages meet the minimums: 75 percent for managerial, 60 percent for technical, 80 percent for non-technical. The AI has already flagged potential issues, which appear as yellow warnings.",
+    bullets: [
+      "Expenditure: verify LCS certificate numbers",
+      "Employment: check against 75% / 60% / 80% minimums",
+      "Narrative: AI-generated, review for accuracy",
+      "Yellow flags = potential compliance issues to investigate",
+    ],
+    position: "center",
+  },
+  {
+    id: "compliance",
+    title: "Compliance Monitoring",
+    narration: "The compliance dashboard gives you a bird's-eye view of every entity in your jurisdiction. Green means they're meeting all requirements. Yellow means they're at risk — perhaps employment percentages are close to the minimum, or a deadline is approaching. Red means they've missed a deadline or are below required thresholds. Click any entity to drill into their specific compliance history.",
+    bullets: [
+      "Green = fully compliant",
+      "Yellow = at risk, approaching minimums",
+      "Red = missed deadline or below thresholds",
+      "Click any entity to see their full history",
+    ],
+    target: "[data-briefing='compliance']",
+    position: "right",
+  },
+  {
+    id: "register",
+    title: "The LCS Register",
+    narration: "The LCS Register is the official database of certified Guyanese suppliers. Contractors use this register to verify that their suppliers qualify for local content credit. From here, you can review new applications, renew certificates, and flag expired registrations. Every certificate has a unique LCSR number that contractors reference in their filings.",
+    bullets: [
+      "Official database of certified suppliers",
+      "Review applications, renew certificates",
+      "LCSR numbers link suppliers to filing data",
+      "Expired certificates are flagged automatically",
+    ],
+    target: "[data-briefing='register']",
+    position: "left",
+  },
+  {
+    id: "training",
+    title: "Training & Course Management",
+    narration: "You can create compliance training courses specific to your jurisdiction. The AI course builder generates complete modules from a few topic prompts — slides, diagrams, quizzes, and voice narration. Courses you publish here are available to all users in your market. This is a powerful tool for standardizing compliance knowledge across your industry.",
+    bullets: [
+      "Create jurisdiction-specific training courses",
+      "AI builds slides, diagrams, and quizzes for you",
+      "Published courses appear for all users in your market",
+      "Use templates: Compliance Overview, Practical Guide, and more",
+    ],
+    target: "[data-briefing='training']",
+    position: "right",
+  },
+  {
+    id: "team",
+    title: "Team Management",
+    narration: "Invite your colleagues to join the Secretariat dashboard. Each team member can be assigned specific review permissions. You control who can approve submissions, manage the register, and create training content. Only the team owner can change roles or remove members.",
+    bullets: [
+      "Invite reviewers with specific permissions",
+      "Control who can approve, manage register, create courses",
+      "Only the owner can change roles",
+    ],
+    target: "[data-briefing='team']",
+    position: "right",
+  },
+  {
+    id: "ready",
+    title: "You're All Set",
+    narration: "That's your platform briefing complete. Remember, you can find information icons throughout the dashboard that explain each section in detail. If you need help at any time, the support tab has direct access to our team. You can also replay this briefing from the support page. Welcome aboard.",
+    bullets: [
+      "Look for (i) icons for detailed explanations",
+      "Support tab for direct help",
+      "Replay this briefing anytime from Support",
+      "Welcome to LCA Desk",
+    ],
+    position: "center",
+  },
+];
+
+interface PlatformBriefingProps {
+  onComplete: () => void;
+  steps?: BriefingStep[];
+}
+
+export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: PlatformBriefingProps) {
+  const [current, setCurrent] = useState(0);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
+  const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mountedRef = useRef(true);
+
+  const step = steps[current];
+  const isFirst = current === 0;
+  const isLast = current === steps.length - 1;
+  const progress = ((current + 1) / steps.length) * 100;
+
+  // Find and measure the spotlight target
+  useEffect(() => {
+    if (!step.target) { setSpotlightRect(null); return; }
+    // Small delay to ensure layout is settled after step change
+    const timer = setTimeout(() => {
+      if (!step.target) return;
+      try {
+        const el = document.querySelector(step.target);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            setSpotlightRect(rect);
+            // Scroll element into view
+            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            return;
+          }
+        }
+      } catch {}
+      setSpotlightRect(null);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [step.target, current]);
+
+  // Speak the narration
+  const speak = useCallback(async (text: string) => {
+    if (!audioEnabled || !text) return;
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setSpeaking(true);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: "nova" }),
+      });
+      if (!res.ok || !mountedRef.current) { setSpeaking(false); return; }
+      const blob = await res.blob();
+      if (!mountedRef.current) { setSpeaking(false); return; }
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
+      audio.play().catch(() => { setSpeaking(false); });
+    } catch {
+      if (mountedRef.current) setSpeaking(false);
+    }
+  }, [audioEnabled]);
+
+  // Speak on step change
+  useEffect(() => {
+    speak(step.narration);
+    return () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      setSpeaking(false);
+    };
+  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    };
+  }, []);
+
+  const stopAudio = () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setSpeaking(false);
+  };
+
+  const next = () => { stopAudio(); setCurrent(c => Math.min(c + 1, steps.length - 1)); };
+  const prev = () => { stopAudio(); setCurrent(c => Math.max(c - 1, 0)); };
+  const skip = () => { stopAudio(); onComplete(); };
+
+  // Card positioning
+  const getCardStyle = (): React.CSSProperties => {
+    const padding = 24;
+    const cardWidth = 380;
+
+    if (!spotlightRect || step.position === "center") {
+      return { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: cardWidth };
+    }
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    switch (step.position) {
+      case "right": {
+        const left = Math.min(spotlightRect.right + padding, vw - cardWidth - 16);
+        const top = Math.max(16, Math.min(spotlightRect.top, vh - 480));
+        return { position: "fixed", top, left, width: cardWidth };
+      }
+      case "left": {
+        const right = Math.max(16, vw - spotlightRect.left + padding);
+        const top = Math.max(16, Math.min(spotlightRect.top, vh - 480));
+        return { position: "fixed", top, right, width: cardWidth };
+      }
+      case "bottom": {
+        const top = Math.min(spotlightRect.bottom + padding, vh - 480);
+        const left = Math.max(16, Math.min(spotlightRect.left, vw - cardWidth - 16));
+        return { position: "fixed", top, left, width: cardWidth };
+      }
+      default:
+        return { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: cardWidth };
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300]" aria-modal="true" role="dialog" aria-label="Platform Briefing">
+      {/* Backdrop with optional spotlight cutout */}
+      <div
+        className="absolute inset-0 bg-black/60 transition-all duration-500"
+        style={spotlightRect ? {
+          clipPath: `polygon(
+            0% 0%, 100% 0%, 100% 100%, 0% 100%,
+            0% ${spotlightRect.top - 12}px,
+            ${spotlightRect.left - 12}px ${spotlightRect.top - 12}px,
+            ${spotlightRect.left - 12}px ${spotlightRect.bottom + 12}px,
+            ${spotlightRect.right + 12}px ${spotlightRect.bottom + 12}px,
+            ${spotlightRect.right + 12}px ${spotlightRect.top - 12}px,
+            0% ${spotlightRect.top - 12}px
+          )`,
+        } : undefined}
+        onClick={skip}
+      />
+
+      {/* Spotlight border glow */}
+      {spotlightRect && (
+        <div
+          className="absolute border-2 border-accent/60 rounded-xl pointer-events-none transition-all duration-500"
+          style={{
+            top: spotlightRect.top - 12,
+            left: spotlightRect.left - 12,
+            width: spotlightRect.width + 24,
+            height: spotlightRect.height + 24,
+            boxShadow: "0 0 30px rgba(113, 181, 154, 0.3)",
+          }}
+        />
+      )}
+
+      {/* Briefing card */}
+      <div
+        className="absolute bg-bg-card border border-border rounded-2xl shadow-2xl p-6 max-w-[90vw]"
+        style={getCardStyle()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-accent/10">
+              <Shield className="h-3.5 w-3.5 text-accent" />
+            </div>
+            <span className="text-xs text-text-muted font-medium">
+              Platform Briefing · {current + 1} of {steps.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                if (audioEnabled) stopAudio();
+                setAudioEnabled(!audioEnabled);
+              }}
+              className="p-1.5 rounded-lg hover:bg-bg-primary transition-colors"
+              title={audioEnabled ? "Mute narration" : "Enable narration"}
+            >
+              {audioEnabled
+                ? <Volume2 className="h-4 w-4 text-accent" />
+                : <VolumeX className="h-4 w-4 text-text-muted" />
+              }
+            </button>
+            <button onClick={skip} className="p-1.5 rounded-lg hover:bg-bg-primary transition-colors" title="Close briefing">
+              <X className="h-4 w-4 text-text-muted" />
+            </button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1 bg-bg-primary rounded-full mb-4 overflow-hidden">
+          <div
+            className="h-full bg-accent rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Content */}
+        <h3 className="text-lg font-heading font-bold text-text-primary mb-3">{step.title}</h3>
+        <ul className="space-y-2 mb-5">
+          {step.bullets.map((b, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-sm text-text-secondary">
+              <div className="h-1.5 w-1.5 rounded-full bg-accent mt-2 shrink-0" />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* Speaking indicator */}
+        {speaking && (
+          <div className="flex items-center gap-2 mb-4 text-xs text-accent">
+            <div className="flex gap-0.5 items-end h-4">
+              {[0, 150, 300, 100, 200].map((delay, i) => (
+                <div
+                  key={i}
+                  className={cn("w-1 rounded-full bg-accent/70 animate-pulse", [
+                    "h-3", "h-4", "h-2.5", "h-3.5", "h-2",
+                  ][i])}
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
+            </div>
+            <span>Narrating...</span>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={prev}
+            disabled={isFirst}
+            className="flex items-center gap-1 text-sm text-text-muted hover:text-text-primary disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back
+          </button>
+
+          {isLast ? (
+            <button
+              onClick={onComplete}
+              className="flex items-center gap-1.5 bg-accent text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors"
+            >
+              Get Started
+            </button>
+          ) : (
+            <button
+              onClick={next}
+              className="flex items-center gap-1.5 bg-accent text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {!isLast && (
+          <button
+            onClick={skip}
+            className="w-full text-center text-xs text-text-muted hover:text-text-secondary mt-3 transition-colors"
+          >
+            Skip briefing
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

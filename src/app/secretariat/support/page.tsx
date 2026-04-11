@@ -303,6 +303,17 @@ export default function SupportPage() {
                     </div>
                   </Link>
                 ))}
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("secretariat-briefing-completed");
+                    window.location.href = "/secretariat/dashboard";
+                  }}
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-bg-primary transition-colors w-full text-left"
+                >
+                  <BookOpen className="h-3.5 w-3.5 text-accent" />
+                  <span className="text-xs text-accent font-medium">Replay Platform Briefing</span>
+                  <ArrowRight className="h-3 w-3 text-text-muted ml-auto" />
+                </button>
               </div>
             </CardContent>
           </Card>
