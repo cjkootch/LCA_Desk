@@ -48,7 +48,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Narrative: AI-generated, review for accuracy",
       "Yellow flags = potential compliance issues to investigate",
     ],
-    position: "center",
+    target: '[href="/secretariat/compliance"], [href="/secretariat/reports"]',
+    position: "right",
   },
   {
     id: "compliance",
@@ -60,7 +61,7 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Red = missed deadline or below thresholds",
       "Click any entity to see their full history",
     ],
-    target: "[data-briefing='compliance']",
+    target: '[href="/secretariat/compliance"]',
     position: "right",
   },
   {
@@ -73,8 +74,8 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "LCSR numbers link suppliers to filing data",
       "Expired certificates are flagged automatically",
     ],
-    target: "[data-briefing='register']",
-    position: "left",
+    target: '[href="/secretariat/suppliers"], [href="/secretariat/applications"]',
+    position: "right",
   },
   {
     id: "training",
@@ -86,7 +87,7 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Published courses appear for all users in your market",
       "Use templates: Compliance Overview, Practical Guide, and more",
     ],
-    target: "[data-briefing='training']",
+    target: '[href="/secretariat/courses"], [href="/secretariat/training"]',
     position: "right",
   },
   {
@@ -98,20 +99,21 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
       "Control who can approve, manage register, create courses",
       "Only the owner can change roles",
     ],
-    target: "[data-briefing='team']",
+    target: '[href="/secretariat/team"]',
     position: "right",
   },
   {
     id: "ready",
-    title: "You're All Set",
-    narration: "That's your platform briefing complete. Remember, you can find information icons throughout the dashboard that explain each section in detail. If you need help at any time, the support tab has direct access to our team. You can also replay this briefing from the support page. Welcome aboard.",
+    title: "Ready to Talk?",
+    narration: "That completes your platform briefing. When you're ready to discuss how LCA Desk fits your jurisdiction, tap the contact button to reach me directly — by email, Teams, or WhatsApp. You can also view a tailored proposal I've prepared. Take your time exploring the dashboard. Every section has an info icon if you need more detail. Welcome to LCA Desk.",
     bullets: [
-      "Look for (i) icons for detailed explanations",
-      "Support tab for direct help",
-      "Replay this briefing anytime from Support",
-      "Welcome to LCA Desk",
+      "Tap the contact button to reach Cole directly",
+      "View the tailored proposal for your jurisdiction",
+      "Explore the dashboard — (i) icons explain each section",
+      "Switch demo views anytime from the banner above",
     ],
-    position: "center",
+    target: "[data-briefing='contact-card']",
+    position: "left",
   },
 ];
 
@@ -398,21 +400,25 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
       {/* Spotlight border glow */}
       {spotlightRect && (
         <div
-          className="absolute border-2 border-accent/60 rounded-xl pointer-events-none transition-all duration-500"
+          className="absolute border-2 border-accent/60 rounded-xl pointer-events-none"
           style={{
             top: spotlightRect.top - 12,
             left: spotlightRect.left - 12,
             width: spotlightRect.width + 24,
             height: spotlightRect.height + 24,
             boxShadow: "0 0 30px rgba(113, 181, 154, 0.3)",
+            transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         />
       )}
 
       {/* Briefing card */}
       <div
-        className="absolute bg-bg-card border border-border rounded-2xl shadow-2xl p-6 max-w-[90vw]"
-        style={getCardStyle()}
+        className="absolute bg-bg-card border border-border rounded-2xl shadow-2xl p-6 w-[380px] max-w-[90vw]"
+        style={{
+          ...getCardStyle(),
+          transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
