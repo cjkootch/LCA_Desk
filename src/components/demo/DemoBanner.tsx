@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getPlan, getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
+import { getEffectivePlan, isInTrial, getTrialDaysRemaining } from "@/lib/plans";
 import { fetchPlanAndUsage } from "@/server/actions";
 import { ChevronDown, ChevronUp, CheckCircle, XCircle } from "lucide-react";
 
@@ -13,13 +13,13 @@ export function DemoBanner() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [planData, setPlanData] = useState<any>(null);
 
+  const isDemo = !!email && email.endsWith("@lcadesk.com") && email.startsWith("demo-");
+
   useEffect(() => {
-    if (email?.startsWith("demo-")) {
+    if (isDemo && !email.includes("secretariat") && !email.includes("seeker")) {
       fetchPlanAndUsage().then(setPlanData).catch(() => {});
     }
-  }, [email]);
-
-  const isDemo = !!email && email.endsWith("@lcadesk.com") && email.startsWith("demo-");
+  }, [email, isDemo]);
 
   // Set CSS variable so sidebars and content can offset for the banner
   useEffect(() => {
@@ -29,17 +29,18 @@ export function DemoBanner() {
 
   if (!isDemo || !email) return null;
 
-  const label = email.includes("filer-lite") ? "Filer (Lite)" :
-    email.includes("filer-pro") ? "Filer (Pro)" :
-    email.includes("filer-trial") ? "Filer (Trial)" :
-    email.includes("filer-expired") ? "Filer (Expired Trial)" :
-    email.includes("secretariat") ? "Secretariat" :
+  const viewingAs = email.includes("secretariat") ? "Secretariat" :
     email.includes("seeker") ? "Job Seeker" :
+    email.includes("filer-lite") ? "Contractor (Lite)" :
+    email.includes("filer-pro") ? "Contractor (Pro)" :
+    email.includes("filer-trial") ? "Contractor (Trial)" :
+    email.includes("filer-expired") ? "Contractor (Expired)" :
     email.includes("supplier") ? "Supplier" :
     email.includes("admin") ? "Super Admin" : "Demo";
 
   const isSecretariat = email.includes("secretariat");
-  const isSeeker = email.includes("seeker") && !email.includes("secretariat");
+  const isSeeker = email.includes("seeker");
+  const isFiler = !isSecretariat && !isSeeker && email.includes("filer");
 
   const effectivePlan = planData ? getEffectivePlan(planData.plan, planData.trialEndsAt) : null;
   const inTrial = planData ? isInTrial(planData.trialEndsAt) : false;
@@ -47,34 +48,32 @@ export function DemoBanner() {
 
   return (
     <>
-      <div
-        className="fixed top-0 left-0 right-0 z-[100] h-7 bg-gold text-white text-center py-1 text-sm font-medium tracking-wide cursor-pointer select-none flex items-center justify-center gap-2"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <span>DEMO MODE — {label}</span>
-        <span className="opacity-60">·</span>
-        <a href="/demo" className="underline" onClick={e => e.stopPropagation()}>Switch User</a>
-        <span className="opacity-60">·</span>
-        <span className="flex items-center gap-0.5">
-          Info {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      <div className="fixed top-0 left-0 right-0 z-[100] h-7 bg-gold text-white py-1 text-sm font-medium tracking-wide select-none flex items-center justify-between px-4">
+        <span
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => isFiler && setExpanded(!expanded)}
+        >
+          <span>Viewing as: <strong>{viewingAs}</strong></span>
+          {isFiler && (
+            <span className="flex items-center gap-0.5 opacity-80">
+              {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </span>
+          )}
         </span>
+
+        <a
+          href="/demo/select"
+          className="text-xs font-medium bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors"
+        >
+          Switch View
+        </a>
       </div>
 
-      {expanded && (isSecretariat || isSeeker) && (
-        <div className="fixed top-7 right-4 z-[100] w-72 bg-white border border-border rounded-xl shadow-xl overflow-hidden text-xs">
-          <div className="px-4 py-3 text-text-secondary leading-relaxed">
-            {isSecretariat
-              ? "You're viewing a demo of the Secretariat portal. All data is sample data."
-              : "You're viewing a demo of the Job Seeker portal. All data is sample data."}
-          </div>
-        </div>
-      )}
-
-      {expanded && !isSecretariat && !isSeeker && effectivePlan && (
+      {expanded && isFiler && effectivePlan && (
         <div className="fixed top-7 right-4 z-[100] w-80 bg-white border border-border rounded-xl shadow-xl overflow-hidden text-xs">
           <div className="bg-bg-primary px-4 py-2 border-b border-border">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-text-primary">{label}</span>
+              <span className="font-bold text-text-primary">{viewingAs}</span>
               <span className="text-text-muted font-mono">{email}</span>
             </div>
             <div className="flex items-center gap-2 mt-1 text-text-secondary">

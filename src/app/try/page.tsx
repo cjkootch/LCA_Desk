@@ -1,70 +1,24 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 
-/**
- * Auto-logs in as the demo filer user and redirects to /dashboard.
- * Only works when NEXT_PUBLIC_DEMO_PASSWORD is set.
- */
 export default function TryPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
-    const run = async () => {
-      try {
-        const res = await fetch("/api/demo/public-login?role=filer");
-        if (!res.ok) {
-          setError("Demo is not available right now. Please sign up for a free trial.");
-          return;
-        }
-        const { email, password } = await res.json() as { email: string; password: string };
+    fetch("/api/demo/public-login")
+      .then(r => r.json())
+      .then(async ({ email, password }: { email?: string; password?: string }) => {
+        if (!email) { window.location.href = "/auth/login"; return; }
         const result = await signIn("credentials", { email, password, redirect: false });
-        if (result?.error) {
-          setError("Could not log in to demo account. Please try again.");
-          return;
-        }
-        router.replace("/dashboard");
-      } catch {
-        setError("Something went wrong. Please try again.");
-      }
-    };
-    run();
-  }, [router]);
+        if (result?.error) { window.location.href = "/auth/login"; return; }
+        window.location.href = "/demo/select";
+      })
+      .catch(() => { window.location.href = "/auth/login"; });
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary px-4">
-      <Image src="/logo-full.svg" alt="LCA Desk" width={160} height={48} priority className="mb-8" />
-      {error ? (
-        <div className="text-center space-y-4">
-          <p className="text-sm text-text-secondary max-w-sm">{error}</p>
-          <a href="/auth/signup" className="text-accent hover:underline text-sm font-medium">
-            Start your free trial →
-          </a>
-        </div>
-      ) : (
-        <div className="text-center space-y-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto" />
-          <p className="text-sm text-text-muted">Loading your demo...</p>
-        </div>
-      )}
-      <div className="mt-10 text-center space-y-2 text-sm text-text-muted">
-        <p>
-          Are you a regulator?{" "}
-          <a href="/try/secretariat" className="text-accent hover:underline font-medium">
-            Try the Secretariat demo →
-          </a>
-        </p>
-        <p>
-          Looking for a job?{" "}
-          <a href="/try/seeker" className="text-accent hover:underline font-medium">
-            Try the Job Seeker demo →
-          </a>
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg-primary">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+      <p className="text-text-muted text-sm">Loading demo...</p>
     </div>
   );
 }
