@@ -7592,6 +7592,170 @@ export async function fetchPlgStats() {
   };
 }
 
+// ─── COURSE MANAGEMENT ────────────────────────────────────────────
+
+async function _checkSecretariatMember(userId: string) {
+  const [member] = await db.select({ id: secretariatMembers.id }).from(secretariatMembers).where(eq(secretariatMembers.userId, userId)).limit(1);
+  return !!member;
+}
+
+export async function fetchCourseModulesByAdmin(courseId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  return db.select({
+    id: courseModules.id,
+    courseId: courseModules.courseId,
+    orderIndex: courseModules.orderIndex,
+    title: courseModules.title,
+    content: courseModules.content,
+    quizQuestions: courseModules.quizQuestions,
+    passingScore: courseModules.passingScore,
+  }).from(courseModules).where(eq(courseModules.courseId, courseId)).orderBy(asc(courseModules.orderIndex));
+}
+
+export async function fetchAdminCourses() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  return db.select({
+    id: courses.id,
+    slug: courses.slug,
+    title: courses.title,
+    description: courses.description,
+    audience: courses.audience,
+    jurisdictionCode: courses.jurisdictionCode,
+    moduleCount: courses.moduleCount,
+    badgeLabel: courses.badgeLabel,
+    badgeColor: courses.badgeColor,
+    estimatedMinutes: courses.estimatedMinutes,
+    mandatory: courses.mandatory,
+    active: courses.active,
+  }).from(courses).orderBy(asc(courses.title));
+}
+
+export async function createCourse(input: {
+  slug: string;
+  title: string;
+  description?: string;
+  audience?: string;
+  jurisdictionCode?: string;
+  badgeLabel?: string;
+  badgeColor?: string;
+  estimatedMinutes?: number;
+  mandatory?: boolean;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const [course] = await db.insert(courses).values({
+    slug: input.slug,
+    title: input.title,
+    description: input.description ?? null,
+    audience: input.audience ?? "all",
+    jurisdictionCode: input.jurisdictionCode ?? null,
+    moduleCount: 0,
+    badgeLabel: input.badgeLabel ?? null,
+    badgeColor: input.badgeColor ?? null,
+    estimatedMinutes: input.estimatedMinutes ?? null,
+    mandatory: input.mandatory ?? false,
+    active: false,
+  }).returning();
+
+  return course;
+}
+
+export async function updateCourse(courseId: string, input: {
+  title?: string;
+  description?: string;
+  audience?: string;
+  jurisdictionCode?: string;
+  badgeLabel?: string;
+  badgeColor?: string;
+  estimatedMinutes?: number;
+  mandatory?: boolean;
+  active?: boolean;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const [updated] = await db.update(courses).set({ ...input }).where(eq(courses.id, courseId)).returning();
+  return updated;
+}
+
+export async function addModule(courseId: string, input: {
+  title: string;
+  content?: string;
+  quizQuestions?: string;
+  passingScore?: number;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const existing = await db.select({ orderIndex: courseModules.orderIndex }).from(courseModules).where(eq(courseModules.courseId, courseId)).orderBy(desc(courseModules.orderIndex)).limit(1);
+  const nextOrder = existing.length > 0 ? existing[0].orderIndex + 1 : 1;
+
+  const [mod] = await db.insert(courseModules).values({
+    courseId,
+    orderIndex: nextOrder,
+    title: input.title,
+    content: input.content ?? "",
+    quizQuestions: input.quizQuestions ?? "[]",
+    passingScore: input.passingScore ?? 80,
+  }).returning();
+
+  await db.update(courses).set({ moduleCount: nextOrder }).where(eq(courses.id, courseId));
+  return mod;
+}
+
+export async function updateModule(moduleId: string, input: {
+  title?: string;
+  content?: string;
+  quizQuestions?: string;
+  passingScore?: number;
+  orderIndex?: number;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const [updated] = await db.update(courseModules).set({ ...input }).where(eq(courseModules.id, moduleId)).returning();
+  return updated;
+}
+
+export async function deleteModule(moduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await _checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const [mod] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
+  if (!mod) throw new Error("Module not found");
+
+  await db.delete(courseModules).where(eq(courseModules.id, moduleId));
+
+  const remaining = await db.select({ id: courseModules.id }).from(courseModules).where(eq(courseModules.courseId, mod.courseId));
+  await db.update(courses).set({ moduleCount: remaining.length }).where(eq(courses.id, mod.courseId));
+}
+
 // ─── ONBOARDING ──────────────────────────────────────────────────
 export async function markOnboardingComplete() {
   "use server";

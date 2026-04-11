@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, Building2, FileText, Briefcase, Shield, TrendingUp,
   CreditCard, Clock, AlertTriangle, BarChart3, MessageSquare,
-  Database, Globe, Activity, LogIn, LineChart,
+  Database, Globe, Activity, LogIn, LineChart, GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkSuperAdmin, fetchAdminStats } from "@/server/actions";
@@ -96,6 +96,7 @@ export default function AdminPage() {
             { label: "Open Tickets", value: data.support.openTickets, icon: MessageSquare, color: "text-warning", href: "/dashboard/admin/tickets" },
           { label: "Product Analytics", value: "View →", icon: LineChart, color: "text-purple-500", href: "/dashboard/admin/analytics" },
           { label: "PLG Dashboard", value: "View →", icon: TrendingUp, color: "text-green-500", href: "/dashboard/admin/plg" },
+          { label: "Courses", value: "Manage →", icon: GraduationCap, color: "text-accent", href: "/dashboard/admin/courses" },
           ].map(s => {
             const Inner = (
               <Card key={s.label} className={s.href ? "hover:border-accent/30 transition-colors cursor-pointer" : ""}>

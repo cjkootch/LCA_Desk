@@ -48,7 +48,7 @@ function stripMarkdown(text: string): string {
 
 // Build TTS text with natural pacing — pauses between bullets and sections
 function buildSpeechText(heading: string, body: string): string {
-  const lines = body.split("\n").filter(Boolean);
+  const lines = body.replace(/```mermaid[\s\S]*?```/g, "").replace(/:::scenario[\s\S]*?:::/g, "").split("\n").filter(Boolean);
   const parts: string[] = [];
 
   if (heading) parts.push(heading + ".");
@@ -82,7 +82,7 @@ function buildSpeechText(heading: string, body: string): string {
 const WORDS_PER_SEC = 2.8;
 
 function estimateLineTimings(heading: string, body: string): number[] {
-  const lines = body.split("\n").filter(Boolean);
+  const lines = body.replace(/```mermaid[\s\S]*?```/g, "").replace(/:::scenario[\s\S]*?:::/g, "").split("\n").filter(Boolean);
   const timings: number[] = [];
   let cumulativeWords = 0;
 
@@ -103,6 +103,83 @@ function estimateLineTimings(heading: string, body: string): number[] {
   }
 
   return timings;
+}
+
+function ScenarioCard({ title, scenario, question, options, correctIndex }: {
+  title: string;
+  scenario: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className="my-6 rounded-xl border-2 border-[#19544c]/20 bg-white/70 overflow-hidden">
+      <div className="px-5 py-3 bg-[#19544c]/10 border-b border-[#19544c]/15">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#19544c]">Scenario — {title}</p>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-[#334155] text-sm leading-relaxed italic">{scenario}</p>
+        <p className="text-[#19544c] font-medium text-sm">{question}</p>
+        <div className="space-y-2">
+          {options.map((opt, i) => {
+            const isCorrect = i === correctIndex;
+            const isSelected = selected === i;
+            return (
+              <button
+                key={i}
+                onClick={() => { if (!revealed) setSelected(i); }}
+                disabled={revealed}
+                className={cn(
+                  "w-full text-left px-4 py-2.5 rounded-lg text-sm border-2 transition-all",
+                  revealed && isCorrect ? "border-[#71b59a] bg-[#71b59a]/10 text-[#19544c] font-medium" :
+                  revealed && isSelected && !isCorrect ? "border-red-400 bg-red-50 text-red-700" :
+                  isSelected ? "border-[#19544c] bg-[#19544c]/5 text-[#19544c] font-medium" :
+                  "border-[#19544c]/15 hover:border-[#71b59a]/50 hover:bg-[#19544c]/5 text-[#475569]"
+                )}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+        {revealed && (
+          <p className={cn("text-sm font-medium mt-1", selected === correctIndex ? "text-[#19544c]" : "text-red-600")}>
+            {selected === correctIndex ? "Correct! " : `The correct answer is: "${options[correctIndex]}". `}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MermaidDiagram({ chart }: { chart: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2)}`);
+
+  useEffect(() => {
+    let cancelled = false;
+    const w = window as typeof window & { mermaid?: { render: (id: string, text: string) => Promise<{ svg: string }> } };
+
+    async function tryRender(attempts = 0) {
+      if (cancelled || !containerRef.current) return;
+      if (!w.mermaid) {
+        if (attempts < 20) setTimeout(() => tryRender(attempts + 1), 150);
+        return;
+      }
+      try {
+        const { svg } = await w.mermaid.render(idRef.current, chart);
+        if (!cancelled && containerRef.current) containerRef.current.innerHTML = svg;
+      } catch { /* silent */ }
+    }
+
+    tryRender();
+    return () => { cancelled = true; };
+  }, [chart]);
+
+  return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-lg bg-white/60 p-4" />;
 }
 
 export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, onComplete, isModuleComplete }: SlideshowProps) {
@@ -292,6 +369,19 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     };
   }, []);
 
+  // Load Mermaid.js from CDN once
+  useEffect(() => {
+    if (document.getElementById("mermaid-cdn")) return;
+    const script = document.createElement("script");
+    script.id = "mermaid-cdn";
+    script.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
+    script.onload = () => {
+      const w = window as typeof window & { mermaid?: { initialize: (c: object) => void } };
+      w.mermaid?.initialize({ startOnLoad: false, theme: "base", themeVariables: { primaryColor: "#19544c", primaryTextColor: "#ffffff", lineColor: "#71b59a", nodeBorder: "#19544c" } });
+    };
+    document.head.appendChild(script);
+  }, []);
+
   const slide = slides[current];
   const progress = ((current + 1) / slides.length) * 100;
 
@@ -303,48 +393,87 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
   // Render markdown body with voice-synced progressive reveal
   const renderBody = (body: string) => {
-    const lines = body.split("\n").filter(Boolean);
-    return lines.map((line, i) => {
-      const trimmed = line.trim();
+    const parts = body.split(/(```mermaid\n[\s\S]*?```|:::scenario\n[\s\S]*?:::)/g);
+    const elements: React.ReactNode[] = [];
+    let lineIndex = 0;
 
-      // When voice is enabled, sync animation to estimated speech timing
-      // When muted, use fast stagger so content appears quickly
-      const voiceDelay = voiceEnabled && lineTimings[i] !== undefined
-        ? lineTimings[i] * 1000 // convert seconds to ms
-        : 0;
-      const fallbackDelay = 200 + i * 120; // fast stagger when muted
-      const delay = `${voiceEnabled ? Math.max(200, voiceDelay) : fallbackDelay}ms`;
-      const style = { animationDelay: delay };
+    parts.forEach((part, pi) => {
+      const mermaidMatch = part.match(/^```mermaid\n([\s\S]*?)```$/);
+      if (mermaidMatch) {
+        elements.push(<MermaidDiagram key={`m-${pi}`} chart={mermaidMatch[1].trim()} />);
+        return;
+      }
 
-      if (trimmed.startsWith("### ")) return (
-        <h3 key={i} className="text-xl font-bold text-[#19544c] mt-8 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
-          {trimmed.slice(4)}
-        </h3>
-      );
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) return (
-        <div key={i} className="flex items-start gap-3 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
-          <div className="h-2 w-2 rounded-full bg-[#71b59a] mt-2.5 shrink-0" />
-          <span className="text-[#475569] text-base sm:text-lg leading-relaxed">
-            {trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
-          </span>
-        </div>
-      );
-      if (trimmed.startsWith('"') || trimmed.startsWith('\u201c')) return (
-        <blockquote key={i} className="border-l-4 border-[#71b59a] pl-5 py-2 my-5 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
-          <p className="text-[#334155] italic text-base sm:text-lg">{trimmed}</p>
-        </blockquote>
-      );
-      if (trimmed.startsWith("**") && trimmed.endsWith("**")) return (
-        <p key={i} className="text-[#19544c] font-semibold text-base sm:text-lg mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
-          {trimmed.replace(/\*\*/g, "")}
-        </p>
-      );
-      return (
-        <p key={i} className="text-[#475569] text-base sm:text-lg mb-3 leading-relaxed animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
-          {trimmed.replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
-        </p>
-      );
+      const scenarioMatch = part.match(/^:::scenario\n([\s\S]*?):::$/);
+      if (scenarioMatch) {
+        try {
+          const data = JSON.parse(scenarioMatch[1].trim());
+          elements.push(
+            <ScenarioCard
+              key={`s-${pi}`}
+              title={data.title}
+              scenario={data.scenario}
+              question={data.question}
+              options={data.options}
+              correctIndex={data.correctIndex}
+            />
+          );
+        } catch { /* skip malformed scenario */ }
+        return;
+      }
+
+      const lines = part.split("\n").filter(Boolean);
+      lines.forEach((line, i) => {
+        const li = lineIndex++;
+        const trimmed = line.trim();
+
+        // When voice is enabled, sync animation to estimated speech timing
+        // When muted, use fast stagger so content appears quickly
+        const voiceDelay = voiceEnabled && lineTimings[li] !== undefined
+          ? lineTimings[li] * 1000
+          : 0;
+        const fallbackDelay = 200 + li * 120;
+        const delay = `${voiceEnabled ? Math.max(200, voiceDelay) : fallbackDelay}ms`;
+        const style = { animationDelay: delay };
+
+        if (trimmed.startsWith("### ")) {
+          elements.push(
+            <h3 key={`${pi}-${i}`} className="text-xl font-bold text-[#19544c] mt-8 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              {trimmed.slice(4)}
+            </h3>
+          );
+        } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          elements.push(
+            <div key={`${pi}-${i}`} className="flex items-start gap-3 mb-4 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              <div className="h-2 w-2 rounded-full bg-[#71b59a] mt-2.5 shrink-0" />
+              <span className="text-[#475569] text-base sm:text-lg leading-relaxed">
+                {trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
+              </span>
+            </div>
+          );
+        } else if (trimmed.startsWith('"') || trimmed.startsWith('\u201c')) {
+          elements.push(
+            <blockquote key={`${pi}-${i}`} className="border-l-4 border-[#71b59a] pl-5 py-2 my-5 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              <p className="text-[#334155] italic text-base sm:text-lg">{trimmed}</p>
+            </blockquote>
+          );
+        } else if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
+          elements.push(
+            <p key={`${pi}-${i}`} className="text-[#19544c] font-semibold text-base sm:text-lg mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              {trimmed.replace(/\*\*/g, "")}
+            </p>
+          );
+        } else {
+          elements.push(
+            <p key={`${pi}-${i}`} className="text-[#475569] text-base sm:text-lg mb-3 leading-relaxed animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              {trimmed.replace(/\*\*(.+?)\*\*/g, (_, m) => m)}
+            </p>
+          );
+        }
+      });
     });
+
+    return elements;
   };
 
   return (

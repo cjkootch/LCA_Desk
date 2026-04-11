@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { fetchCourseWithModules, completeModule } from "@/server/actions";
 import { Slideshow } from "@/components/training/Slideshow";
+import { DragDropQuiz } from "@/components/training/DragDropQuiz";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -459,37 +460,49 @@ export default function CoursePage() {
                   <Progress value={(Object.keys(answers).length / Math.max(quizQuestions.length, 1)) * 100} className="h-1.5 mt-2" />
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {quizQuestions.map((q: { question: string; options: string[]; correctIndex: number }, qi: number) => (
+                  {quizQuestions.map((q: { question: string; options: string[]; correctIndex: number; type?: string; items?: string[]; correctPairs?: { item: string; target: string }[] }, qi: number) => (
                     <div key={qi} className={cn("rounded-lg p-4 transition-colors", answers[qi] !== undefined ? "bg-bg-primary" : "")}>
                       <p className="text-sm font-medium text-text-primary mb-3">
                         <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-accent text-white text-xs font-bold mr-2">{qi + 1}</span>
                         {q.question}
                       </p>
-                      <div className="space-y-2 ml-7">
-                        {q.options.map((opt: string, oi: number) => {
-                          const selected = answers[qi] === oi;
-                          const showResult = quizResult !== null;
-                          const isCorrect = oi === q.correctIndex;
-                          return (
-                            <button key={oi}
-                              onClick={() => { if (!quizResult) setAnswers({ ...answers, [qi]: oi }); }}
-                              disabled={!!quizResult}
-                              className={cn(
-                                "w-full text-left px-4 py-2.5 rounded-lg text-sm border-2 transition-all",
-                                showResult && isCorrect ? "border-success bg-success/5 text-success font-medium" :
-                                showResult && selected && !isCorrect ? "border-danger bg-danger/5 text-danger" :
-                                selected ? "border-accent bg-accent/5 text-accent font-medium shadow-sm" :
-                                "border-border hover:border-accent/30 hover:bg-bg-primary"
-                              )}>
-                              <span className="flex items-center justify-between">
-                                {opt}
-                                {showResult && isCorrect && <CheckCircle className="h-4 w-4 shrink-0" />}
-                                {showResult && selected && !isCorrect && <XCircle className="h-4 w-4 shrink-0" />}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {q.type === "drag_drop" ? (
+                        <div className="ml-7">
+                          <DragDropQuiz
+                            question=""
+                            items={q.items ?? []}
+                            correctPairs={q.correctPairs ?? []}
+                            onAnswer={(isCorrect) => { if (!quizResult) setAnswers(prev => ({ ...prev, [qi]: isCorrect ? 1 : 0 })); }}
+                            disabled={!!quizResult}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2 ml-7">
+                          {q.options.map((opt: string, oi: number) => {
+                            const selected = answers[qi] === oi;
+                            const showResult = quizResult !== null;
+                            const isCorrect = oi === q.correctIndex;
+                            return (
+                              <button key={oi}
+                                onClick={() => { if (!quizResult) setAnswers({ ...answers, [qi]: oi }); }}
+                                disabled={!!quizResult}
+                                className={cn(
+                                  "w-full text-left px-4 py-2.5 rounded-lg text-sm border-2 transition-all",
+                                  showResult && isCorrect ? "border-success bg-success/5 text-success font-medium" :
+                                  showResult && selected && !isCorrect ? "border-danger bg-danger/5 text-danger" :
+                                  selected ? "border-accent bg-accent/5 text-accent font-medium shadow-sm" :
+                                  "border-border hover:border-accent/30 hover:bg-bg-primary"
+                                )}>
+                                <span className="flex items-center justify-between">
+                                  {opt}
+                                  {showResult && isCorrect && <CheckCircle className="h-4 w-4 shrink-0" />}
+                                  {showResult && selected && !isCorrect && <XCircle className="h-4 w-4 shrink-0" />}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
 

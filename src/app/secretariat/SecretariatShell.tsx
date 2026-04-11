@@ -48,6 +48,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Compliance Analyst", href: "/secretariat/assistant", icon: Bot },
       { label: "Announcements", href: "/secretariat/announcements", icon: Megaphone },
       { label: "Training", href: "/secretariat/training", icon: GraduationCap },
+      { label: "Courses", href: "/secretariat/courses", icon: GraduationCap },
     ],
   },
   {
