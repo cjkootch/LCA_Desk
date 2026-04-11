@@ -158,7 +158,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   const isLast = current === steps.length - 1;
   const progress = ((current + 1) / steps.length) * 100;
 
-  // Try each comma-separated selector until one matches a visible element
+  // Try each comma-separated selector — scroll into view first, measure after scroll settles
   const findAndSetSpotlight = useCallback((target?: string) => {
     if (!target) { setSpotlightRect(null); return; }
     const selectors = target.split(",").map(s => s.trim());
@@ -166,12 +166,19 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
       try {
         const el = document.querySelector(sel);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            setSpotlightRect(rect);
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-          }
+          // Scroll element into view first
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Measure AFTER scroll animation settles
+          setTimeout(() => {
+            if (!mountedRef.current) return;
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              setSpotlightRect(rect);
+            } else {
+              setSpotlightRect(null);
+            }
+          }, 600);
+          return;
         }
       } catch {}
     }
