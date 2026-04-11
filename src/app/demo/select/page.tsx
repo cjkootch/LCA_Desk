@@ -3,10 +3,21 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { Building2, Shield, Search, ArrowRight, Info } from "lucide-react";
+import { Building2, Shield, Search, ArrowRight, Info, Play, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DEMO_ROLES = [
+  {
+    id: "secretariat",
+    email: "demo-secretariat@lcadesk.com",
+    label: "Secretariat / Regulator",
+    minWidth: 768,
+    description: "Review submissions, audit compliance, manage the LCS Register",
+    icon: Shield,
+    color: "gold",
+    redirect: "/secretariat/dashboard",
+    featured: true,
+  },
   {
     id: "filer",
     email: "demo-filer-pro@lcadesk.com",
@@ -15,16 +26,7 @@ const DEMO_ROLES = [
     icon: Building2,
     color: "accent",
     redirect: "/dashboard",
-  },
-  {
-    id: "secretariat",
-    email: "demo-secretariat@lcadesk.com",
-    label: "Secretariat / Regulator",
-    minWidth: 768, // iPad+ only
-    description: "Review submissions, audit compliance, manage the LCS Register",
-    icon: Shield,
-    color: "gold",
-    redirect: "/secretariat/dashboard",
+    featured: false,
   },
   {
     id: "seeker",
@@ -34,6 +36,7 @@ const DEMO_ROLES = [
     icon: Search,
     color: "accent",
     redirect: "/seeker/dashboard",
+    featured: false,
   },
 ] as const;
 
@@ -79,11 +82,11 @@ export default function DemoSelectPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 mb-6">
+        <div className="rounded-lg border border-dashed border-text-muted/30 bg-bg-primary/50 p-3 mb-6">
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-text-primary">Interactive Demo</p>
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Interactive Demo</p>
               <p className="text-xs text-text-secondary mt-1">
                 This is a live demo with sample data. Look for <Info className="h-3 w-3 inline text-text-muted" /> icons throughout — they explain what each section does. You can switch between views anytime using the banner at the top.
               </p>
@@ -101,12 +104,21 @@ export default function DemoSelectPage() {
               }}
               disabled={switching !== null || (!!((role as any).minWidth) && isMobile)}
               className={cn(
-                "w-full rounded-xl border p-5 text-left transition-all",
-                "hover:border-accent/40 hover:shadow-md",
-                switching === role.id ? "border-accent bg-accent/5" : "border-border bg-bg-card",
+                "w-full rounded-xl border text-left transition-all relative",
+                (role as any).featured
+                  ? "p-6 border-2 border-gold/50 bg-gradient-to-br from-gold/5 to-gold/[0.02] hover:border-gold/70 hover:shadow-lg hover:shadow-gold/10"
+                  : "p-5 hover:border-accent/40 hover:shadow-md",
+                !((role as any).featured) && (switching === role.id ? "border-accent bg-accent/5" : "border-border bg-bg-card"),
                 switching !== null && switching !== role.id && "opacity-50"
               )}
             >
+              {/* Start Here badge for featured role */}
+              {(role as any).featured && (
+                <div className="absolute -top-3 left-5 flex items-center gap-1.5 bg-gold text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+                  <Sparkles className="h-3 w-3" />
+                  Start Here
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "p-3 rounded-xl shrink-0",
