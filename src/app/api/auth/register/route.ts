@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
         .replace(/^-+|-+$/g, "");
 
       // 14-day free trial — no CC required. Users can extend to 30 days via /dashboard/activate.
-      const freeTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const freeTrialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const [tenant] = await db
         .insert(tenants)
         .values({
@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       // Analytics: trial_started
-      trackEvent(user.id, tenant.id, "trial_started", { plan: "lite", trialType: "free_14day", trialEndsAt: freeTrialEndsAt.toISOString() }).catch(() => {});
+      trackEvent(user.id, tenant.id, "trial_started", { plan: "lite", trialType: "free_30day", trialEndsAt: freeTrialEndsAt.toISOString() }).catch(() => {});
 
       return NextResponse.json({
         success: true,
