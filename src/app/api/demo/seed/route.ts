@@ -487,7 +487,7 @@ CERTIFICATIONS
     results.push(`✓ Supplier (Pro): ${supplier.email}`);
 
     // ═══ 8. Secretariat User ═══
-    const secretariatUser = await ensureUser("demo-secretariat@lcadesk.com", "Dr. Martin Pertab", "secretariat");
+    const secretariatUser = await ensureUser("demo-secretariat@lcadesk.com", "Michael Munroe", "secretariat");
     results.push(`✓ Secretariat: ${secretariatUser.email}`);
 
     // Ensure secretariat office and membership
