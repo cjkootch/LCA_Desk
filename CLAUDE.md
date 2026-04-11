@@ -46,3 +46,5 @@ New filer registrations get `trialEndsAt = now + 14 days` set directly on the te
 
 ### Onboarding tour server-side completion
 `markOnboardingComplete()` in `src/server/actions.ts` sets `users.onboardingCompletedAt` and fires an analytics event. Called on tour skip and final step. Requires a migration for the new `onboarding_completed_at` column — run `npx drizzle-kit generate` interactively and commit the generated SQL.
+
+<!-- CRON_SECRET env var updated 2026-04-11 -->
