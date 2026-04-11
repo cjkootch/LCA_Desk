@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
         input: text.slice(0, 4096), // OpenAI TTS limit
         voice: voice || "nova", // nova = warm female, alloy = neutral, onyx = deep male
         response_format: "mp3",
-        speed: 1.05,
+        speed: 0.92,
       }),
     });
 
