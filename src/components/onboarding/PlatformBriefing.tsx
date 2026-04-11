@@ -143,6 +143,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const prefetchCache = useRef<Map<number, Blob>>(new Map());
   const mountedRef = useRef(true);
 
@@ -221,11 +222,14 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
 
   const speak = useCallback(async (text: string) => {
     if (!audioEnabled || !text) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    // Stop any previous audio and abort in-flight fetch
+    stopAudio();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setSpeaking(true);
 
     // Check prefetch cache first for instant playback
-    const cachedBlob = prefetchCache.current.get(current);
+    const cachedBlob = prefetchCache.current.get(currentRef.current);
     let blob: Blob | null = cachedBlob || null;
 
     if (!blob) {
@@ -234,16 +238,19 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, voice: "nova" }),
+          signal: controller.signal,
         });
-        if (!res.ok || !mountedRef.current) { setSpeaking(false); return; }
+        if (!res.ok || !mountedRef.current || controller.signal.aborted) { setSpeaking(false); return; }
         blob = await res.blob();
-      } catch {
+        if (controller.signal.aborted) { setSpeaking(false); return; }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
         if (mountedRef.current) setSpeaking(false);
         return;
       }
     }
 
-    if (!mountedRef.current || !blob) { setSpeaking(false); return; }
+    if (!mountedRef.current || !blob || controller.signal.aborted) { setSpeaking(false); return; }
     try {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
@@ -289,8 +296,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
     speak(step.narration);
     prefetchStep(current + 1);
     return () => {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      setSpeaking(false);
+      stopAudio();
     };
   }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -302,12 +308,27 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      abortRef.current?.abort();
+      if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, []);
 
   const stopAudio = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    // Abort any in-flight TTS fetch
+    abortRef.current?.abort();
+    abortRef.current = null;
+    // Stop any playing audio
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setSpeaking(false);
   };
 
