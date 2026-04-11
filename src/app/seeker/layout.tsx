@@ -14,7 +14,7 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
       <SeekerSidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
 
       {/* Mobile header */}
-      <div className="lg:hidden sticky top-0 z-30 flex items-center h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+      <div className="lg:hidden sticky z-30 flex items-center h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm" style={{ top: "var(--demo-banner-h, 0px)" }}>
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 -ml-2 text-text-secondary hover:text-text-primary"

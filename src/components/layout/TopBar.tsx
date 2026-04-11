@@ -31,7 +31,7 @@ export function TopBar({ title, description, action }: TopBarProps) {
   const showUpgrade = planConfig.code !== "enterprise";
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between h-14 sm:h-16 px-4 sm:px-8 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+    <header className="sticky z-20 flex items-center justify-between h-14 sm:h-16 px-4 sm:px-8 border-b border-border bg-bg-surface/95 backdrop-blur-sm" style={{ top: "var(--demo-banner-h, 0px)" }}>
       <div className="min-w-0">
         <h1 className="text-base sm:text-lg font-heading font-semibold text-text-primary truncate">{title}</h1>
         {description && (

@@ -314,9 +314,9 @@ export function CourseWizard({ jurisdictionCode: defaultJurisdiction = "GY", loc
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="fixed inset-0 z-50 bg-bg-primary overflow-auto">
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-bg-primary overflow-auto" style={{ top: "var(--demo-banner-h, 0px)" }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div className="sticky z-10 bg-bg-primary border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between" style={{ top: 0 }}>
         <StepIndicator current={step} total={4} />
         <button
           onClick={onClose}

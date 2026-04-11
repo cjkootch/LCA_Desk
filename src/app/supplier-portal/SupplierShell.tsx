@@ -118,7 +118,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm">
+      <div className="lg:hidden sticky z-30 flex items-center justify-between h-14 px-4 border-b border-border bg-bg-surface/95 backdrop-blur-sm" style={{ top: "var(--demo-banner-h, 0px)" }}>
         <div className="flex items-center">
           <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-text-secondary hover:text-text-primary">
             <Menu className="h-5 w-5" />
