@@ -10,6 +10,7 @@ import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ActivationChecklist } from "@/components/shared/ActivationChecklist";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -218,6 +219,7 @@ export default function DashboardPage() {
 
             {/* Sidebar */}
             <div className="space-y-3">
+              <ActivationChecklist />
               <ComplianceHealthWidget />
               <ComplianceCalendar deadlines={upcomingDeadlines} />
               <RecentActivity />

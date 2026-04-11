@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
-import { tenants, tenantMembers, users, entities, reportingPeriods, expenditureRecords, employmentRecords, lcsOpportunities, lcsRegister } from "@/server/db/schema";
+import { tenants, tenantMembers, users, entities, reportingPeriods, expenditureRecords, employmentRecords, lcsOpportunities, lcsRegister, usageTracking, narrativeDrafts } from "@/server/db/schema";
 import { eq, and, gte } from "drizzle-orm";
+import { getEffectivePlan } from "@/lib/plans";
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/client";
 import { startCronRun, completeCronRun, isAlreadyRunning } from "@/lib/cron-logger";
@@ -52,6 +53,37 @@ export async function GET(req: NextRequest) {
       const allEmp = await db.select().from(employmentRecords).where(eq(employmentRecords.tenantId, tenant.id));
 
       if (ents.length === 0) continue; // skip empty tenants
+
+      // AI draft usage this month
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const [usage] = await db.select({ aiDraftsUsed: usageTracking.aiDraftsUsed })
+        .from(usageTracking)
+        .where(and(eq(usageTracking.tenantId, tenant.id), eq(usageTracking.periodMonth, currentMonth)))
+        .limit(1);
+      const aiDraftsUsed = usage?.aiDraftsUsed ?? 0;
+      const effectivePlan = getEffectivePlan(tenant.plan, tenant.trialEndsAt ?? null);
+      const aiDraftsLimit = effectivePlan.aiDraftsPerMonth;
+
+      // Any compliance gaps (employment below minimums)
+      const gapWarnings: string[] = [];
+      const byCategory = (cat: string) => {
+        const filtered = allEmp.filter(e => e.employmentCategory === cat);
+        const total = filtered.reduce((s, e) => s + (e.totalEmployees || 0), 0);
+        const guyanese = filtered.reduce((s, e) => s + (e.guyanaeseEmployed || 0), 0);
+        return total > 0 ? Math.round((guyanese / total) * 100) : null;
+      };
+      const manPct = byCategory("Managerial");
+      const techPct = byCategory("Technical");
+      const nonTechPct = byCategory("Non-Technical");
+      if (manPct !== null && manPct < 75) gapWarnings.push(`Managerial GY% ${manPct}% (min 75%)`);
+      if (techPct !== null && techPct < 60) gapWarnings.push(`Technical GY% ${techPct}% (min 60%)`);
+      if (nonTechPct !== null && nonTechPct < 80) gapWarnings.push(`Non-Technical GY% ${nonTechPct}% (min 80%)`);
+
+      // Narrative drafts count this month
+      const narrativeCount = (await db.select({ id: narrativeDrafts.id })
+        .from(narrativeDrafts)
+        .where(and(eq(narrativeDrafts.tenantId, tenant.id), gte(narrativeDrafts.createdAt, new Date(currentMonth + "-01"))))
+        ).length;
 
       // Calculate metrics
       const totalSpend = allExp.reduce((s, e) => s + Number(e.actualPayment || 0), 0);
@@ -105,6 +137,10 @@ export async function GET(req: NextRequest) {
         overdueCount: overdue.length,
         expiringCerts,
         newOpportunities: newOpps.length,
+        aiDraftsUsed,
+        aiDraftsLimit,
+        gapWarnings,
+        narrativeCount,
       });
 
       // Send to each recipient
@@ -141,6 +177,10 @@ function buildDigestEmail(data: {
   overdueCount: number;
   expiringCerts: string[];
   newOpportunities: number;
+  aiDraftsUsed: number;
+  aiDraftsLimit: number;
+  gapWarnings: string[];
+  narrativeCount: number;
 }) {
   const accent = "#047857";
   const warning = "#D97706";
@@ -218,7 +258,25 @@ function buildDigestEmail(data: {
   </div>
   ` : ""}
 
-  <a href="https://app.lcadesk.com/dashboard" style="display:inline-block;background:${accent};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Open Dashboard</a>
+  ${data.gapWarnings.length > 0 ? `
+  <div style="background:#FFFBEB;border:1px solid #FCD34D40;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+    <p style="margin:0 0 6px;font-size:13px;color:${warning};font-weight:600;">Compliance Gaps Detected</p>
+    ${data.gapWarnings.map(w => `<p style="margin:2px 0;font-size:12px;color:#92400E;">• ${w}</p>`).join("")}
+  </div>
+  ` : ""}
+
+  ${data.aiDraftsLimit > 0 ? `
+  <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <p style="margin:0;font-size:13px;color:#0F172A;font-weight:600;">AI Drafts This Month</p>
+      <p style="margin:0;font-size:13px;font-weight:700;color:${data.aiDraftsUsed >= data.aiDraftsLimit ? danger : accent};">${data.aiDraftsUsed} / ${data.aiDraftsLimit === -1 ? "∞" : data.aiDraftsLimit}</p>
+    </div>
+    ${data.aiDraftsUsed >= data.aiDraftsLimit && data.aiDraftsLimit !== -1 ? `<p style="margin:4px 0 0;font-size:12px;color:${danger};">Monthly limit reached — <a href="https://app.lcadesk.com/dashboard/settings/billing" style="color:${danger};">upgrade to continue</a></p>` : ""}
+    ${data.narrativeCount > 0 ? `<p style="margin:4px 0 0;font-size:12px;color:#64748B;">${data.narrativeCount} narrative draft${data.narrativeCount !== 1 ? "s" : ""} updated this month</p>` : ""}
+  </div>
+  ` : ""}
+
+  <a href="https://app.lcadesk.com/dashboard" style="display:inline-block;background:${accent};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Log in to review →</a>
 
   <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
   <p style="margin:0;font-size:11px;color:#94A3B8;">

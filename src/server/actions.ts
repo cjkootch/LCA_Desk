@@ -49,6 +49,7 @@ import {
   announcements,
   teamInvites,
   referrals,
+  userEvents,
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -7217,4 +7218,123 @@ export async function fetchSecretariatDocuments() {
     .limit(200);
 
   return allSubs.filter(s => demo.includeTenant(s.tenantId));
+}
+
+// ─── ACTIVATION STATUS ───────────────────────────────────────────
+export async function fetchActivationStatus() {
+  "use server";
+  const { tenantId } = await getSessionTenant();
+
+  const [ents, expRec, empRec, narRec, subRec] = await Promise.all([
+    db.select({ id: entities.id }).from(entities)
+      .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true))).limit(1),
+    db.select({ id: expenditureRecords.id }).from(expenditureRecords)
+      .where(eq(expenditureRecords.tenantId, tenantId)).limit(1),
+    db.select({ id: employmentRecords.id }).from(employmentRecords)
+      .where(eq(employmentRecords.tenantId, tenantId)).limit(1),
+    db.select({ id: narrativeDrafts.id }).from(narrativeDrafts)
+      .where(eq(narrativeDrafts.tenantId, tenantId)).limit(1),
+    db.select({ id: reportingPeriods.id }).from(reportingPeriods)
+      .where(and(
+        eq(reportingPeriods.tenantId, tenantId),
+        or(eq(reportingPeriods.status, "submitted"), eq(reportingPeriods.status, "acknowledged"))
+      )).limit(1),
+  ]);
+
+  return {
+    hasEntity: ents.length > 0,
+    hasExpenditure: expRec.length > 0,
+    hasEmployment: empRec.length > 0,
+    hasNarrative: narRec.length > 0,
+    hasSubmission: subRec.length > 0,
+  };
+}
+
+// ─── ANALYTICS FUNNEL (admin only) ──────────────────────────────
+export async function fetchAnalyticsFunnel(days: number = 30) {
+  "use server";
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+  const [me] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id!)).limit(1);
+  if (!me?.isSuperAdmin) throw new Error("Unauthorized");
+
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  // Count unique users per funnel event
+  const funnelEvents = [
+    "trial_started",
+    "entity_created",
+    "first_expenditure_added",
+    "narrative_generated",
+    "report_submitted",
+    "plan_upgraded",
+  ] as const;
+
+  const counts = await Promise.all(
+    funnelEvents.map(async (eventName) => {
+      const rows = await db
+        .selectDistinct({ userId: userEvents.userId })
+        .from(userEvents)
+        .where(and(
+          eq(userEvents.eventName, eventName),
+          gte(userEvents.occurredAt, since),
+        ));
+      return { eventName, count: rows.length };
+    })
+  );
+
+  // Active users (any event in last 7 days)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const activeRows = await db
+    .selectDistinct({ userId: userEvents.userId })
+    .from(userEvents)
+    .where(gte(userEvents.occurredAt, sevenDaysAgo));
+  const activeUsers = activeRows.length;
+
+  // Total signups (all time users with filer role)
+  const totalSignups = (await db.select({ id: users.id }).from(users)
+    .where(gte(users.createdAt, since))).length;
+
+  // Avg days from signup to first report_submitted
+  const submittedEvents = await db
+    .select({ userId: userEvents.userId, occurredAt: userEvents.occurredAt })
+    .from(userEvents)
+    .where(and(eq(userEvents.eventName, "report_submitted"), gte(userEvents.occurredAt, since)));
+
+  const signupDates = await db
+    .select({ id: users.id, createdAt: users.createdAt })
+    .from(users)
+    .where(gte(users.createdAt, since));
+
+  const signupMap = new Map(signupDates.map(u => [u.id, u.createdAt]));
+  const daysToReport = submittedEvents
+    .map(e => {
+      const signup = signupMap.get(e.userId);
+      if (!signup || !e.occurredAt) return null;
+      return (new Date(e.occurredAt).getTime() - new Date(signup).getTime()) / (1000 * 60 * 60 * 24);
+    })
+    .filter((d): d is number => d !== null && d >= 0);
+
+  const avgDaysToFirstReport = daysToReport.length > 0
+    ? Math.round(daysToReport.reduce((a, b) => a + b, 0) / daysToReport.length)
+    : null;
+
+  // Trial-to-paid conversion
+  const trialCount = counts.find(c => c.eventName === "trial_started")?.count ?? 0;
+  const paidCount = counts.find(c => c.eventName === "plan_upgraded")?.count ?? 0;
+  const conversionRate = trialCount > 0 ? Math.round((paidCount / trialCount) * 100) : 0;
+
+  return {
+    funnel: counts.map((c, i) => ({
+      ...c,
+      conversionFromPrev: i === 0 || counts[i - 1].count === 0
+        ? 100
+        : Math.round((c.count / counts[i - 1].count) * 100),
+    })),
+    activeUsers,
+    totalSignups,
+    avgDaysToFirstReport,
+    conversionRate,
+    days,
+  };
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, RefreshCw, Check } from "lucide-react";
 import type { NarrativeSection } from "@/types/ai.types";
+import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 
 interface NarrativeDrafterProps {
   section: NarrativeSection;
@@ -23,6 +24,7 @@ export function NarrativeDrafter({
   initialContent,
   onSave,
 }: NarrativeDrafterProps) {
+  const { showUpgradePrompt } = useUpgradePrompt();
   const [content, setContent] = useState(initialContent || "");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,7 +58,19 @@ export function NarrativeDrafter({
         body: JSON.stringify({ section, data, jurisdiction_code: jurisdictionCode }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate narrative");
+      if (!response.ok) {
+        if (response.status === 403) {
+          showUpgradePrompt("ai_narrative");
+          setGenerating(false);
+          return;
+        }
+        if (response.status === 429) {
+          showUpgradePrompt("ai_drafts");
+          setGenerating(false);
+          return;
+        }
+        throw new Error("Failed to generate narrative");
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
@@ -76,9 +90,8 @@ export function NarrativeDrafter({
       console.error("Generation error:", error);
       setContent("Error generating narrative. Please try again.");
     }
-
     setGenerating(false);
-  }, [section, data, jurisdictionCode]);
+  }, [section, data, jurisdictionCode, showUpgradePrompt]);
 
   const handleSave = async () => {
     setSaving(true);

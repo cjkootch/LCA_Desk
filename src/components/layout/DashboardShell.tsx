@@ -9,6 +9,7 @@ import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { BillingAccess } from "@/lib/plans";
+import { UpgradePromptProvider } from "@/hooks/useUpgradePrompt";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -44,6 +45,7 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
   if (!billingAccess.canAccess && !isAllowedPath) return null;
 
   return (
+    <UpgradePromptProvider>
     <div className="flex min-h-screen" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -80,5 +82,6 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         ]}
       />
     </div>
+    </UpgradePromptProvider>
   );
 }

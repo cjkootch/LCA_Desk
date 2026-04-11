@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/card";
 import { EntityForm } from "@/components/entity/EntityForm";
 import { addEntity } from "@/server/actions";
 import { toast } from "sonner";
+import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 
 export default function NewEntityPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showUpgradePrompt } = useUpgradePrompt();
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     setLoading(true);
@@ -20,7 +22,12 @@ export default function NewEntityPage() {
       toast.success("Entity created successfully");
       router.push("/dashboard/entities");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create entity");
+      const msg = error instanceof Error ? error.message : "Failed to create entity";
+      if (msg.includes("Entity limit reached")) {
+        showUpgradePrompt("entities");
+      } else {
+        toast.error(msg);
+      }
     }
     setLoading(false);
   };

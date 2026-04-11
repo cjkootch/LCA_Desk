@@ -20,6 +20,7 @@ import {
   saveChatMessage,
   deleteChatConversation,
 } from "@/server/actions";
+import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 
 interface Message {
   role: "user" | "assistant";
@@ -108,6 +109,7 @@ function renderMarkdown(text: string): React.ReactNode {
 
 // ─── Main Page ───────────────────────────────────────────────────
 export default function ExpertPage() {
+  const { showUpgradePrompt } = useUpgradePrompt();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -189,7 +191,19 @@ export default function ExpertPage() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      if (!response.ok) throw new Error("Chat failed");
+      if (!response.ok) {
+        if (response.status === 403) {
+          showUpgradePrompt("ai_chat_plan");
+          setStreaming(false);
+          return;
+        }
+        if (response.status === 429) {
+          showUpgradePrompt("ai_chat");
+          setStreaming(false);
+          return;
+        }
+        throw new Error("Chat failed");
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
@@ -222,7 +236,7 @@ export default function ExpertPage() {
 
     setStreaming(false);
     inputRef.current?.focus();
-  }, [messages, streaming, activeConvId]);
+  }, [messages, streaming, activeConvId, showUpgradePrompt]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

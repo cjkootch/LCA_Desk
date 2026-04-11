@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, AlertTriangle, XCircle, Info, CheckCircle, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 
 interface ScanIssue {
   level: "error" | "warning" | "info";
@@ -25,6 +26,7 @@ const LEVEL_CONFIG = {
 };
 
 export function ComplianceScan({ scanData }: ComplianceScanProps) {
+  const { showUpgradePrompt } = useUpgradePrompt();
   const [issues, setIssues] = useState<ScanIssue[]>([]);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -40,7 +42,19 @@ export function ComplianceScan({ scanData }: ComplianceScanProps) {
         body: JSON.stringify({ data: scanData }),
       });
 
-      if (!response.ok) throw new Error("Scan failed");
+      if (!response.ok) {
+        if (response.status === 403) {
+          showUpgradePrompt("compliance_scan_plan");
+          setScanning(false);
+          return;
+        }
+        if (response.status === 429) {
+          showUpgradePrompt("ai_drafts");
+          setScanning(false);
+          return;
+        }
+        throw new Error("Scan failed");
+      }
 
       const text = await response.text();
       // Extract JSON from response (may be wrapped in markdown code blocks)
