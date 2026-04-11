@@ -24,7 +24,7 @@ interface CourseWizardProps {
   onSave: (data: {
     title: string; slug: string; description: string; audience: string;
     jurisdictionCode: string; badgeLabel: string; badgeColor: string;
-    estimatedMinutes: number;
+    estimatedMinutes: number; isPublished: boolean;
     modules: Array<{ title: string; content: string; quizQuestions: string }>;
   }) => Promise<void>;
   onClose: () => void;
@@ -316,7 +316,36 @@ export function CourseWizard({
     }
   }
 
-  async function handleSave() {
+  // LocalStorage autosave key
+  const DRAFT_KEY = "lca_wizard_draft";
+
+  // Autosave whenever meaningful state changes
+  useEffect(() => {
+    if (step >= 2 && (topics.length > 0 || modules.length > 0)) {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ settings, topics, modules, step }));
+      } catch { /* storage not available */ }
+    }
+  }, [settings, topics, modules, step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as { settings: typeof settings; topics: string[]; modules: GeneratedModule[]; step: number };
+        if (draft.settings?.title) {
+          setSettings(draft.settings);
+          setTopics(draft.topics ?? []);
+          setModules(draft.modules ?? []);
+          setStep(draft.step ?? 1);
+          toast.success("Draft restored — pick up where you left off");
+        }
+      }
+    } catch { /* ignore corrupted draft */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSave(isPublished: boolean) {
     if (!settings.title.trim()) { toast.error("Course title required"); return; }
     if (modules.length === 0) { toast.error("No modules to save"); return; }
     setSaving(true);
@@ -331,12 +360,15 @@ export function CourseWizard({
         badgeLabel: badgeLabel || `${settings.title} Certified`,
         badgeColor,
         estimatedMinutes,
+        isPublished,
         modules: modules.map(m => ({
           title: m.title,
           content: m.content,
           quizQuestions: typeof m.quiz === "string" ? (m.quiz as string) : JSON.stringify(m.quiz),
         })),
       });
+      // Clear the draft on successful save
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -951,14 +983,14 @@ export function CourseWizard({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={handleSave}
+                onClick={() => handleSave(false)}
                 loading={saving}
                 disabled={saving || modules.length === 0}
               >
                 Save as Draft
               </Button>
               <Button
-                onClick={handleSave}
+                onClick={() => handleSave(true)}
                 loading={saving}
                 disabled={saving || modules.length === 0}
                 className="gap-2"

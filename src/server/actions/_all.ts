@@ -4286,6 +4286,8 @@ export async function fetchCourses(audience?: "seeker" | "filer" | "all", jurisd
   const allCourses = await db.select().from(courses).where(eq(courses.active, true)).limit(50);
 
   return allCourses.filter(c => {
+    // Only show published courses to learners
+    if (!c.isPublished) return false;
     // Audience filter: match audience or "all"
     if (audience && c.audience !== audience && c.audience !== "all") return false;
     // Jurisdiction filter: match jurisdiction or null (universal)
@@ -7494,11 +7496,17 @@ export async function fetchAdminCourses() {
     estimatedMinutes: courses.estimatedMinutes,
     mandatory: courses.mandatory,
     active: courses.active,
+    isPublished: courses.isPublished,
+    createdBy: courses.createdBy,
   }).from(courses).orderBy(asc(courses.title));
 
-  // Secretariat users cannot see affiliate courses
+  // Secretariat users cannot see affiliate courses; only see their own drafts + all published
+  const userId = session.user?.id;
   if (!isSuperAdmin) {
-    return allCourses.filter(c => c.audience !== "affiliate");
+    return allCourses.filter(c =>
+      c.audience !== "affiliate" &&
+      (c.createdBy === userId || c.isPublished === true)
+    );
   }
   return allCourses;
 }
@@ -7513,6 +7521,7 @@ export async function createCourse(input: {
   badgeColor?: string;
   estimatedMinutes?: number;
   mandatory?: boolean;
+  isPublished?: boolean;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -7536,7 +7545,9 @@ export async function createCourse(input: {
     badgeColor: input.badgeColor ?? null,
     estimatedMinutes: input.estimatedMinutes ?? null,
     mandatory: input.mandatory ?? false,
-    active: false,
+    active: input.isPublished ?? false,
+    isPublished: input.isPublished ?? false,
+    createdBy: session.user.id,
   }).returning();
 
   return course;
@@ -7552,6 +7563,7 @@ export async function updateCourse(courseId: string, input: {
   estimatedMinutes?: number;
   mandatory?: boolean;
   active?: boolean;
+  isPublished?: boolean;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -7559,8 +7571,69 @@ export async function updateCourse(courseId: string, input: {
   const isSecretary = await checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
+  // Secretariat can only update courses they created
+  if (isSecretary && !isSuperAdmin) {
+    const [existing] = await db.select({ createdBy: courses.createdBy })
+      .from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (!existing) throw new Error("Course not found");
+    if (existing.createdBy !== session.user.id) throw new Error("You can only update courses you created");
+  }
+
   const [updated] = await db.update(courses).set({ ...input }).where(eq(courses.id, courseId)).returning();
   return updated;
+}
+
+export async function deleteCourse(courseId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  // Secretariat can only delete courses they created
+  if (isSecretary && !isSuperAdmin) {
+    const [existing] = await db.select({ createdBy: courses.createdBy })
+      .from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (!existing) throw new Error("Course not found");
+    if (existing.createdBy !== session.user.id) throw new Error("You can only delete courses you created");
+  }
+
+  // Cascade: delete progress records, then modules, then course
+  // (course_modules and user_course_progress have onDelete: cascade in schema,
+  //  but we delete explicitly to be safe with progress referencing modules)
+  await db.delete(userCourseProgress).where(eq(userCourseProgress.courseId, courseId));
+  await db.delete(courseModules).where(eq(courseModules.courseId, courseId));
+  await db.delete(courses).where(eq(courses.id, courseId));
+}
+
+export async function publishCourse(courseId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  const moduleCount = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(courseModules).where(eq(courseModules.courseId, courseId));
+  if (Number(moduleCount[0]?.count ?? 0) === 0) {
+    throw new Error("Add at least one module before publishing");
+  }
+
+  await db.update(courses)
+    .set({ isPublished: true, active: true })
+    .where(eq(courses.id, courseId));
+}
+
+export async function unpublishCourse(courseId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSecretary = await checkSecretariatMember(session.user.id);
+  if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
+
+  await db.update(courses)
+    .set({ isPublished: false, active: false })
+    .where(eq(courses.id, courseId));
 }
 
 export async function addModule(courseId: string, input: {

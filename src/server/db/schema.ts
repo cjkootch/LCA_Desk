@@ -1167,6 +1167,8 @@ export const courses = pgTable(
     estimatedMinutes: integer("estimated_minutes"),
     mandatory: boolean("mandatory").default(false), // admin can toggle
     active: boolean("active").default(true),
+    isPublished: boolean("is_published").notNull().default(false),
+    createdBy: uuid("created_by"), // user id of creator
     createdAt: timestamp("created_at").defaultNow(),
   }
 );
