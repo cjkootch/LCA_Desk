@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, BookOpen, CheckCircle, XCircle, Trophy, ArrowRight, Lock,
-  Zap, PartyPopper, Presentation, Play, ChevronDown, ChevronUp,
+  Zap, PartyPopper, Presentation, Play,
 } from "lucide-react";
 import { fetchCourseWithModules, completeModule } from "@/server/actions";
 import { Slideshow } from "@/components/training/Slideshow";
@@ -122,8 +122,6 @@ export default function CoursePage() {
   const [showSlideshow, setShowSlideshow] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [watchedModules, setWatchedModules] = useState<Set<number>>(new Set());
-  const [showReadingContent, setShowReadingContent] = useState(false);
-
   useEffect(() => {
     fetchCourseWithModules(slug).then(setData).catch(() => {}).finally(() => setLoading(false));
   }, [slug]);
@@ -290,7 +288,7 @@ export default function CoursePage() {
               const locked = i > 0 && !isModuleComplete(modules[i - 1].id) && !complete;
               return (
                 <button key={m.id}
-                  onClick={() => { if (!locked) { setActiveModule(i); setShowQuiz(false); setQuizResult(null); setAnswers({}); setShowReadingContent(false); } }}
+                  onClick={() => { if (!locked) { setActiveModule(i); setShowQuiz(false); setQuizResult(null); setAnswers({}); } }}
                   disabled={locked}
                   className={cn(
                     "w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2",
@@ -320,11 +318,10 @@ export default function CoursePage() {
                 <h2 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{currentModule.title}</h2>
 
                 {/* Learning path steps */}
-                <div className="grid sm:grid-cols-3 gap-3">
+                <div className="grid sm:grid-cols-2 gap-3">
                   {[
                     { step: 1, label: "Watch Presentation", icon: Presentation, done: watchedModules.has(activeModule) || isModuleComplete(currentModule.id) },
-                    { step: 2, label: "Review Content", icon: BookOpen, done: showReadingContent || watchedModules.has(activeModule) || isModuleComplete(currentModule.id) },
-                    { step: 3, label: "Take Quiz", icon: Trophy, done: isModuleComplete(currentModule.id) },
+                    { step: 2, label: "Take Quiz", icon: Trophy, done: isModuleComplete(currentModule.id) },
                   ].map(({ step, label, icon: Icon, done }) => (
                     <div key={step} className={cn(
                       "flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm transition-colors",
@@ -357,7 +354,7 @@ export default function CoursePage() {
                           <p className="text-sm text-text-secondary leading-relaxed">
                             {watchedModules.has(activeModule)
                               ? "Watch the AI-narrated slideshow again to reinforce key concepts before taking the quiz."
-                              : "Watch the AI-narrated interactive slideshow to learn the key concepts before diving into the reading material and quiz."}
+                              : "Watch the AI-narrated interactive slideshow to learn the key concepts, then take the quiz."}
                           </p>
                         </div>
                         <Button
@@ -382,36 +379,6 @@ export default function CoursePage() {
                     <Presentation className="h-4 w-4" /> Replay Presentation
                   </Button>
                 )}
-
-                {/* Reading content (collapsible) */}
-                <Card>
-                  <button
-                    className="w-full flex items-center justify-between px-5 py-4 text-left"
-                    onClick={() => setShowReadingContent(!showReadingContent)}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <BookOpen className="h-4 w-4 text-accent" />
-                      <span className="text-sm font-semibold text-text-primary">Reading Material</span>
-                      <span className="text-xs text-text-muted">{watchedModules.has(activeModule) || isModuleComplete(currentModule.id) ? "" : "— watch presentation first"}</span>
-                    </div>
-                    {showReadingContent ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
-                  </button>
-                  {showReadingContent && (
-                    <CardContent className="pt-0 px-5 pb-5">
-                      <div className="prose prose-sm max-w-none border-t border-border pt-4">
-                        {currentModule.content.split("\n").map((line: string, i: number) => {
-                          const t = line.trim();
-                          if (t.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-text-primary mt-5 mb-2">{t.slice(3)}</h2>;
-                          if (t.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-text-primary mt-4 mb-1">{t.slice(4)}</h3>;
-                          if (t.startsWith("- ")) return <li key={i} className="text-sm text-text-secondary ml-4">{t.slice(2)}</li>;
-                          if (t.startsWith("**") && t.endsWith("**")) return <p key={i} className="text-sm font-bold text-text-primary">{t.replace(/\*\*/g, "")}</p>;
-                          if (t.length === 0) return <div key={i} className="h-3" />;
-                          return <p key={i} className="text-sm text-text-secondary leading-relaxed">{t.replace(/\*\*/g, "")}</p>;
-                        })}
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
 
                 {/* Quiz CTA */}
                 <Card className={cn(
@@ -542,7 +509,7 @@ export default function CoursePage() {
                     </div>
                   ) : (
                     <div className="flex gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setShowQuiz(false)}>Back to Reading</Button>
+                      <Button variant="outline" onClick={() => setShowQuiz(false)}>Back</Button>
                       <Button onClick={handleSubmitQuiz} loading={submitting} disabled={Object.keys(answers).length < quizQuestions.length}>
                         Submit Answers ({Object.keys(answers).length}/{quizQuestions.length})
                       </Button>
