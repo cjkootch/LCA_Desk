@@ -588,11 +588,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       }
     }
 
-    if (false && hiddenCount > 0) { // Disabled — auto-split handles length
-      elements.push(
-        <p key="more" className="text-xs text-[#19544c]/50 italic mt-3 animate-[fadeIn_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "800ms" }}>
-        </p>
-    }
+    // Visual trimming disabled — auto-split handles slide length
 
     return elements;
   };
