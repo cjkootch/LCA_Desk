@@ -230,6 +230,91 @@ export const FILER_BRIEFING: BriefingStep[] = [
   },
 ];
 
+export const SEEKER_BRIEFING: BriefingStep[] = [
+  {
+    id: "welcome",
+    title: "Welcome to Your Job Portal",
+    narration: "Welcome to LCA Desk. This portal connects you with job opportunities in Guyana's petroleum sector. Over the next few minutes, I'll show you how to find jobs, track applications, build your resume, and develop your skills through compliance training. Let's get started.",
+    bullets: [
+      "Find petroleum sector jobs in your jurisdiction",
+      "Track applications and get status updates",
+      "Build your resume and earn training badges",
+    ],
+    position: "center",
+  },
+  {
+    id: "jobs",
+    title: "Find Jobs",
+    narration: "The job board shows current openings across the petroleum sector. You can filter by category, company, and location. Each listing shows the role, requirements, and whether the position prioritizes Guyanese nationals under the Local Content Act. Tap any job to see full details and apply directly.",
+    bullets: [
+      "Filter by category, company, and location",
+      "See which roles prioritize Guyanese nationals",
+      "Apply directly from the listing",
+    ],
+    target: '[href="/seeker/jobs"]',
+    position: "right",
+  },
+  {
+    id: "opportunities",
+    title: "Procurement Opportunities",
+    narration: "Beyond jobs, the opportunities board shows procurement tenders and contracts from operators and contractors. If you're also a business owner or thinking of starting one, these are the contracts being awarded in the petroleum sector right now.",
+    bullets: [
+      "Procurement tenders from operators and contractors",
+      "See what's being contracted in the sector",
+      "Useful for business owners and entrepreneurs",
+    ],
+    target: '[href="/seeker/opportunities"]',
+    position: "right",
+  },
+  {
+    id: "applications",
+    title: "Track Your Applications",
+    narration: "Every job you apply for is tracked here. You'll see the status of each application — whether it's been received, is under review, or has a decision. You'll also get notifications when your status changes.",
+    bullets: [
+      "See all your submitted applications",
+      "Track status: received, under review, decision",
+      "Get notified when status changes",
+    ],
+    target: '[href="/seeker/applications"]',
+    position: "right",
+  },
+  {
+    id: "resume",
+    title: "Resume Builder",
+    narration: "Build a resume tailored to the petroleum sector. The builder helps you highlight relevant skills, certifications, and experience that employers in the oil and gas industry are looking for. You can export it as a PDF to attach to applications.",
+    bullets: [
+      "Tailored to petroleum sector employers",
+      "Highlight relevant certifications and skills",
+      "Export as PDF for applications",
+    ],
+    target: '[href="/seeker/resume"]',
+    position: "right",
+  },
+  {
+    id: "training",
+    title: "Compliance Training",
+    narration: "Earn badges by completing training courses. The LCA Fundamentals course teaches you your rights under the Local Content Act — equal pay, first consideration for Guyanese nationals, and capacity development obligations. Badges on your profile show employers you understand the compliance landscape.",
+    bullets: [
+      "LCA Fundamentals and other courses",
+      "Learn your rights under the Local Content Act",
+      "Earn badges that show on your profile",
+    ],
+    target: '[href="/seeker/learn"]',
+    position: "right",
+  },
+  {
+    id: "ready",
+    title: "Start Exploring",
+    narration: "That's your portal overview. Start by browsing the job board — new listings are added regularly as operators and contractors post positions. If you have questions about your rights under the Local Content Act, check the training section. Good luck with your job search.",
+    bullets: [
+      "Browse the job board for current openings",
+      "Complete LCA Fundamentals to understand your rights",
+      "Check back regularly — new jobs posted often",
+    ],
+    position: "center",
+  },
+];
+
 interface PlatformBriefingProps {
   onComplete: () => void;
   steps?: BriefingStep[];

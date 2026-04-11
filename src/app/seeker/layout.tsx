@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SeekerSidebar } from "@/components/seeker/SeekerSidebar";
 import { SeekerTour } from "@/components/onboarding/SeekerTour";
+import { PlatformBriefing, SEEKER_BRIEFING } from "@/components/onboarding/PlatformBriefing";
 import { Menu } from "lucide-react";
 import { SessionProvider } from "next-auth/react";
 
 function SeekerShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [briefingActive, setBriefingActive] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setBriefingActive(true);
+    window.addEventListener("start-briefing", handler);
+    return () => window.removeEventListener("start-briefing", handler);
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-primary" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
@@ -36,6 +44,15 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <SeekerTour />
+      {briefingActive && (
+        <PlatformBriefing
+          steps={SEEKER_BRIEFING}
+          onComplete={() => {
+            localStorage.setItem("seeker-briefing-completed", "true");
+            setBriefingActive(false);
+          }}
+        />
+      )}
     </div>
   );
 }

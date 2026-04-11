@@ -10,7 +10,7 @@ import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
 import {
-  ArrowRight, AlertCircle,
+  ArrowRight, AlertCircle, Play,
 } from "lucide-react";
 import { fetchSeekerDashboardStats, fetchMyApplications } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
@@ -33,6 +33,12 @@ export default function SeekerDashboard() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showBriefingCard, setShowBriefingCard] = useState(false);
+
+  useEffect(() => {
+    const completed = localStorage.getItem("seeker-briefing-completed");
+    if (!completed) setShowBriefingCard(true);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -77,6 +83,48 @@ export default function SeekerDashboard() {
 
       <div className="p-4 sm:p-6 max-w-5xl space-y-4">
         <AnnouncementBanner userRole="seeker" />
+
+        {/* Platform Briefing welcome card */}
+        {showBriefingCard && (
+          <div className="rounded-2xl border-2 border-accent bg-gradient-to-br from-[#19544c] to-[#0d3830] p-8 text-white shadow-xl shadow-accent/10">
+            <div className="flex flex-col sm:flex-row items-start gap-6">
+              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur shrink-0">
+                <Play className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-accent-light bg-white/10 px-2.5 py-1 rounded-full">
+                    3-Minute Portal Tour
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-2">
+                  Welcome to Your Job Portal
+                </h2>
+                <p className="text-sm text-white/70 mb-6 leading-relaxed max-w-lg">
+                  Take a guided tour to learn how to find petroleum sector jobs, track applications, build your resume, and earn compliance training badges.
+                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("start-briefing"))}
+                    className="flex items-center gap-2 bg-white text-[#19544c] px-6 py-3 rounded-xl text-sm font-bold hover:bg-white/90 transition-all hover:shadow-lg"
+                  >
+                    <Play className="h-4 w-4" />
+                    Start Portal Tour
+                  </button>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem("seeker-briefing-completed", "true");
+                      setShowBriefingCard(false);
+                    }}
+                    className="text-sm text-white/50 hover:text-white/80 transition-colors"
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Identity */}
         <DashboardIdentity

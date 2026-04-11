@@ -10,6 +10,7 @@ import {
   X, Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Eye, Edit2,
   CheckCircle, Sparkles, Users, Briefcase, Building2, GraduationCap,
   GripVertical, Scale, BookOpen, Globe, Zap, FileText, Trophy, ImageIcon,
+  Presentation,
 } from "lucide-react";
 import { ImageUpload } from "@/components/training/ImageUpload";
 import { toast } from "sonner";
@@ -143,7 +144,7 @@ export function CourseWizard({
   const [genError, setGenError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [genStage, setGenStage] = useState("Initialising...");
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stageTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Step 4
   const [modules, setModules] = useState<GeneratedModule[]>([]);
@@ -159,6 +160,8 @@ export function CourseWizard({
   const [regeneratingQuiz, setRegeneratingQuiz] = useState<Set<number>>(new Set());
   const [showImageUpload, setShowImageUpload] = useState<Set<number>>(new Set());
   const [slideshowModule, setSlideshowModule] = useState<number | null>(null);
+  const [previewAllMode, setPreviewAllMode] = useState(false);
+  const [previewModule, setPreviewModule] = useState<number | null>(null);
 
   // Sync est. minutes from module count
   useEffect(() => {
@@ -219,31 +222,28 @@ export function CourseWizard({
     setStep(3);
     setGenerating(true);
     setGenError(null);
-    setProgress(0);
+    setProgress(5);
+    setGenStage("Analyzing your topics...");
+
+    // Clear any previous timers
+    stageTimersRef.current.forEach(clearTimeout);
 
     const stages = [
-      "Generating module outlines...",
-      "Writing slide content...",
-      "Creating diagrams...",
-      "Building quiz questions...",
-      "Finalising course structure...",
+      { delay: 3000, stage: "Building module outlines...", progress: 15 },
+      { delay: 6000, stage: "Writing slide content...", progress: 30 },
+      { delay: 10000, stage: "Creating diagrams...", progress: 45 },
+      { delay: 15000, stage: "Generating scenarios...", progress: 60 },
+      { delay: 20000, stage: "Building quiz questions...", progress: 75 },
+      { delay: 25000, stage: "Finalizing modules...", progress: 85 },
+      { delay: 30000, stage: "Almost done...", progress: 92 },
     ];
-    let stageIdx = 0;
-    setGenStage(stages[0]);
 
-    progressRef.current = setInterval(() => {
-      setProgress(p => {
-        if (p >= 95) return p;
-        const next = p + 2;
-        // Advance stage label at thresholds
-        const newStageIdx = Math.min(Math.floor(next / 20), stages.length - 1);
-        if (newStageIdx !== stageIdx) {
-          stageIdx = newStageIdx;
-          setGenStage(stages[stageIdx]);
-        }
-        return next;
-      });
-    }, 600);
+    stageTimersRef.current = stages.map(s =>
+      setTimeout(() => {
+        setGenStage(s.stage);
+        setProgress(s.progress);
+      }, s.delay)
+    );
 
     try {
       const res = await fetch("/api/ai/course-builder", {
@@ -264,14 +264,17 @@ export function CourseWizard({
       const data = (await res.json()) as { modules: GeneratedModule[] };
       if (!data.modules || !Array.isArray(data.modules)) throw new Error("Invalid AI response");
 
+      stageTimersRef.current.forEach(clearTimeout);
       setModules(data.modules);
       setProgress(100);
+      setGenStage("Done!");
       setStep(4);
       setExpandedModule(0);
     } catch (err) {
+      stageTimersRef.current.forEach(clearTimeout);
       setGenError(err instanceof Error ? err.message : "Generation failed");
+      setProgress(0);
     } finally {
-      if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
       setGenerating(false);
     }
   }
@@ -676,22 +679,19 @@ export function CourseWizard({
           <div className="flex flex-col items-center justify-center min-h-[65vh] text-center space-y-8">
             {!genError ? (
               <>
-                <div className="relative">
-                  <div className="h-24 w-24 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Sparkles className="h-10 w-10 text-accent" />
+                <div className="text-center py-8">
+                  <div className="max-w-sm mx-auto">
+                    <Sparkles className="h-10 w-10 text-accent mx-auto mb-6 animate-pulse" />
+                    <h2 className="text-xl font-heading font-bold text-text-primary mb-1">Building your course...</h2>
+                    <p className="text-sm font-semibold text-text-secondary mb-4">{genStage}</p>
+                    <div className="h-2 bg-bg-primary rounded-full overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-accent rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-text-muted">{progress}% — usually takes 30–60 seconds</p>
                   </div>
-                </div>
-
-                <div className="space-y-2 max-w-sm">
-                  <h2 className="text-xl font-heading font-bold text-text-primary">Building your course...</h2>
-                  <p className="text-sm text-text-muted">{genStage}</p>
-                  <p className="text-xs text-text-muted">Generating {settings.moduleCount} modules with slides, diagrams &amp; quizzes. Usually takes 30–60 seconds.</p>
-                </div>
-
-                <div className="w-full max-w-xs space-y-1.5">
-                  <Progress value={progress} className="h-2.5" />
-                  <p className="text-xs text-text-muted">{progress}% complete</p>
                 </div>
               </>
             ) : (
@@ -717,11 +717,20 @@ export function CourseWizard({
         {/* ================================================================ */}
         {step === 4 && (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-heading font-bold text-text-primary">Review &amp; Publish</h1>
-              <p className="text-sm text-text-muted mt-1">
-                {modules.length} modules generated. Review, edit, then publish.
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-heading font-bold text-text-primary">Review &amp; Publish</h1>
+                <p className="text-sm text-text-muted mt-1">
+                  {modules.length} modules generated. Review, edit, then publish.
+                </p>
+              </div>
+              <button
+                onClick={() => { setPreviewAllMode(true); setPreviewModule(0); }}
+                className="flex items-center gap-2 bg-accent text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-accent/90 transition-colors shrink-0"
+              >
+                <Presentation className="h-4 w-4" />
+                Preview Course
+              </button>
             </div>
 
             {/* Module accordion */}
@@ -1002,7 +1011,7 @@ export function CourseWizard({
         </div>
       )}
 
-      {/* Slideshow preview overlay */}
+      {/* Slideshow preview overlay (single module) */}
       {slideshowModule !== null && modules[slideshowModule] && (
         <Slideshow
           content={modules[slideshowModule].content}
@@ -1012,6 +1021,54 @@ export function CourseWizard({
           onClose={() => setSlideshowModule(null)}
           isModuleComplete={false}
         />
+      )}
+
+      {/* Full course preview modal */}
+      {previewAllMode && (
+        <div className="fixed inset-0 z-[200] bg-bg-primary flex">
+          {/* Sidebar */}
+          <div className="w-64 border-r border-border p-4 overflow-y-auto shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-text-primary">Course Preview</h3>
+              <button onClick={() => setPreviewAllMode(false)} className="text-text-muted hover:text-text-primary transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-text-muted mb-3 truncate">{settings.title}</p>
+            {modules.map((mod, i) => (
+              <button
+                key={i}
+                onClick={() => setPreviewModule(i)}
+                className={cn(
+                  "w-full text-left p-3 rounded-lg mb-1 text-sm transition-colors",
+                  previewModule === i
+                    ? "bg-accent/10 text-accent font-medium"
+                    : "hover:bg-bg-primary text-text-secondary"
+                )}
+              >
+                <span className="text-xs text-text-muted mr-1">M{i + 1}</span>
+                {mod.title}
+              </button>
+            ))}
+          </div>
+          {/* Slideshow */}
+          <div className="flex-1 min-w-0">
+            {previewModule !== null && modules[previewModule] ? (
+              <Slideshow
+                content={modules[previewModule].content}
+                title={`${settings.title} — ${modules[previewModule].title}`}
+                courseTitle={settings.title}
+                moduleTitle={modules[previewModule].title}
+                onClose={() => setPreviewAllMode(false)}
+                isModuleComplete={false}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-text-muted text-sm">
+                Select a module to preview
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
