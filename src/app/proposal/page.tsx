@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function ProposalPage() {
   return (
-    <div className="min-h-screen bg-[#0B1B18]">
+    <div className="min-h-screen bg-[#0B1B18]" style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       {/* Header */}
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
