@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { Building2, Shield, Search, ArrowRight, Info } from "lucide-react";
@@ -20,6 +20,7 @@ const DEMO_ROLES = [
     id: "secretariat",
     email: "demo-secretariat@lcadesk.com",
     label: "Secretariat / Regulator",
+    minWidth: 768, // iPad+ only
     description: "Review submissions, audit compliance, manage the LCS Register",
     icon: Shield,
     color: "gold",
@@ -38,6 +39,14 @@ const DEMO_ROLES = [
 
 export default function DemoSelectPage() {
   const [switching, setSwitching] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const handleSelect = async (role: typeof DEMO_ROLES[number]) => {
     setSwitching(role.id);
@@ -86,8 +95,11 @@ export default function DemoSelectPage() {
           {DEMO_ROLES.map((role) => (
             <button
               key={role.id}
-              onClick={() => handleSelect(role)}
-              disabled={switching !== null}
+              onClick={() => {
+                if ((role as any).minWidth && isMobile) return;
+                handleSelect(role);
+              }}
+              disabled={switching !== null || (!!((role as any).minWidth) && isMobile)}
               className={cn(
                 "w-full rounded-xl border p-5 text-left transition-all",
                 "hover:border-accent/40 hover:shadow-md",
@@ -108,6 +120,12 @@ export default function DemoSelectPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-semibold text-text-primary">{role.label}</p>
                   <p className="text-sm text-text-muted mt-0.5">{role.description}</p>
+                  {(role as any).minWidth && isMobile && (
+                    <p className="text-xs text-warning font-medium mt-1.5 flex items-center gap-1">
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                      Requires tablet or desktop
+                    </p>
+                  )}
                 </div>
                 {switching === role.id ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent shrink-0" />
