@@ -46,7 +46,8 @@ export default function ExportPage() {
   const [submitting, setSubmitting] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
-  const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>(null);
+  // Default to email — platform submission hidden until secretariat integration is live
+  const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>("email");
   useEffect(() => {
     const load = async () => {
       fetchPlanAndUsage().then(d => setCurrentPlan(d.plan)).catch(() => {});
@@ -296,7 +297,7 @@ export default function ExportPage() {
               </Card>
             )}
 
-            {/* Choose submission method */}
+            {/* Submit to Secretariat */}
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -306,65 +307,14 @@ export default function ExportPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-text-secondary">
-                  Choose how to deliver your report to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"}.
+                  Export your report files and email them to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"}.
                 </p>
 
-                {/* Option cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Option 1: Direct Platform Submission */}
-                  <button
-                    onClick={() => setSubmitMethod("platform")}
-                    className={`text-left rounded-xl border-2 p-4 transition-all ${
-                      submitMethod === "platform"
-                        ? "border-accent bg-accent-light ring-1 ring-accent/20"
-                        : "border-border hover:border-accent/40 bg-bg-card"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 rounded-lg bg-accent/10">
-                        <Globe className="h-5 w-5 text-accent" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-text-primary">Submit via LCA Desk</p>
-                        <Badge variant="success" className="text-xs mt-0.5">Recommended</Badge>
-                      </div>
-                    </div>
-                    <ul className="text-xs text-text-secondary space-y-1 mt-3">
-                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Instant delivery to the Secretariat</li>
-                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Track review status in real-time</li>
-                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Receive amendment requests digitally</li>
-                      <li className="flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-success mt-0.5 shrink-0" /> Full audit trail & receipt</li>
-                    </ul>
-                  </button>
+                {/* TODO: Restore method-selection grid when secretariat API integration is live.
+                    Platform submission ("Submit via LCA Desk") is hidden until then.
+                    When restoring: set default submitMethod back to null and uncomment the grid. */}
 
-                  {/* Option 2: Export & Email */}
-                  <button
-                    onClick={() => setSubmitMethod("email")}
-                    className={`text-left rounded-xl border-2 p-4 transition-all ${
-                      submitMethod === "email"
-                        ? "border-accent bg-accent-light ring-1 ring-accent/20"
-                        : "border-border hover:border-accent/40 bg-bg-card"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 rounded-lg bg-bg-primary">
-                        <Mail className="h-5 w-5 text-text-muted" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-text-primary">Export & Email</p>
-                        <Badge variant="default" className="text-xs mt-0.5">Traditional</Badge>
-                      </div>
-                    </div>
-                    <ul className="text-xs text-text-secondary space-y-1 mt-3">
-                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Download Excel + PDF files</li>
-                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Email to {getJurisdictionTemplate(jurisdictionCode).submissionEmail || "Secretariat"}</li>
-                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Attach files manually</li>
-                      <li className="flex items-start gap-1.5"><ArrowRight className="h-3 w-3 text-text-muted mt-0.5 shrink-0" /> Wait for email confirmation</li>
-                    </ul>
-                  </button>
-                </div>
-
-                {/* Email compose section (shown when email method selected) */}
+                {/* Email compose section */}
                 {submitMethod === "email" && (
                   <div className="bg-bg-primary rounded-lg p-4 space-y-3 border border-border">
                     <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Email Submission Details</p>
@@ -387,20 +337,7 @@ export default function ExportPage() {
                   </div>
                 )}
 
-                {/* Platform submit info (shown when platform method selected) */}
-                {submitMethod === "platform" && (
-                  <div className="bg-accent-light rounded-lg p-4 border border-accent/20">
-                    <div className="flex items-start gap-2 mb-2">
-                      <Globe className="h-4 w-4 text-accent mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs font-semibold text-accent">Direct Platform Submission</p>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Your report data, attestation, and all supporting records will be delivered directly to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"} through LCA Desk. They will see your full submission including compliance metrics, employment breakdown, and expenditure details — no email attachments needed.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Platform submit info — hidden until secretariat integration is live */}
 
                 {/* Attestation */}
                 {submitMethod && (
@@ -441,11 +378,7 @@ export default function ExportPage() {
                       size="lg"
                       className="w-full gap-2"
                     >
-                      {submitMethod === "platform" ? (
-                        <><Globe className="h-5 w-5" /> Attest & Submit via LCA Desk</>
-                      ) : (
-                        <><Lock className="h-5 w-5" /> Attest & Submit Report</>
-                      )}
+                      <Lock className="h-5 w-5" /> Attest & Submit Report
                     </Button>
                   </div>
                 )}

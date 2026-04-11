@@ -600,5 +600,6 @@ export async function generateHalfYearlyReport(
   const relatedSectorSheet = buildRelatedSectorSheet();
   XLSX.utils.book_append_sheet(wb, relatedSectorSheet, "Related Sector");
 
-  return XLSX.write(wb, { type: "array", bookType: "xlsx" }) as Uint8Array;
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as unknown;
+  return buf instanceof Uint8Array ? buf : new Uint8Array(buf as ArrayBuffer);
 }

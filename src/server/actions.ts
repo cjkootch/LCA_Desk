@@ -53,6 +53,7 @@ import {
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
+import { trackEvent } from "@/lib/analytics";
 import { entitySchema } from "@/server/schemas";
 import {
   notifyApplicationReceived as unifiedNotifyAppReceived,
@@ -302,9 +303,11 @@ export async function updatePeriodStatus(periodId: string, newStatus: string) {
   const oldStatus = current.status || "not_started";
 
   // Validate state transitions
+  // Correct flow: not_started → in_progress → in_review → approved → submitted → acknowledged
+  // in_progress cannot skip directly to approved — must go through in_review first
   const validTransitions: Record<string, string[]> = {
     not_started: ["in_progress"],
-    in_progress: ["in_review", "approved"],
+    in_progress: ["in_review"],
     in_review: ["approved", "in_progress"],
     approved: ["submitted"],
     submitted: [],
@@ -344,9 +347,15 @@ export async function updatePeriodStatus(periodId: string, newStatus: string) {
 }
 
 export async function attestAndSubmit(periodId: string, attestationText: string, submissionMethod: "platform" | "email" = "email") {
-  const { tenantId, userId } = await getSessionTenant();
+  const { tenantId, userId, plan, trialEndsAt, stripeSubscriptionId, stripeSubscriptionStatus } = await getSessionTenant();
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw new Error("User not found");
+
+  // Billing guard: locked accounts cannot submit
+  const billingAccess = getBillingAccess(plan, trialEndsAt, stripeSubscriptionId, stripeSubscriptionStatus);
+  if (!billingAccess.canAccess) {
+    throw new Error("Your account is not active. Please update your billing details to submit reports.");
+  }
 
   const [current] = await db
     .select()
@@ -506,9 +515,15 @@ export async function attestAndSubmit(periodId: string, attestationText: string,
 
 // Upload-based submission for free-tier users
 export async function submitWithUpload(periodId: string, attestationText: string, fileKey: string, fileName: string) {
-  const { tenantId, userId } = await getSessionTenant();
+  const { tenantId, userId, plan, trialEndsAt, stripeSubscriptionId, stripeSubscriptionStatus } = await getSessionTenant();
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw new Error("User not found");
+
+  // Billing guard: locked accounts cannot submit
+  const billingAccess = getBillingAccess(plan, trialEndsAt, stripeSubscriptionId, stripeSubscriptionStatus);
+  if (!billingAccess.canAccess) {
+    throw new Error("Your account is not active. Please update your billing details to submit reports.");
+  }
 
   const [current] = await db
     .select()
@@ -519,6 +534,19 @@ export async function submitWithUpload(periodId: string, attestationText: string
 
   if (current.status === "submitted" || current.lockedAt) {
     throw new Error("This period has already been submitted.");
+  }
+
+  // Create data snapshot at time of submission (same as attestAndSubmit)
+  let expenditures, employment, capacity, narratives;
+  try {
+    [expenditures, employment, capacity, narratives] = await Promise.all([
+      db.select().from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, periodId)),
+      db.select().from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, periodId)),
+      db.select().from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.reportingPeriodId, periodId)),
+      db.select().from(narrativeDrafts).where(eq(narrativeDrafts.reportingPeriodId, periodId)),
+    ]);
+  } catch (err) {
+    throw new Error("Failed to create data snapshot. Submission aborted — no data was changed.");
   }
 
   const now = new Date();
@@ -539,6 +567,16 @@ export async function submitWithUpload(periodId: string, attestationText: string
         attestation: attestationText,
         uploadedFile: { key: fileKey, name: fileName },
         submissionMethod: "upload",
+        recordCounts: {
+          expenditures: expenditures.length,
+          employment: employment.length,
+          capacity: capacity.length,
+          narratives: narratives.length,
+        },
+        expenditures,
+        employment,
+        capacity,
+        narratives,
       }),
       updatedAt: now,
     })
@@ -563,7 +601,7 @@ export async function submitWithUpload(periodId: string, attestationText: string
     action: "submit", entityType: "reporting_period", entityId: periodId,
     reportingPeriodId: periodId,
     fieldName: "status", oldValue: current.status || "not_started", newValue: "submitted",
-    metadata: { submissionMethod: "upload", fileName },
+    metadata: { submissionMethod: "upload", fileName, recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length } },
   });
 
   await logAudit({
@@ -582,8 +620,62 @@ export async function submitWithUpload(periodId: string, attestationText: string
     entityName: entityForEmail?.legalName || "",
     reportType: reportTypeNames[current.reportType] || current.reportType,
     periodLabel: `${current.periodStart} to ${current.periodEnd}`,
-    recordCounts: { expenditures: 0, employment: 0, capacity: 0 },
+    recordCounts: { expenditures: expenditures.length, employment: employment.length, capacity: capacity.length },
   });
+
+  // Auto-create next reporting period
+  try {
+    const nextTypeMap: Record<string, string> = {
+      half_yearly_h1: "half_yearly_h2",
+      half_yearly_h2: "half_yearly_h1",
+    };
+    const nextType = nextTypeMap[current.reportType];
+    if (nextType) {
+      const nextYear = nextType === "half_yearly_h1" ? (current.fiscalYear || new Date().getFullYear()) + 1 : current.fiscalYear || new Date().getFullYear();
+      const { calculateDeadlines } = await import("@/lib/compliance/deadlines");
+      const jCode = await getEntityJurisdictionCode(current.entityId);
+      const deadlines = calculateDeadlines(jCode, nextYear);
+      const nextDeadline = deadlines.find(d => d.type === nextType);
+      if (nextDeadline) {
+        const existing = await db.select({ id: reportingPeriods.id }).from(reportingPeriods)
+          .where(and(
+            eq(reportingPeriods.entityId, current.entityId),
+            eq(reportingPeriods.reportType, nextType),
+            eq(reportingPeriods.fiscalYear, nextYear),
+          )).limit(1);
+        if (existing.length === 0) {
+          await db.insert(reportingPeriods).values({
+            entityId: current.entityId,
+            tenantId,
+            jurisdictionId: current.jurisdictionId || null,
+            reportType: nextType,
+            periodStart: nextDeadline.period_start.toISOString().slice(0, 10),
+            periodEnd: nextDeadline.period_end.toISOString().slice(0, 10),
+            dueDate: nextDeadline.due_date.toISOString().slice(0, 10),
+            fiscalYear: nextYear,
+            status: "not_started",
+          });
+        }
+      }
+    }
+  } catch (nextPeriodErr) {
+    console.error("Failed to auto-create next period:", nextPeriodErr);
+    try {
+      await logAudit({
+        tenantId, userId, userName: user.name || undefined,
+        action: "create", entityType: "reporting_period", entityId: periodId,
+        reportingPeriodId: periodId,
+        newValue: "Auto-creation of next period failed — manual creation required",
+      });
+    } catch {}
+  }
+
+  // Track analytics event
+  try {
+    const dueDate = current.dueDate ? new Date(current.dueDate) : null;
+    const daysBeforeDeadline = dueDate ? Math.max(0, Math.floor((dueDate.getTime() - now.getTime()) / 86400000)) : 0;
+    await trackEvent(userId, tenantId, "report_submitted", { daysBeforeDeadline, completenessScore: 100, submissionMethod: "upload" });
+  } catch {}
 
   // Qualify referral on first submission
   try { qualifyReferral(userId); } catch {}
@@ -607,22 +699,52 @@ export async function checkPeriodLocked(periodId: string): Promise<boolean> {
 }
 
 export async function reopenPeriod(periodId: string) {
-  const { tenantId, userId } = await getSessionTenant();
+  const { tenantId, userId, role } = await getSessionTenant();
+  const isSuperAdmin = await checkSuperAdmin();
+
+  // Only owners or super admins may reopen a submitted period
+  if (role !== "owner" && !isSuperAdmin) {
+    throw new Error("Only account owners can reopen a submitted period.");
+  }
+
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
 
-  const [updated] = await db
-    .update(reportingPeriods)
-    .set({ status: "in_progress", lockedAt: null, updatedAt: new Date() })
+  const [current] = await db
+    .select({ status: reportingPeriods.status })
+    .from(reportingPeriods)
     .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
-    .returning();
+    .limit(1);
+  if (!current) throw new Error("Period not found");
 
-  await logAudit({
-    tenantId, userId, userName: user?.name || undefined,
-    action: "reopen", entityType: "reporting_period", entityId: periodId,
-    reportingPeriodId: periodId,
-    fieldName: "status", oldValue: "submitted", newValue: "in_progress",
-    metadata: { reason: "Period reopened for amendments" },
-  });
+  // Only submitted or acknowledged periods can be reopened
+  if (current.status !== "submitted" && current.status !== "acknowledged") {
+    throw new Error(`Cannot reopen a period with status "${current.status}". Only submitted or acknowledged periods can be reopened.`);
+  }
+
+  let updated;
+  try {
+    [updated] = await db
+      .update(reportingPeriods)
+      .set({ status: "in_progress", lockedAt: null, updatedAt: new Date() })
+      .where(and(eq(reportingPeriods.id, periodId), eq(reportingPeriods.tenantId, tenantId)))
+      .returning();
+
+    await logAudit({
+      tenantId, userId, userName: user?.name || undefined,
+      action: "reopen", entityType: "reporting_period", entityId: periodId,
+      reportingPeriodId: periodId,
+      fieldName: "status", oldValue: current.status, newValue: "in_progress",
+      metadata: { reason: "Period reopened for amendments" },
+    });
+  } catch (err) {
+    await logAudit({
+      tenantId, userId, userName: user?.name || undefined,
+      action: "reopen", entityType: "reporting_period", entityId: periodId,
+      reportingPeriodId: periodId,
+      newValue: `Reopen failed: ${err instanceof Error ? err.message : String(err)}`,
+    }).catch(() => {});
+    throw err;
+  }
 
   return updated;
 }
@@ -2092,8 +2214,8 @@ export async function fetchStepCompletion(periodId: string) {
   if (narSections.has("expenditure_narrative") && narSections.has("employment_narrative") && narSections.has("capacity_narrative")) {
     completed.push("narrative");
   }
-  // Review complete if all 3 data steps + narrative done
-  if (exps.length > 0 && emps.length > 0 && caps.length > 0) completed.push("review");
+  // Review complete if all 3 data steps AND all 3 narrative sections are done
+  if (exps.length > 0 && emps.length > 0 && caps.length > 0 && narSections.has("expenditure_narrative") && narSections.has("employment_narrative") && narSections.has("capacity_narrative")) completed.push("review");
   // Export complete after submission
   if (period[0]?.status === "submitted" || period[0]?.status === "acknowledged") completed.push("export");
   return completed;

@@ -19,3 +19,15 @@ Incoming Stripe webhook events are deduplicated via the `stripe_events` table. T
 
 ### Schema migrations
 All schema changes must go through `npx drizzle-kit generate` (generates SQL migration files in `drizzle/migrations/`) followed by committing the generated `.sql` file. Never modify migration files manually. Apply with `npx drizzle-kit migrate` against the target database.
+
+### Submission state machine
+Valid transitions: `not_started → in_progress → in_review → approved → submitted → acknowledged`. There is **no shortcut** from `in_progress` directly to `approved` — the in-review step is mandatory. `reopenPeriod` can only be called by account owners or super admins, and only when the period is in `submitted` or `acknowledged` state.
+
+### Platform submission is hidden (secretariat integration pending)
+`src/app/dashboard/entities/[entityId]/periods/[periodId]/export/page.tsx` defaults `submitMethod` to `"email"` and the method-selection grid (platform vs email cards) is commented out. When the secretariat API integration is live: restore the grid, set the default back to `null`, and re-enable the `"platform"` branch in `handleSubmit`.
+
+### Data snapshot at submission
+Both `attestAndSubmit` and `submitWithUpload` (in `src/server/actions.ts`) fetch all records for the period immediately before writing the `submitted` status, then store the full JSON in `reportingPeriods.snapshotData`. This snapshot includes `recordCounts`, `expenditures`, `employment`, `capacity`, and `narratives`. Both functions also auto-create the next reporting period on success (H1→H2 or H2→next-year H1) and call `trackEvent` with `"report_submitted"`.
+
+### Billing guard on submission
+Both `attestAndSubmit` and `submitWithUpload` call `getBillingAccess(...)` and throw if `canAccess` is false. This prevents locked/past-due accounts from submitting without going through billing first.
