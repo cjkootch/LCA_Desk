@@ -26,7 +26,7 @@ export default async function Image() {
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://app.lcadesk.com/logo-white.png" alt="LCA Desk" width={200} height={50} style={{ objectFit: "contain" }} />
+          <img src="https://app.lcadesk.com/logo-white-lca.png" alt="LCA Desk" width={200} height={50} style={{ objectFit: "contain" }} />
         </div>
 
         {/* Main text */}
