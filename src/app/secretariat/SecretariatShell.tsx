@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen, GraduationCap   LifeBuoy,
+import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen, GraduationCap, LifeBuoy,
 } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
