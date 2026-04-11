@@ -127,6 +127,7 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prefetchCache = useRef<Map<number, Blob>>(new Map());
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -165,38 +166,81 @@ export function PlatformBriefing({ onComplete, steps = SECRETARIAT_BRIEFING }: P
   }, [step.target, current]);
 
   // Speak the narration
-  const speak = useCallback(async (text: string) => {
-    if (!audioEnabled || !text) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    setSpeaking(true);
+  // Prefetch the next step's audio
+  const prefetchStep = useCallback(async (idx: number) => {
+    if (idx < 0 || idx >= steps.length || prefetchCache.current.has(idx)) return;
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: "nova" }),
+        body: JSON.stringify({ text: steps[idx].narration, voice: "nova" }),
       });
-      if (!res.ok || !mountedRef.current) { setSpeaking(false); return; }
-      const blob = await res.blob();
-      if (!mountedRef.current) { setSpeaking(false); return; }
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
+      if (res.ok) {
+        const blob = await res.blob();
+        prefetchCache.current.set(idx, blob);
+      }
+    } catch {}
+  }, [steps]);
+
+  const speak = useCallback(async (text: string) => {
+    if (!audioEnabled || !text) return;
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setSpeaking(true);
+
+    // Check prefetch cache first for instant playback
+    const cachedBlob = prefetchCache.current.get(current);
+    let blob: Blob | null = cachedBlob || null;
+
+    if (!blob) {
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, voice: "nova" }),
+        });
+        if (!res.ok || !mountedRef.current) { setSpeaking(false); return; }
+        blob = await res.blob();
+      } catch {
+        if (mountedRef.current) setSpeaking(false);
+        return;
+      }
+    }
+
+    if (!mountedRef.current || !blob) { setSpeaking(false); return; }
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audioRef.current = audio;
+      audio.onended = () => {
+          URL.revokeObjectURL(url);
+          if (!mountedRef.current) return;
+          setSpeaking(false);
+          // Auto-advance to next step after a brief pause
+          if (current < steps.length - 1) {
+            setTimeout(() => {
+              if (mountedRef.current) setCurrent(c => Math.min(c + 1, steps.length - 1));
+            }, 1500);
+          }
+        };
       audio.onerror = () => { URL.revokeObjectURL(url); if (mountedRef.current) setSpeaking(false); };
       audio.play().catch(() => { setSpeaking(false); });
     } catch {
       if (mountedRef.current) setSpeaking(false);
     }
-  }, [audioEnabled]);
+  }, [audioEnabled, current, steps]);
 
-  // Speak on step change
+  // Speak on step change + prefetch next
   useEffect(() => {
     speak(step.narration);
+    // Prefetch next step's audio while this one plays
+    prefetchStep(current + 1);
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setSpeaking(false);
     };
   }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prefetch step 1 audio immediately on mount for fast first transition
+  useEffect(() => { prefetchStep(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
   useEffect(() => {
