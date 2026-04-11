@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkSuperAdmin, fetchPlgStats } from "@/server/actions";
+import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,33 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
   TrendingUp, ArrowLeft, RefreshCw, Clock, CheckCircle,
-  AlertTriangle, XCircle, ChevronDown, ChevronUp, Activity,
+  AlertTriangle, XCircle, ChevronDown, ChevronUp, Activity, Globe,
 } from "lucide-react";
 
 type PlgData = Awaited<ReturnType<typeof fetchPlgStats>>;
+type DemoLog = Awaited<ReturnType<typeof fetchDemoAccessLog>>[number];
+
+// Cole's known IP — update this if your IP changes
+const COLE_IP = "";
+
+function truncateUA(ua?: string) {
+  if (!ua || ua === "unknown") return "—";
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Firefox")) return "Firefox";
+  if (ua.includes("Edge")) return "Edge";
+  return ua.slice(0, 30) + "...";
+}
+
+function formatTimeAgo(date: Date | string | null) {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
+}
 
 const FUNNEL_LABELS: Record<string, string> = {
   trial_started: "Trial Started",
@@ -60,6 +83,7 @@ export default function PlgPage() {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PlgData | null>(null);
+  const [demoLogs, setDemoLogs] = useState<DemoLog[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showAllTenants, setShowAllTenants] = useState(false);
@@ -68,8 +92,9 @@ export default function PlgPage() {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const d = await fetchPlgStats();
+      const [d, logs] = await Promise.all([fetchPlgStats(), fetchDemoAccessLog()]);
       setData(d);
+      setDemoLogs(logs);
       setLastUpdated(new Date());
     } catch {
       // silently fail on refresh
@@ -384,7 +409,7 @@ export default function PlgPage() {
         </Card>
 
         {/* ── Recent Events Feed ─────────────────────────────────────── */}
-        <Card>
+        <Card className="mb-4">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Recent Events (last 50)</CardTitle>
@@ -419,6 +444,67 @@ export default function PlgPage() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* ── Demo Access Log ───────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-accent" />
+              <CardTitle className="text-sm">Demo Access Log</CardTitle>
+            </div>
+            <p className="text-xs text-text-muted mt-1">External visitors accessing /try — rows highlighted gold are not your IP</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto rounded-b-xl">
+              <table className="w-full text-xs">
+                <thead className="bg-bg-primary">
+                  <tr>
+                    <th className="text-left p-3 font-medium text-text-muted">Time</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Event</th>
+                    <th className="text-left p-3 font-medium text-text-muted">IP Address</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {demoLogs.map(log => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const props = log.properties as any;
+                    const ip = props?.ip as string | undefined;
+                    const isOwnIP = COLE_IP && ip === COLE_IP;
+                    const isExternal = !isOwnIP && ip && ip !== "unknown";
+                    return (
+                      <tr key={log.id} className={cn("border-t border-border", isExternal && "bg-gold/5")}>
+                        <td className="p-3 text-text-secondary whitespace-nowrap">{formatTimeAgo(log.occurredAt)}</td>
+                        <td className="p-3">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-medium",
+                            log.eventName === "demo_login_requested" ? "bg-accent/10 text-accent" : "bg-gold/10 text-gold"
+                          )}>
+                            {log.eventName === "demo_login_requested" ? "Page Visit" : "Role Selected"}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-text-muted">
+                          {ip || "—"}
+                          {isExternal && (
+                            <span className="ml-1.5 text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded">External</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-text-muted">
+                          {props?.role
+                            ? `Selected: ${props.label || props.role}`
+                            : truncateUA(props?.userAgent as string | undefined)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {demoLogs.length === 0 && (
+                <div className="p-6 text-center text-xs text-text-muted">No demo visits yet</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

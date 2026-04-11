@@ -7747,3 +7747,25 @@ export async function deleteModule(moduleId: string) {
   await db.update(courses).set({ moduleCount: remaining.length }).where(eq(courses.id, mod.courseId));
 }
 
+export async function fetchDemoAccessLog() {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  const logs = await db.select({
+    id: userEvents.id,
+    eventName: userEvents.eventName,
+    properties: userEvents.properties,
+    occurredAt: userEvents.occurredAt,
+  }).from(userEvents)
+    .where(
+      or(
+        eq(userEvents.eventName, "demo_login_requested"),
+        eq(userEvents.eventName, "demo_role_selected"),
+      )
+    )
+    .orderBy(desc(userEvents.occurredAt))
+    .limit(100);
+
+  return logs;
+}
+

@@ -63,6 +63,15 @@ export default function DemoSelectPage() {
         setSwitching(null);
         return;
       }
+      // Log role selection (fire-and-forget)
+      fetch("/api/analytics/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventName: "demo_role_selected",
+          properties: { role: role.id, label: role.label },
+        }),
+      }).catch(() => {});
       window.location.href = role.redirect;
     } catch {
       setSwitching(null);
