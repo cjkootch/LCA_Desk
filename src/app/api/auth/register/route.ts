@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
         .replace(/[\s_]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-      // 14-day free trial — no CC required. Users can extend to 30 days via /dashboard/activate.
+      // 30-day free trial — no CC required. Users can add a payment method via /dashboard/activate to ensure continued access.
       const freeTrialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const [tenant] = await db
         .insert(tenants)
