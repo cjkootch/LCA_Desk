@@ -213,7 +213,6 @@ export const FILER_BRIEFING: BriefingStep[] = [
       "Color-coded: green on track, orange soon, red overdue",
       "Automatic reminders at 30, 14, and 7 days out",
     ],
-    navigateTo: "/dashboard",
     target: '[data-briefing="deadlines"], [data-section="deadlines"], .compliance-calendar',
     position: "right",
   },
