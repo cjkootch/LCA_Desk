@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { Building2, Shield, Search, ArrowRight, Info, Play, Sparkles } from "lucide-react";
+import { Building2, Shield, Search, ArrowRight, Info, Play, Sparkles, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DEMO_ROLES = [
@@ -149,7 +149,33 @@ export default function DemoSelectPage() {
           ))}
         </div>
 
-        <p className="text-xs text-text-muted text-center mt-6">
+        {/* Contact card */}
+        <div className="rounded-2xl border border-border bg-bg-card shadow-sm p-5 mt-6">
+          <div className="flex items-center gap-3 mb-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/founder-new.png" alt="Cole Kutschinski" className="h-10 w-10 rounded-full object-cover" />
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Cole Kutschinski</p>
+              <p className="text-[11px] text-text-muted">Founder, LCA Desk</p>
+            </div>
+          </div>
+          <a href="mailto:Cole@lcadesk.com" className="flex items-center gap-2 text-xs text-text-secondary hover:text-accent transition-colors mb-3">
+            <Mail className="h-3.5 w-3.5 text-text-muted" />Cole@lcadesk.com
+          </a>
+          <div className="space-y-1.5">
+            <a href="/proposal" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border-2 border-accent text-accent text-xs font-semibold hover:bg-accent hover:text-white transition-colors">
+              View Proposal
+            </a>
+            <a href="https://teams.microsoft.com/l/chat/0/0?users=Cole@lcadesk.com&message=Hi%20Cole%2C%20I%27d%20like%20to%20schedule%20a%20demo%20meeting." target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-[#5B5FC7] text-white text-xs font-medium hover:bg-[#4B4FB7] transition-colors">
+              Schedule Meeting
+            </a>
+            <a href="https://wa.me/18324927169?text=Hi%20Cole%2C%20I%20just%20tried%20the%20LCA%20Desk%20demo." target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-[#25D366] text-white text-xs font-medium hover:bg-[#1DA851] transition-colors">
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <p className="text-xs text-text-muted text-center mt-4">
           All data is sample data for demonstration purposes.
         </p>
       </div>

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-import { Building2, Plus, ArrowRight, FileText } from "lucide-react";
+import { Building2, Plus, ArrowRight, FileText, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
 import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
@@ -40,7 +40,13 @@ export default function DashboardPage() {
   const [isPro, setIsPro] = useState(false);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showBriefingCard, setShowBriefingCard] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const completed = localStorage.getItem("filer-briefing-completed");
+    if (!completed) setShowBriefingCard(true);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -84,6 +90,48 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 max-w-6xl">
       <AnnouncementBanner userRole="filer" />
+
+      {/* Platform Briefing welcome card */}
+      {showBriefingCard && (
+        <div className="rounded-2xl border-2 border-accent bg-gradient-to-br from-[#19544c] to-[#0d3830] p-8 text-white shadow-xl shadow-accent/10 mb-6">
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur shrink-0">
+              <Play className="h-8 w-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-accent-light bg-white/10 px-2.5 py-1 rounded-full">
+                  3-Minute Audio Tour
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-2">
+                Welcome to Your Compliance Dashboard
+              </h2>
+              <p className="text-sm text-white/70 mb-6 leading-relaxed max-w-lg">
+                Take a guided briefing with audio narration to learn how to file your Half-Yearly Reports, use AI narrative drafting, and track deadlines.
+              </p>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("start-briefing"))}
+                  className="flex items-center gap-2 bg-white text-[#19544c] px-6 py-3 rounded-xl text-sm font-bold hover:bg-white/90 transition-all hover:shadow-lg"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Platform Briefing
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("filer-briefing-completed", "true");
+                    setShowBriefingCard(false);
+                  }}
+                  className="text-sm text-white/50 hover:text-white/80 transition-colors"
+                >
+                  Skip for now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Identity header */}
       <DashboardIdentity
@@ -161,6 +209,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-3">
+              <div data-briefing="entities">
               <DashboardSection title="Your Entities" info="Each entity represents a company or project that files separately with the Secretariat. Most contractors have one entity, but if you operate multiple subsidiaries each may need its own filing." action={
                 <Link href="/dashboard/entities/new">
                   <Button size="sm" variant="outline" className="gap-1"><Plus className="h-3.5 w-3.5" /> Add Entity</Button>
@@ -172,6 +221,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </DashboardSection>
+              </div>
 
               {/* Upcoming deadlines */}
               {upcomingDeadlines.length > 0 && (
@@ -218,7 +268,9 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <ActivationChecklist />
               <ComplianceHealthWidget />
-              <ComplianceCalendar deadlines={upcomingDeadlines} />
+              <div data-briefing="deadlines">
+                <ComplianceCalendar deadlines={upcomingDeadlines} />
+              </div>
               <RecentActivity />
             </div>
           </div>

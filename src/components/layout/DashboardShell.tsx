@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { PlatformBriefing, FILER_BRIEFING } from "@/components/onboarding/PlatformBriefing";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -27,6 +28,13 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [briefingActive, setBriefingActive] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setBriefingActive(true);
+    window.addEventListener("start-briefing", handler);
+    return () => window.removeEventListener("start-briefing", handler);
+  }, []);
 
   const isAllowedPath = ALLOWED_PATHS.some(p => pathname?.startsWith(p));
 
@@ -72,6 +80,15 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         {children}
       </main>
       <OnboardingTour />
+      {briefingActive && (
+        <PlatformBriefing
+          steps={FILER_BRIEFING}
+          onComplete={() => {
+            localStorage.setItem("filer-briefing-completed", "true");
+            setBriefingActive(false);
+          }}
+        />
+      )}
       <FloatingChatWidget
         pageContext={pathname || undefined}
         quickQuestions={[

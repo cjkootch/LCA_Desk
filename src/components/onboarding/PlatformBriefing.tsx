@@ -126,6 +126,111 @@ export const SECRETARIAT_BRIEFING: BriefingStep[] = [
   },
 ];
 
+export const FILER_BRIEFING: BriefingStep[] = [
+  {
+    id: "welcome",
+    title: "Welcome to Your Compliance Dashboard",
+    narration: "Welcome to LCA Desk. This is your compliance command center for managing local content filings under the Local Content Act. Over the next few minutes, I'll walk you through the key areas you'll use to prepare and submit your Half-Yearly Reports. You can pause or skip at any time.",
+    bullets: [
+      "This briefing covers 7 key areas of your dashboard",
+      "Takes about 3 minutes",
+      "Pause or skip anytime — replay from Settings",
+    ],
+    position: "center",
+  },
+  {
+    id: "entities",
+    title: "Your Entities",
+    narration: "Entities are the companies or projects you file reports for. Most contractors have one entity, but if you operate subsidiaries or joint ventures, each may need its own filing. Your first step is always to add your entity with its legal name, LCS Certificate number, and contact details.",
+    bullets: [
+      "Each entity files its own Half-Yearly Report",
+      "Add your company name, LCS Certificate ID, and contacts",
+      "Most users have one entity — JVs may need separate ones",
+    ],
+    target: '[data-briefing="entities"], [data-section="entities"]',
+    position: "right",
+  },
+  {
+    id: "filing",
+    title: "The Filing Workflow",
+    narration: "Once your entity is set up, you'll work through a guided 7-step filing process. You'll enter expenditure records showing how much you spent with local versus international suppliers, employment data breaking down your workforce by category and Guyanese percentage, and capacity development activities. The platform validates your data against LCA requirements as you go.",
+    bullets: [
+      "7-step guided process from data entry to submission",
+      "Expenditure: local vs international supplier spend",
+      "Employment: Guyanese percentages by category",
+      "Capacity development: training and skills investment",
+    ],
+    navigateTo: "/dashboard/entities",
+    target: "main table, main > div > div, [data-section]",
+    position: "right",
+  },
+  {
+    id: "narrative",
+    title: "AI Narrative Drafting",
+    narration: "This is where LCA Desk saves you the most time. Once your data is entered, the AI generates your Comparative Analysis narrative — the written portion of your Half-Yearly Report that explains your local content performance. It references your actual data, cites the correct sections of the Act, and produces a first draft in under a minute. You review, edit, and approve it.",
+    bullets: [
+      "AI drafts your Comparative Analysis from your data",
+      "References actual numbers and LCA sections",
+      "First draft in under a minute",
+      "Review, edit, and approve before submission",
+    ],
+    position: "center",
+  },
+  {
+    id: "expert",
+    title: "Ask the LCA Expert",
+    narration: "Have a question about the Act, a filing deadline, or what data to report? The LCA Expert is an AI assistant trained on the full Local Content Act and its regulations. Ask it anything — it gives you cited answers with section references. Think of it as having a compliance consultant available 24/7.",
+    bullets: [
+      "AI trained on the full Local Content Act",
+      "Cited answers with section references",
+      "Ask about deadlines, requirements, or penalties",
+      "Available 24/7 — no waiting for a consultant",
+    ],
+    navigateTo: "/dashboard/expert",
+    target: "main",
+    position: "center",
+  },
+  {
+    id: "training",
+    title: "Compliance Training",
+    narration: "The training section has courses designed to help you understand your obligations under the Act. The LCA Fundamentals course covers everything from employment categories to the LCS Register. Each course has voice-narrated slides, interactive diagrams, and quizzes. Completing courses earns you badges that demonstrate compliance knowledge.",
+    bullets: [
+      "LCA Fundamentals and other compliance courses",
+      "Voice-narrated slides with interactive diagrams",
+      "Quizzes test your understanding",
+      "Earn badges to demonstrate compliance knowledge",
+    ],
+    navigateTo: "/dashboard/training",
+    target: "main",
+    position: "center",
+  },
+  {
+    id: "calendar",
+    title: "Deadlines & Calendar",
+    narration: "Never miss a filing deadline. The compliance calendar shows all your upcoming due dates with color-coded urgency. H1 reports covering January through June are due July 30th. H2 reports covering July through December are due January 30th. The platform sends you reminders at 30, 14, and 7 days before each deadline.",
+    bullets: [
+      "H1 due July 30 — H2 due January 30",
+      "Color-coded: green on track, orange soon, red overdue",
+      "Automatic reminders at 30, 14, and 7 days out",
+    ],
+    navigateTo: "/dashboard",
+    target: '[data-briefing="deadlines"], [data-section="deadlines"], .compliance-calendar',
+    position: "right",
+  },
+  {
+    id: "ready",
+    title: "You're Ready to File",
+    narration: "That's your platform briefing complete. Your next step is to add your first entity — it takes about 2 minutes. From there, the platform guides you through every step of your filing. If you need help at any point, the LCA Expert is one click away, and info icons throughout the dashboard explain each section. Good luck with your filing.",
+    bullets: [
+      "Add your first entity to get started (2 minutes)",
+      "The platform guides you through every step",
+      "LCA Expert available for any questions",
+      "Look for (i) icons for section explanations",
+    ],
+    position: "center",
+  },
+];
+
 interface PlatformBriefingProps {
   onComplete: () => void;
   steps?: BriefingStep[];
