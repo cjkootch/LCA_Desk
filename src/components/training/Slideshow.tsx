@@ -445,7 +445,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
     script.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
     script.onload = () => {
       const w = window as typeof window & { mermaid?: { initialize: (c: object) => void } };
-      w.mermaid?.initialize({ startOnLoad: false, theme: "base", themeVariables: { primaryColor: "#19544c", primaryTextColor: "#ffffff", lineColor: "#71b59a", nodeBorder: "#19544c" } });
+      w.mermaid?.initialize({ startOnLoad: false, theme: "base", themeVariables: { background: "transparent", primaryColor: "#19544c", primaryTextColor: "#ffffff", lineColor: "#71b59a", nodeBorder: "#19544c" } });
     };
     document.head.appendChild(script);
   }, []);
