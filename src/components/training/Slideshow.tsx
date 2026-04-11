@@ -99,7 +99,7 @@ function stripMarkdown(text: string): string {
 
 // Build TTS text with natural pacing — pauses between bullets and sections
 function buildSpeechText(heading: string, body: string): string {
-  const lines = body.replace(/```mermaid[\s\S]*?```/g, "").replace(/:::scenario[\s\S]*?:::/g, "").split("\n").filter(Boolean);
+  const lines = stripQuizContent(body.replace(/```mermaid[\s\S]*?```/g, "")).split("\n").filter(Boolean);
   const parts: string[] = [];
 
   if (heading) parts.push(heading + ".");
@@ -133,7 +133,7 @@ function buildSpeechText(heading: string, body: string): string {
 const WORDS_PER_SEC = 2.8;
 
 function estimateLineTimings(heading: string, body: string): number[] {
-  const lines = body.replace(/```mermaid[\s\S]*?```/g, "").replace(/:::scenario[\s\S]*?:::/g, "").split("\n").filter(Boolean);
+  const lines = stripQuizContent(body.replace(/```mermaid[\s\S]*?```/g, "")).split("\n").filter(Boolean);
   const timings: number[] = [];
   let cumulativeWords = 0;
 
@@ -233,8 +233,25 @@ function MermaidDiagram({ chart }: { chart: string }) {
   return <div ref={containerRef} className="my-6 flex justify-center overflow-x-auto rounded-lg bg-white/60 p-4" />;
 }
 
+// Strip any quiz-like or interactive-test content before it reaches the slideshow renderer.
+// Quizzes are handled post-slideshow in learn/[slug]/page.tsx — they must never appear as slides.
+function stripQuizContent(markdown: string): string {
+  let s = markdown;
+  // Remove :::scenario blocks (interactive multiple-choice embedded in content)
+  s = s.replace(/:::scenario\n[\s\S]*?:::/g, "");
+  // Remove any ## Quiz section and everything after it
+  s = s.replace(/^## Quiz[\s\S]*/m, "");
+  // Remove JSON quiz arrays (correctIndex is a reliable signal they leaked from quizQuestions)
+  s = s.replace(/\[\s*\{[\s\S]*?"correctIndex"[\s\S]*?\}\s*\]/g, "");
+  // Remove any lines that look like raw quiz fields (question:/options:/correctIndex:)
+  s = s.replace(/^(question|options|correctIndex)\s*:/gm, "");
+  // Collapse excess blank lines left by stripping
+  s = s.replace(/\n{3,}/g, "\n\n");
+  return s.trim();
+}
+
 export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, onComplete, isModuleComplete }: SlideshowProps) {
-  const contentSlides = autoSplitSlides(parseSlides(content));
+  const contentSlides = autoSplitSlides(parseSlides(stripQuizContent(content)));
 
   const topicList = contentSlides
     .map(s => s.heading)
