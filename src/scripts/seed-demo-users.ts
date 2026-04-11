@@ -36,7 +36,7 @@ async function run() {
 
   // ── 1. demo-secretariat ──────────────────────────────────────────────────
   console.log("\n[1] demo-secretariat@lcadesk.com");
-  const secUser = await ensureUser("demo-secretariat@lcadesk.com", "Dr. Martin Pertab", "secretariat");
+  const secUser = await ensureUser("demo-secretariat@lcadesk.com", "Michael Munroe", "secretariat");
 
   // Ensure a secretariat office exists
   const [existingOffice] = await db.select().from(secretariatOffices).limit(1);
