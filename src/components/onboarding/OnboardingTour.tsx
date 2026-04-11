@@ -148,7 +148,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: "Refer & Earn",
-    description: "Know other companies with a filing obligation? Refer them and earn a commission for every paying customer you bring in.",
+    description: "Know another contractor with a filing obligation? Share your referral link \u2014 when they file their first report, you both get 14 extra trial days added automatically.",
     icon: Gift,
     extra: (
       <div className="mt-4 rounded-lg border border-accent/20 bg-accent-light p-4 space-y-2">
