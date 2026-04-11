@@ -95,6 +95,7 @@ export default function AdminPage() {
             { label: "Trialing", value: data.tenants.trialing, icon: Clock, color: "text-blue-600" },
             { label: "Open Tickets", value: data.support.openTickets, icon: MessageSquare, color: "text-warning", href: "/dashboard/admin/tickets" },
           { label: "Product Analytics", value: "View →", icon: LineChart, color: "text-purple-500", href: "/dashboard/admin/analytics" },
+          { label: "PLG Dashboard", value: "View →", icon: TrendingUp, color: "text-green-500", href: "/dashboard/admin/plg" },
           ].map(s => {
             const Inner = (
               <Card key={s.label} className={s.href ? "hover:border-accent/30 transition-colors cursor-pointer" : ""}>

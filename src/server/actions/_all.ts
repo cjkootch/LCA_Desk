@@ -49,6 +49,8 @@ import {
   announcements,
   teamInvites,
   referrals,
+  userEvents,
+  cronRuns,
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull, type InferInsertModel } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -7264,5 +7266,149 @@ export async function fetchSecretariatDocuments() {
     .limit(200);
 
   return allSubs.filter(s => demo.includeTenant(s.tenantId));
+}
+
+// ─── PLG ANALYTICS ────────────────────────────────────────────────
+export async function fetchPlgStats() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const [user] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, session.user.id)).limit(1);
+  if (!user?.isSuperAdmin) throw new Error("Not authorized");
+
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const FUNNEL_EVENTS = [
+    "trial_started",
+    "entity_created",
+    "first_expenditure_added",
+    "narrative_generated",
+    "report_submitted",
+  ] as const;
+
+  // Run all queries in parallel
+  const [
+    allTenants,
+    funnelRows,
+    recentEvents,
+    allReferrals,
+    recentCronRuns,
+    signups7d,
+    signups30d,
+  ] = await Promise.all([
+    // 1. All non-demo tenants
+    db.select({
+      id: tenants.id,
+      name: tenants.name,
+      slug: tenants.slug,
+      plan: tenants.plan,
+      trialEndsAt: tenants.trialEndsAt,
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      stripeSubscriptionStatus: tenants.stripeSubscriptionStatus,
+      stripePriceId: tenants.stripePriceId,
+      createdAt: tenants.createdAt,
+      isDemo: tenants.isDemo,
+    }).from(tenants).where(eq(tenants.isDemo, false)).orderBy(asc(tenants.createdAt)).limit(500),
+
+    // 2. Activation funnel — count distinct userId per eventName
+    db.select({
+      eventName: userEvents.eventName,
+      uniqueUsers: sql<number>`cast(count(distinct ${userEvents.userId}) as int)`,
+    }).from(userEvents)
+      .where(sql`${userEvents.eventName} = any(array['trial_started','entity_created','first_expenditure_added','narrative_generated','report_submitted'])`)
+      .groupBy(userEvents.eventName),
+
+    // 3. Recent 50 events
+    db.select({
+      id: userEvents.id,
+      userId: userEvents.userId,
+      tenantId: userEvents.tenantId,
+      eventName: userEvents.eventName,
+      properties: userEvents.properties,
+      occurredAt: userEvents.occurredAt,
+    }).from(userEvents).orderBy(desc(userEvents.occurredAt)).limit(50),
+
+    // 4. Referral stats
+    db.select({ status: referrals.status }).from(referrals).limit(1000),
+
+    // 5. Latest run per job (get last 200 runs, dedup in JS)
+    db.select({
+      id: cronRuns.id,
+      jobName: cronRuns.jobName,
+      startedAt: cronRuns.startedAt,
+      completedAt: cronRuns.completedAt,
+      status: cronRuns.status,
+      recordsProcessed: cronRuns.recordsProcessed,
+      durationMs: cronRuns.durationMs,
+      errorMessage: cronRuns.errorMessage,
+    }).from(cronRuns).orderBy(desc(cronRuns.startedAt)).limit(200),
+
+    // 6. Recent signups 7d
+    db.select({ id: users.id }).from(users).where(gte(users.createdAt, sevenDaysAgo)),
+
+    // 7. Recent signups 30d
+    db.select({ id: users.id }).from(users).where(gte(users.createdAt, thirtyDaysAgo)),
+  ]);
+
+  // Enrich tenants with billing access
+  const enrichedTenants = allTenants.map(t => {
+    const access = getBillingAccess(t.plan, t.trialEndsAt, t.stripeSubscriptionId, t.stripeSubscriptionStatus);
+    const daysRemaining = getTrialDaysRemaining(t.trialEndsAt);
+    return { ...t, billingState: access.state, daysRemaining };
+  });
+
+  // Segment by state
+  const activeTrials = enrichedTenants.filter(t => t.billingState === "trial");
+  const expiredTrials = enrichedTenants.filter(t => t.billingState === "trial_expired");
+  const paying = enrichedTenants.filter(t => t.billingState === "active");
+  const pastDue = enrichedTenants.filter(t => t.billingState === "past_due");
+  const locked = enrichedTenants.filter(t => t.billingState === "locked" || t.billingState === "setup_required");
+
+  // Build funnel map
+  const eventMap: Record<string, number> = {};
+  for (const row of funnelRows) {
+    eventMap[row.eventName] = row.uniqueUsers;
+  }
+  const funnel = FUNNEL_EVENTS.map(name => ({ name, count: eventMap[name] ?? 0 }));
+
+  // Referral stats
+  const referralStats = {
+    pending: allReferrals.filter(r => r.status === "pending").length,
+    signedUp: allReferrals.filter(r => r.status === "signed_up").length,
+    qualified: allReferrals.filter(r => r.status === "qualified").length,
+    rewarded: allReferrals.filter(r => r.status === "rewarded").length,
+  };
+
+  // Cron health — latest run per job
+  const cronHealth: typeof recentCronRuns = [];
+  const seen = new Set<string>();
+  for (const run of recentCronRuns) {
+    if (!seen.has(run.jobName)) {
+      seen.add(run.jobName);
+      cronHealth.push(run);
+    }
+  }
+
+  // Trial list sorted by daysRemaining asc
+  const trialList = [...activeTrials].sort((a, b) => (a.daysRemaining ?? 999) - (b.daysRemaining ?? 999));
+
+  return {
+    totalTenants: enrichedTenants.length,
+    activeTrials: activeTrials.length,
+    expiredTrials: expiredTrials.length,
+    paying: paying.length,
+    pastDue: pastDue.length,
+    locked: locked.length,
+    recentSignups7: signups7d.length,
+    recentSignups30: signups30d.length,
+    trialList,
+    allTenants: enrichedTenants,
+    funnel,
+    eventMap,
+    recentEvents,
+    referralStats,
+    cronHealth,
+  };
 }
 
