@@ -67,6 +67,41 @@ function Shell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobileDevice(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Block demo-secretariat users on mobile — this portal needs tablet+ screen
+  const isDemo = profile?.email?.includes("demo-");
+  if (isMobileDevice && isDemo) {
+    return (
+      <div className="min-h-screen bg-[#0B1B18] flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4">
+            <Shield className="h-8 w-8 text-emerald-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">
+            Secretariat Demo
+          </h2>
+          <p className="text-sm text-white/60 mb-6 leading-relaxed">
+            The Secretariat dashboard is designed for tablet and desktop screens. 
+            Please open this demo on a larger device for the full experience.
+          </p>
+          <a href="/demo/select" className="inline-flex items-center gap-2 bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors">
+            ← Back to Demo Selector
+          </a>
+          <p className="text-xs text-white/30 mt-4">
+            Try the Contractor or Job Seeker demos — they work great on mobile.
+          </p>
+        </div>
+      </div>
+    );
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [office, setOffice] = useState<any>(null);
 
