@@ -34,7 +34,7 @@ export default function TrialExpiredPage() {
           <Image src="/logo-full.svg" alt="LCA Desk" width={160} height={48} className="mx-auto mb-6" />
           <div className="inline-flex items-center gap-2 bg-warning-light border border-warning/20 text-warning text-sm font-medium px-4 py-2 rounded-full mb-4">
             <Lock className="h-4 w-4" />
-            Your 30-day Professional trial has ended
+            Your 30-day free trial has ended
           </div>
           <h1 className="text-3xl font-heading font-bold text-text-primary mb-3">
             Choose a plan to continue
