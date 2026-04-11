@@ -98,11 +98,11 @@ function stripMarkdown(text: string): string {
 }
 
 // Build TTS text with natural pacing — pauses between bullets and sections
-function buildSpeechText(heading: string, body: string): string {
+function buildSpeechText(heading: string, body: string, isContinuation?: boolean | null): string {
   const lines = stripQuizContent(body.replace(/```mermaid[\s\S]*?```/g, "")).split("\n").filter(Boolean);
   const parts: string[] = [];
 
-  if (heading) parts.push(heading + ".");
+  if (heading && !isContinuation) parts.push(heading + ".");
 
   for (const line of lines) {
     const t = line.trim();
