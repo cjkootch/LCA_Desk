@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { FileText, Users, LogOut, X, Menu, Shield, ClipboardCheck, Bot, BarChart3, UserPlus, PieChart, Settings, Megaphone, Building2, Calendar, Bell, History, FolderOpen, GraduationCap, LifeBuoy,
+  Mail,
 } from "lucide-react";
 import { SecretariatTour } from "@/components/onboarding/SecretariatTour";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
@@ -215,6 +216,48 @@ function Shell({ children }: { children: React.ReactNode }) {
           "How many submissions are pending review?",
         ]}
       />
+      {/* Floating contact card — demo users only */}
+      {isDemo && <DemoContactFloat />}
+    </div>
+  );
+}
+
+function DemoContactFloat() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="fixed bottom-6 right-24 z-[90]">
+      {open && (
+        <div className="mb-3 w-[280px] rounded-2xl border border-border bg-bg-card shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in duration-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-sm font-bold text-accent">CK</div>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Cole Kutschinski</p>
+              <p className="text-[11px] text-text-muted">Founder, LCA Desk</p>
+            </div>
+          </div>
+          <a href="mailto:Cole@lcadesk.com" className="flex items-center gap-2 text-xs text-text-secondary hover:text-accent transition-colors mb-3">
+            <Mail className="h-3.5 w-3.5 text-text-muted" />Cole@lcadesk.com
+          </a>
+          <div className="space-y-1.5">
+            <a href="/proposal" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg border-2 border-accent text-accent text-xs font-semibold hover:bg-accent hover:text-white transition-colors">
+              View Proposal
+            </a>
+            <a href="https://teams.microsoft.com/l/chat/0/0?users=Cole@lcadesk.com&message=Hi%20Cole%2C%20I%27d%20like%20to%20schedule%20a%20demo%20meeting." target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-[#5B5FC7] text-white text-xs font-medium hover:bg-[#4B4FB7] transition-colors">
+              Schedule Meeting
+            </a>
+            <a href="https://wa.me/18324927169?text=Hi%20Cole%2C%20I%20just%20tried%20the%20LCA%20Desk%20demo." target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg bg-[#25D366] text-white text-xs font-medium hover:bg-[#1DA851] transition-colors">
+              WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+      <button
+        onClick={() => setOpen(!open)}
+        className="h-12 w-12 rounded-full bg-accent text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+        title="Contact Cole"
+      >
+        {open ? <X className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
+      </button>
     </div>
   );
 }
