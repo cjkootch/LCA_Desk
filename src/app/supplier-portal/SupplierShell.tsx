@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell, Gift   LifeBuoy,
+import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, LogOut, X, Menu, GraduationCap, Bell, Gift, LifeBuoy,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupplierTour } from "@/components/onboarding/SupplierTour";
