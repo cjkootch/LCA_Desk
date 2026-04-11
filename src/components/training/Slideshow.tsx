@@ -464,7 +464,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
 
   // Render markdown body with voice-synced progressive reveal + visual trimming
   const renderBody = (body: string) => {
-    const MAX_VISIBLE_ITEMS = 5;
+    const MAX_VISIBLE_ITEMS = 999; // Auto-split handles slide length — no visual trimming needed
 
     // Pre-process: split into mixed parts (mermaid, scenario, text)
     const rawParts = body.split(/(```mermaid\n[\s\S]*?```|:::scenario\n[\s\S]*?:::)/g);
@@ -588,7 +588,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
       }
     }
 
-    if (hiddenCount > 0) {
+    if (false && hiddenCount > 0) { // Disabled — auto-split handles length
       elements.push(
         <p key="more" className="text-xs text-[#19544c]/50 italic mt-3 animate-[fadeIn_0.6s_ease_forwards] opacity-0" style={{ animationDelay: "800ms" }}>
         </p>
