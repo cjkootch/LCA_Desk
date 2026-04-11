@@ -240,9 +240,16 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function DemoContactFloat() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true); // Start expanded for demo users
+
+  // Listen for briefing events to control the card
+  useEffect(() => {
+    const openHandler = () => setOpen(true);
+    window.addEventListener("open-contact-card", openHandler);
+    return () => window.removeEventListener("open-contact-card", openHandler);
+  }, []);
   return (
-    <div className="fixed bottom-6 right-24 z-[90]">
+    <div className="fixed bottom-6 right-24 z-[90]" data-briefing="contact-card">
       {open && (
         <div className="mb-3 w-[280px] rounded-2xl border border-border bg-bg-card shadow-2xl p-4 animate-in slide-in-from-bottom-2 fade-in duration-200">
           <div className="flex items-center gap-3 mb-3">
