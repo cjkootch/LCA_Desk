@@ -23,12 +23,10 @@ export default async function Image() {
         {/* Top accent line */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #19544c, #71b59a, #8b6914)" }} />
 
-        {/* Logo area */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: "#19544c", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 24, fontWeight: 800, color: "#71b59a" }}>LC</span>
-          </div>
-          <span style={{ fontSize: 32, fontWeight: 700, color: "white", letterSpacing: -1 }}>LCA Desk</span>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="https://app.lcadesk.com/logo-white.png" alt="LCA Desk" width={200} height={50} style={{ objectFit: "contain" }} />
         </div>
 
         {/* Main text */}
