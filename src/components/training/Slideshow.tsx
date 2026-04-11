@@ -222,7 +222,12 @@ function MermaidDiagram({ chart }: { chart: string }) {
       }
       try {
         const { svg } = await w.mermaid.render(idRef.current, chart);
-        if (!cancelled && containerRef.current) containerRef.current.innerHTML = svg;
+        if (!cancelled && containerRef.current) {
+          containerRef.current.innerHTML = svg;
+          // Remove white background rect from mermaid SVG
+          const bgRect = containerRef.current.querySelector("svg > rect");
+          if (bgRect) bgRect.setAttribute("fill", "transparent");
+        }
       } catch { /* silent */ }
     }
 
