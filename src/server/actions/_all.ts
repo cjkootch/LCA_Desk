@@ -4564,29 +4564,10 @@ function _getLcaModuleData() {
 }
 
 export async function seedLcaCourse() {
-  // Check if already seeded — if so, update existing modules with latest content
+  // Create-only — if already seeded, return existing ID without overwriting
+  // Course content is now managed via the course editor UI, not the seed function
   const [existing] = await db.select({ id: courses.id }).from(courses).where(eq(courses.slug, "lca-fundamentals")).limit(1);
-  if (existing) {
-    // Update course metadata
-    await db.update(courses).set({
-      description: "A comprehensive course on Guyana\'s Local Content Act 2021 — the legal framework, employment requirements, supplier certification, worker protections, and the petroleum sector ecosystem.",
-      estimatedMinutes: 90,
-    }).where(eq(courses.id, existing.id));
-    // Update module content in place (preserves user completions)
-    const existingModules = await db.select({ id: courseModules.id, orderIndex: courseModules.orderIndex }).from(courseModules).where(eq(courseModules.courseId, existing.id)).orderBy(courseModules.orderIndex);
-    // Re-seed modules with updated content (defined below)
-    const updatedModuleData = _getLcaModuleData();
-    for (let i = 0; i < updatedModuleData.length; i++) {
-      const mod = updatedModuleData[i];
-      const existingMod = existingModules.find((m: { orderIndex: number }) => m.orderIndex === i + 1);
-      if (existingMod) {
-        await db.update(courseModules).set({ title: mod.title, content: mod.content, quizQuestions: JSON.stringify(mod.quiz) }).where(eq(courseModules.id, existingMod.id));
-      } else {
-        await db.insert(courseModules).values({ courseId: existing.id, orderIndex: i + 1, title: mod.title, content: mod.content, quizQuestions: JSON.stringify(mod.quiz) });
-      }
-    }
-    return existing.id;
-  }
+  if (existing) return existing.id;
 
   const [course] = await db.insert(courses).values({
     slug: "lca-fundamentals",
