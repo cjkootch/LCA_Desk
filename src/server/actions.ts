@@ -4385,7 +4385,11 @@ export async function completeModule(courseId: string, moduleId: string, answers
       .where(and(eq(courseModules.courseId, courseId), sql`${courseModules.orderIndex} < ${mod.orderIndex}`));
     const completedPrev = await db.select({ moduleId: userCourseProgress.moduleId })
       .from(userCourseProgress)
-      .where(and(eq(userCourseProgress.userId, session.user.id), eq(userCourseProgress.courseId, courseId), eq(userCourseProgress.status, "completed")));
+      .where(and(
+        eq(userCourseProgress.userId, session.user.id),
+        eq(userCourseProgress.courseId, courseId),
+        or(eq(userCourseProgress.status, "completed"), eq(userCourseProgress.status, "skipped")),
+      ));
     const allPrevDone = prevModules.every(pm => completedPrev.some(cp => cp.moduleId === pm.id));
     if (!allPrevDone) throw new Error("Complete previous modules first");
   }
@@ -4455,6 +4459,56 @@ export async function completeModule(courseId: string, moduleId: string, answers
   }
 
   return { passed: true, score: quizScore, badgeEarned: allComplete };
+}
+
+export async function skipModule(courseId: string, moduleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const [mod] = await db.select({
+    orderIndex: courseModules.orderIndex,
+    courseId: courseModules.courseId,
+  }).from(courseModules).where(and(eq(courseModules.id, moduleId), eq(courseModules.courseId, courseId))).limit(1);
+  if (!mod) throw new Error("Module not found");
+
+  if (mod.orderIndex > 1) {
+    const prevModules = await db.select({ id: courseModules.id })
+      .from(courseModules)
+      .where(and(eq(courseModules.courseId, courseId), sql`${courseModules.orderIndex} < ${mod.orderIndex}`));
+    const accessiblePrev = await db.select({ moduleId: userCourseProgress.moduleId })
+      .from(userCourseProgress)
+      .where(and(
+        eq(userCourseProgress.userId, session.user.id),
+        eq(userCourseProgress.courseId, courseId),
+        or(eq(userCourseProgress.status, "completed"), eq(userCourseProgress.status, "skipped")),
+      ));
+    const allPrevAccessible = prevModules.every(pm => accessiblePrev.some(ap => ap.moduleId === pm.id));
+    if (!allPrevAccessible) throw new Error("Access previous modules first");
+  }
+
+  const [existing] = await db.select({ id: userCourseProgress.id, status: userCourseProgress.status })
+    .from(userCourseProgress)
+    .where(and(
+      eq(userCourseProgress.userId, session.user.id),
+      eq(userCourseProgress.courseId, courseId),
+      eq(userCourseProgress.moduleId, moduleId),
+    )).limit(1);
+
+  if (existing) {
+    // Don't downgrade a completed module to skipped
+    if (existing.status !== "completed") {
+      await db.update(userCourseProgress)
+        .set({ status: "skipped", updatedAt: new Date() })
+        .where(eq(userCourseProgress.id, existing.id));
+    }
+  } else {
+    await db.insert(userCourseProgress).values({
+      userId: session.user.id, courseId, moduleId,
+      status: "skipped", quizScore: 0,
+    });
+  }
+
+  return { skipped: true };
 }
 
 export async function fetchUserBadges(userId?: string) {

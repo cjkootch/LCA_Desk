@@ -11,7 +11,7 @@ import {
   ArrowLeft, BookOpen, CheckCircle, XCircle, Trophy, ArrowRight, Lock,
   Zap, PartyPopper, Presentation, Play,
 } from "lucide-react";
-import { fetchCourseWithModules, completeModule } from "@/server/actions";
+import { fetchCourseWithModules, completeModule, skipModule } from "@/server/actions";
 import { Slideshow } from "@/components/training/Slideshow";
 import { DragDropQuiz } from "@/components/training/DragDropQuiz";
 import { toast } from "sonner";
@@ -155,6 +155,8 @@ export default function CoursePage() {
   const { course, modules, progress } = data;
   const currentModule = modules[activeModule];
   const isModuleComplete = (moduleId: string) => progress.some((p: { moduleId: string; status: string }) => p.moduleId === moduleId && p.status === "completed");
+  // Skipped modules count as accessible so the next module unlocks
+  const isModuleAccessible = (moduleId: string) => progress.some((p: { moduleId: string; status: string }) => p.moduleId === moduleId && (p.status === "completed" || p.status === "skipped"));
   const completedCount = modules.filter((m: { id: string }) => isModuleComplete(m.id)).length;
   const hasBadge = progress.some((p: { badgeEarnedAt: Date | null }) => p.badgeEarnedAt);
   const progressPct = modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0;
@@ -285,7 +287,7 @@ export default function CoursePage() {
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Modules</p>
             {modules.map((m: { id: string; title: string; orderIndex: number }, i: number) => {
               const complete = isModuleComplete(m.id);
-              const locked = i > 0 && !isModuleComplete(modules[i - 1].id) && !complete;
+              const locked = i > 0 && !isModuleAccessible(modules[i - 1].id) && !complete;
               return (
                 <button key={m.id}
                   onClick={() => { if (!locked) { setActiveModule(i); setShowQuiz(false); setQuizResult(null); setAnswers({}); } }}
@@ -417,12 +419,18 @@ export default function CoursePage() {
                   <p className="text-xs text-text-muted">
                     Not ready?{" "}
                     <button
-                      onClick={() => setWatchedModules(prev => { const s = new Set(prev); s.delete(activeModule); return s; })}
+                      onClick={async () => {
+                        try {
+                          await skipModule(course.id, currentModule.id);
+                          const refreshed = await fetchCourseWithModules(slug);
+                          if (refreshed) setData(refreshed);
+                        } catch { /* silent — user stays on page */ }
+                      }}
                       className="underline hover:text-text-secondary transition-colors"
                     >
                       Skip quiz — I&apos;ll come back later
                     </button>
-                    {" "}— quiz skipped, no completion credit until you pass.
+                    {" "}— next module unlocks but no badge until you pass.
                   </p>
                 )}
               </>
@@ -530,12 +538,21 @@ export default function CoursePage() {
                         </Button>
                       </div>
                       <button
-                        onClick={() => { setShowQuiz(false); setAnswers({}); setQuizResult(null); }}
+                        onClick={async () => {
+                          setShowQuiz(false);
+                          setAnswers({});
+                          setQuizResult(null);
+                          try {
+                            await skipModule(course.id, currentModule.id);
+                            const refreshed = await fetchCourseWithModules(slug);
+                            if (refreshed) setData(refreshed);
+                          } catch { /* silent */ }
+                        }}
                         className="text-sm text-text-muted hover:text-text-secondary underline text-left transition-colors w-fit"
                       >
                         Skip quiz — I&apos;ll come back later
                       </button>
-                      <p className="text-xs text-text-muted -mt-1">Quiz skipped — complete the quiz to earn your badge and XP.</p>
+                      <p className="text-xs text-text-muted -mt-1">Next module unlocks — complete the quiz later to earn your badge and XP.</p>
                     </div>
                   )}
                 </CardContent>
