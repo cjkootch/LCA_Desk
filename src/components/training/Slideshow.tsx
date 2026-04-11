@@ -116,6 +116,10 @@ function buildSpeechText(heading: string, body: string, isContinuation?: boolean
       parts.push(cleaned);
     } else if (t.startsWith("**") && t.endsWith("**")) {
       parts.push(stripMarkdown(t) + ".");
+    } else if (t.startsWith("![")) {
+      // Markdown image — read alt text aloud
+      const imgAlt = t.match(/^!\[(.+?)\]/)?.[1];
+      if (imgAlt) parts.push(`Image: ${imgAlt}.`);
     } else if (t.startsWith('"') || t.startsWith('\u201c')) {
       parts.push(stripMarkdown(t));
     } else {
@@ -660,7 +664,18 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
         const delay = `${voiceEnabled ? Math.max(200, voiceDelay) : fallbackDelay}ms`;
         const style = { animationDelay: delay };
 
-        if (isHeading) {
+        const imageMatch = trimmed.match(/^!\[(.+?)\]\((.+?)\)$/);
+        if (imageMatch) {
+          const [, altText, src] = imageMatch;
+          elements.push(
+            <div key={`${pi}-${i}`} className="my-6 rounded-xl overflow-hidden shadow-sm animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={altText} className="w-full max-h-[400px] object-cover rounded-xl" />
+              <p className="text-xs text-text-muted text-center mt-2 italic">{altText}</p>
+            </div>
+          );
+          shownItems++;
+        } else if (isHeading) {
           elements.push(
             <h3 key={`${pi}-${i}`} className="text-xl font-bold text-[#19544c] mt-6 mb-3 animate-[fadeSlideUp_0.6s_ease_forwards] opacity-0" style={style}>
               {trimmed.slice(4)}

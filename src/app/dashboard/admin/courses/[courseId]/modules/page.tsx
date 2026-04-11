@@ -6,10 +6,11 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Save, X } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Save, X, ImageIcon } from "lucide-react";
 import { checkSuperAdmin, fetchAdminCourses, fetchCourseModulesByAdmin, addModule, updateModule, deleteModule } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
+import { ImageUpload } from "@/components/training/ImageUpload";
 
 type Module = {
   id: string;
@@ -34,6 +35,7 @@ function ModuleEditor({
   const [content, setContent] = useState(mod.content ?? "");
   const [passingScore, setPassingScore] = useState(mod.passingScore ?? 80);
   const [saving, setSaving] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
 
   async function handleSave() {
     if (!title.trim()) { toast.error("Title is required"); return; }
@@ -61,6 +63,31 @@ function ModuleEditor({
             onChange={e => setContent(e.target.value)}
             placeholder="## Section\n\nContent here..."
           />
+          {showImageUpload ? (
+            <div className="mt-2 rounded-lg border border-border p-3 bg-bg-primary space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">Add Image</p>
+                <button type="button" onClick={() => setShowImageUpload(false)} className="text-text-muted hover:text-text-primary transition-colors">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <ImageUpload
+                onUpload={(url, description) => {
+                  setContent(prev => prev.trimEnd() + `\n\n![${description}](${url})\n`);
+                  setShowImageUpload(false);
+                }}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowImageUpload(true)}
+              className="mt-2 flex items-center gap-1.5 text-xs text-text-muted hover:text-accent font-medium transition-colors"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              Add Image
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <div>

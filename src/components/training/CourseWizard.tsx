@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import {
   X, Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Eye, Edit2,
   CheckCircle, Sparkles, Users, Briefcase, Building2, GraduationCap,
-  GripVertical, Scale, BookOpen, Globe, Zap, FileText, Trophy,
+  GripVertical, Scale, BookOpen, Globe, Zap, FileText, Trophy, ImageIcon,
 } from "lucide-react";
+import { ImageUpload } from "@/components/training/ImageUpload";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -156,6 +157,7 @@ export function CourseWizard({
   const [estimatedMinutes, setEstimatedMinutes] = useState(75);
   const [saving, setSaving] = useState(false);
   const [regeneratingQuiz, setRegeneratingQuiz] = useState<Set<number>>(new Set());
+  const [showImageUpload, setShowImageUpload] = useState<Set<number>>(new Set());
   const [slideshowModule, setSlideshowModule] = useState<number | null>(null);
 
   // Sync est. minutes from module count
@@ -765,12 +767,43 @@ export function CourseWizard({
                           </div>
 
                           {editingContent.has(idx) ? (
-                            <textarea
-                              className="input w-full resize-y font-mono text-xs leading-relaxed"
-                              rows={14}
-                              value={mod.content}
-                              onChange={e => updateModuleContent(idx, e.target.value)}
-                            />
+                            <div className="space-y-2">
+                              <textarea
+                                className="input w-full resize-y font-mono text-xs leading-relaxed"
+                                rows={14}
+                                value={mod.content}
+                                onChange={e => updateModuleContent(idx, e.target.value)}
+                              />
+                              {showImageUpload.has(idx) ? (
+                                <div className="rounded-lg border border-border p-3 bg-bg-primary space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">Add Image</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowImageUpload(prev => { const s = new Set(prev); s.delete(idx); return s; })}
+                                      className="text-text-muted hover:text-text-primary transition-colors"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    onUpload={(url, description) => {
+                                      updateModuleContent(idx, mod.content.trimEnd() + `\n\n![${description}](${url})\n`);
+                                      setShowImageUpload(prev => { const s = new Set(prev); s.delete(idx); return s; });
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowImageUpload(prev => new Set(prev).add(idx))}
+                                  className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent font-medium transition-colors"
+                                >
+                                  <ImageIcon className="h-3.5 w-3.5" />
+                                  Add Image
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <div className="bg-bg-primary rounded-lg p-3 text-xs text-text-secondary border border-border font-mono leading-relaxed">
                               <p className="whitespace-pre-wrap break-words">

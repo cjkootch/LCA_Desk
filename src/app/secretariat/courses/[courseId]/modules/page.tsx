@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Save, X } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Save, X, ImageIcon } from "lucide-react";
 import { fetchAdminCourses, fetchCourseModulesByAdmin, addModule, updateModule, deleteModule } from "@/server/actions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { SecretariatShell } from "@/app/secretariat/SecretariatShell";
+import { ImageUpload } from "@/components/training/ImageUpload";
 
 type Module = {
   id: string;
@@ -33,6 +34,7 @@ function ModuleEditor({
   const [content, setContent] = useState(mod.content ?? "");
   const [passingScore, setPassingScore] = useState(mod.passingScore ?? 80);
   const [saving, setSaving] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
 
   async function handleSave() {
     if (!title.trim()) { toast.error("Title is required"); return; }
@@ -51,6 +53,31 @@ function ModuleEditor({
         <div>
           <label className="text-xs font-medium text-text-muted">Content (Markdown)</label>
           <textarea className="input mt-1 w-full font-mono text-xs resize-y" rows={10} value={content} onChange={e => setContent(e.target.value)} placeholder="## Section..." />
+          {showImageUpload ? (
+            <div className="mt-2 rounded-lg border border-border p-3 bg-bg-primary space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">Add Image</p>
+                <button type="button" onClick={() => setShowImageUpload(false)} className="text-text-muted hover:text-text-primary transition-colors">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <ImageUpload
+                onUpload={(url, description) => {
+                  setContent(prev => prev.trimEnd() + `\n\n![${description}](${url})\n`);
+                  setShowImageUpload(false);
+                }}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowImageUpload(true)}
+              className="mt-2 flex items-center gap-1.5 text-xs text-text-muted hover:text-accent font-medium transition-colors"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              Add Image
+            </button>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-text-muted">Passing Score (%)</label>
