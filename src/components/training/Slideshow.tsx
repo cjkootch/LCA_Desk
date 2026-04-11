@@ -252,9 +252,41 @@ function MermaidDiagram({ chart }: { chart: string }) {
               rect.setAttribute("rx", "16");
               rect.setAttribute("ry", "16");
             });
-            // Style text
+            // Uniform mindmap node styling — all nodes get consistent colors
+            const mindmapSections = svgEl.querySelectorAll(".mindmap-node");
+            if (mindmapSections.length > 0) {
+              const colors = ["#19544c", "#276f37", "#4d9a7e", "#71b59a", "#8b6914", "#2d7a5f"];
+              mindmapSections.forEach((node, idx) => {
+                const rects = node.querySelectorAll("rect, circle, ellipse, path");
+                const depth = node.closest("[class*='level']")?.className?.match(/level-(\d+)/)?.[1];
+                const colorIdx = depth ? Math.min(Number(depth), colors.length - 1) : idx % colors.length;
+                rects.forEach(r => {
+                  r.setAttribute("fill", colors[colorIdx]);
+                  r.setAttribute("stroke", colors[colorIdx]);
+                  r.setAttribute("rx", "10");
+                  r.setAttribute("ry", "10");
+                });
+                node.querySelectorAll("text").forEach(t => {
+                  (t as HTMLElement).style.fill = "#ffffff";
+                  (t as HTMLElement).style.fontWeight = "500";
+                });
+              });
+            }
+            // Also style section nodes in mindmaps (the branch groups)
+            svgEl.querySelectorAll(".section-root rect, .section-root circle").forEach(el => {
+              el.setAttribute("fill", "#19544c");
+              el.setAttribute("stroke", "#19544c");
+            });
+            // Style ALL text uniformly
             svgEl.querySelectorAll("text").forEach(t => {
               t.style.fontFamily = "'DM Mono', monospace";
+            });
+            // Force all leaf/branch nodes to have fills (mindmap sometimes leaves them transparent)
+            svgEl.querySelectorAll("rect:not([fill]), rect[fill='none'], rect[fill='']").forEach(r => {
+              if (r.closest(".node") || r.closest(".mindmap-node")) {
+                r.setAttribute("fill", "#71b59a");
+                r.setAttribute("stroke", "#4d9a7e");
+              }
             });
           }
         }
@@ -521,7 +553,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
               fontFamily: "'DM Mono', monospace",
             },
             flowchart: { curve: "basis", padding: 20, nodeSpacing: 50, rankSpacing: 60, htmlLabels: true },
-            mindmap: { padding: 16 },
+            mindmap: { padding: 20, maxNodeWidth: 180 },
             timeline: { padding: 10 },
           });
     };
