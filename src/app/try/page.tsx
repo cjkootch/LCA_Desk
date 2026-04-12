@@ -6,6 +6,15 @@ export default function TryPage() {
   const [status, setStatus] = useState<"loading" | "error">("loading");
 
   useEffect(() => {
+    // Heartbeat — fires immediately and every 30s while on this page
+    const ping = () => fetch("/api/demo/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page: "/try" }),
+    }).catch(() => {});
+    ping();
+    const interval = setInterval(ping, 30000);
+
     fetch("/api/demo/public-login")
       .then(r => r.json())
       .then(async ({ email, password }: { email?: string; password?: string }) => {
@@ -15,6 +24,8 @@ export default function TryPage() {
         window.location.href = "/demo/select";
       })
       .catch(() => setStatus("error"));
+
+    return () => clearInterval(interval);
   }, []);
 
   if (status === "error") {

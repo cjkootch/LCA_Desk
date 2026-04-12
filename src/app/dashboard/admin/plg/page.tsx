@@ -39,6 +39,18 @@ function formatTimeAgo(date: Date | string | null) {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
+function formatDuration(ms: number) {
+  if (ms < 1000) return "<1s";
+  const secs = Math.floor(ms / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return `${hrs}h ${remMins}m`;
+}
+
 const FUNNEL_LABELS: Record<string, string> = {
   trial_started: "Trial Started",
   entity_created: "Entity Created",
@@ -210,6 +222,7 @@ export default function PlgPage() {
   const [demoLogs, setDemoLogs] = useState<DemoLog[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [demoRefreshing, setDemoRefreshing] = useState(false);
   const [showAllTenants, setShowAllTenants] = useState(false);
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
   const router = useRouter();
@@ -227,6 +240,25 @@ export default function PlgPage() {
       setRefreshing(false);
     }
   }, []);
+
+  const refreshDemoLog = useCallback(async () => {
+    setDemoRefreshing(true);
+    try {
+      const logs = await fetchDemoAccessLog();
+      setDemoLogs(logs);
+    } catch {
+      // silently fail
+    } finally {
+      setDemoRefreshing(false);
+    }
+  }, []);
+
+  // Auto-refresh demo log every 30 seconds so active visitors update in near real-time
+  useEffect(() => {
+    if (!authorized) return;
+    const interval = setInterval(refreshDemoLog, 30000);
+    return () => clearInterval(interval);
+  }, [authorized, refreshDemoLog]);
 
   useEffect(() => {
     checkSuperAdmin().then((isAdmin) => {
@@ -642,64 +674,93 @@ export default function PlgPage() {
         {/* ── Demo Access Log ───────────────────────────────────────── */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-accent" />
-              <CardTitle className="text-sm">Demo Access Log</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-accent" />
+                <CardTitle className="text-sm">Demo Visitors (last 24h)</CardTitle>
+                {demoLogs.filter(s => s.status === "active").length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-success/15 text-success">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                    {demoLogs.filter(s => s.status === "active").length} on site now
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={refreshDemoLog}
+                disabled={demoRefreshing}
+                className="gap-1.5 h-7 text-xs"
+              >
+                <RefreshCw className={cn("h-3 w-3", demoRefreshing && "animate-spin")} />
+                Refresh
+              </Button>
             </div>
-            <p className="text-xs text-text-muted mt-1">External visitors to /try — your own IP is filtered out</p>
+            <p className="text-xs text-text-muted mt-1">Sessions grouped by IP · auto-refreshes every 30s · your own IP is filtered</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto rounded-b-xl">
               <table className="w-full text-xs">
                 <thead className="bg-bg-primary">
                   <tr>
-                    <th className="text-left p-3 font-medium text-text-muted">Time</th>
-                    <th className="text-left p-3 font-medium text-text-muted">Event</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Status</th>
                     <th className="text-left p-3 font-medium text-text-muted">Location</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Arrived</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Last Seen</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Time on Site</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Role Picked</th>
                     <th className="text-left p-3 font-medium text-text-muted">IP / Browser</th>
-                    <th className="text-left p-3 font-medium text-text-muted">Details</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {demoLogs.map(log => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const props = log.properties as any;
-                    const ip = props?.ip as string | undefined;
-                    const geo = props?.geo as { city: string; country: string; region?: string } | null;
+                  {demoLogs.map(session => {
+                    const statusConfig = {
+                      active: { label: "On site", cls: "bg-success/15 text-success", dot: "bg-success animate-pulse" },
+                      recent: { label: "Recent", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
+                      departed: { label: "Left", cls: "bg-border text-text-muted", dot: "bg-text-muted/40" },
+                    }[session.status];
                     return (
-                      <tr key={log.id} className="border-t border-border hover:bg-bg-primary/50">
-                        <td className="p-3 text-text-secondary whitespace-nowrap">{formatTimeAgo(log.occurredAt)}</td>
-                        <td className="p-3">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-medium",
-                            log.eventName === "demo_login_requested" ? "bg-accent/10 text-accent" : "bg-gold/10 text-gold"
-                          )}>
-                            {log.eventName === "demo_login_requested" ? "Page Visit" : "Role Selected"}
+                      <tr key={session.id} className={cn(
+                        "border-t border-border hover:bg-bg-primary/50",
+                        session.status === "active" && "bg-success/5"
+                      )}>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium", statusConfig.cls)}>
+                            <span className={cn("h-1.5 w-1.5 rounded-full", statusConfig.dot)} />
+                            {statusConfig.label}
                           </span>
                         </td>
                         <td className="p-3">
-                          {geo ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-text-primary font-medium">{geo.city}</span>
-                              <span className="text-text-muted">·</span>
-                              <span className="text-text-muted">{geo.country}</span>
+                          {session.geo ? (
+                            <div>
+                              <div className="text-text-primary font-medium">{session.geo.city}</div>
+                              <div className="text-text-muted text-[10px]">
+                                {session.geo.region && `${session.geo.region}, `}{session.geo.country}
+                              </div>
                             </div>
                           ) : (
                             <span className="text-text-muted italic">Unknown</span>
                           )}
                         </td>
+                        <td className="p-3 text-text-secondary whitespace-nowrap">{formatTimeAgo(session.firstSeen)}</td>
+                        <td className="p-3 text-text-secondary whitespace-nowrap">{formatTimeAgo(session.lastSeen)}</td>
+                        <td className="p-3 text-text-primary font-medium tabular-nums">{formatDuration(session.durationMs)}</td>
                         <td className="p-3">
-                          <div className="font-mono text-text-muted text-[11px]">{ip || "—"}</div>
-                          <div className="text-text-muted text-[10px] mt-0.5">{truncateUA(props?.userAgent as string | undefined)}</div>
-                        </td>
-                        <td className="p-3 text-text-muted">
-                          {props?.role ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-medium">
-                              {props.label || props.role}
-                            </span>
+                          {session.rolesSelected.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {session.rolesSelected.map((r, i) => (
+                                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-medium">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
                           ) : (
-                            <span className="text-text-muted/60">—</span>
+                            <span className="text-text-muted/60 text-[10px]">Browsing</span>
                           )}
+                        </td>
+                        <td className="p-3">
+                          <div className="font-mono text-text-muted text-[11px]">{session.ip}</div>
+                          <div className="text-text-muted text-[10px] mt-0.5">{truncateUA(session.userAgent)}</div>
                         </td>
                       </tr>
                     );
@@ -707,7 +768,7 @@ export default function PlgPage() {
                 </tbody>
               </table>
               {demoLogs.length === 0 && (
-                <div className="p-6 text-center text-xs text-text-muted">No demo visits yet</div>
+                <div className="p-6 text-center text-xs text-text-muted">No demo visits in the last 24 hours</div>
               )}
             </div>
           </CardContent>

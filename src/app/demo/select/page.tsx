@@ -51,6 +51,18 @@ export default function DemoSelectPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Heartbeat — tracks time on /demo/select
+  useEffect(() => {
+    const ping = () => fetch("/api/demo/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page: "/demo/select" }),
+    }).catch(() => {});
+    ping();
+    const interval = setInterval(ping, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSelect = async (role: typeof DEMO_ROLES[number]) => {
     setSwitching(role.id);
     try {

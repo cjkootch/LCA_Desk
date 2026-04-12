@@ -7992,6 +7992,8 @@ export async function fetchDemoAccessLog() {
   const isSuperAdmin = await checkSuperAdmin();
   if (!isSuperAdmin) throw new Error("Unauthorized");
 
+  // Pull all demo-related events from the last 24 hours
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const logs = await db.select({
     id: userEvents.id,
     eventName: userEvents.eventName,
@@ -7999,38 +8001,107 @@ export async function fetchDemoAccessLog() {
     occurredAt: userEvents.occurredAt,
   }).from(userEvents)
     .where(
-      or(
-        eq(userEvents.eventName, "demo_login_requested"),
-        eq(userEvents.eventName, "demo_role_selected"),
+      and(
+        gte(userEvents.occurredAt, twentyFourHoursAgo),
+        or(
+          eq(userEvents.eventName, "demo_login_requested"),
+          eq(userEvents.eventName, "demo_role_selected"),
+          eq(userEvents.eventName, "demo_heartbeat"),
+        )
       )
     )
     .orderBy(desc(userEvents.occurredAt))
-    .limit(200); // fetch more so we have enough after filtering
+    .limit(2000);
 
   // Filter out excluded IPs (Cole's IP)
   const filtered = logs.filter(log => {
     const props = log.properties as { ip?: string } | null;
     const ip = props?.ip;
     return !ip || !EXCLUDED_IPS.has(ip);
-  }).slice(0, 100);
+  });
 
-  // Enrich with geolocation — collect unique IPs, look up in parallel
-  const uniqueIps = Array.from(new Set(
-    filtered.map(l => (l.properties as { ip?: string } | null)?.ip).filter((ip): ip is string => !!ip && ip !== "unknown")
-  ));
+  // Group by IP into sessions
+  type SessionEvent = { eventName: string; occurredAt: Date | null; role?: string; page?: string };
+  const sessionsByIp = new Map<string, {
+    ip: string;
+    userAgent: string;
+    firstSeen: Date;
+    lastSeen: Date;
+    events: SessionEvent[];
+    rolesSelected: string[];
+    pagesVisited: Set<string>;
+  }>();
+
+  for (const log of filtered) {
+    const props = log.properties as { ip?: string; userAgent?: string; role?: string; label?: string; page?: string } | null;
+    const ip = props?.ip;
+    if (!ip || ip === "unknown" || !log.occurredAt) continue;
+
+    const ts = new Date(log.occurredAt);
+    let s = sessionsByIp.get(ip);
+    if (!s) {
+      s = {
+        ip,
+        userAgent: props.userAgent || "unknown",
+        firstSeen: ts,
+        lastSeen: ts,
+        events: [],
+        rolesSelected: [],
+        pagesVisited: new Set(),
+      };
+      sessionsByIp.set(ip, s);
+    }
+    if (ts < s.firstSeen) s.firstSeen = ts;
+    if (ts > s.lastSeen) s.lastSeen = ts;
+    s.events.push({ eventName: log.eventName, occurredAt: log.occurredAt, role: props.role, page: props.page });
+    if (log.eventName === "demo_role_selected" && (props.label || props.role)) {
+      s.rolesSelected.push(props.label || props.role || "");
+    }
+    if (props.page) s.pagesVisited.add(props.page);
+  }
+
+  // Enrich with geolocation
+  const uniqueIps = Array.from(sessionsByIp.keys());
   const geoResults = await Promise.all(uniqueIps.map(async ip => [ip, await lookupIpGeo(ip)] as const));
   const geoMap = new Map(geoResults.filter(([, g]) => g).map(([ip, g]) => [ip, g!]));
 
-  // Attach geo to each log's properties
-  return filtered.map(log => {
-    const props = (log.properties as Record<string, unknown> | null) || {};
-    const ip = (props.ip as string) || null;
-    const geo = ip ? geoMap.get(ip) : null;
+  // Build session rows
+  const now = Date.now();
+  const ACTIVE_THRESHOLD_MS = 2 * 60 * 1000;    // 2 minutes
+  const RECENT_THRESHOLD_MS = 10 * 60 * 1000;   // 10 minutes
+
+  const sessions = Array.from(sessionsByIp.values()).map(s => {
+    const msSinceLastSeen = now - s.lastSeen.getTime();
+    const durationMs = s.lastSeen.getTime() - s.firstSeen.getTime();
+    let status: "active" | "recent" | "departed";
+    if (msSinceLastSeen < ACTIVE_THRESHOLD_MS) status = "active";
+    else if (msSinceLastSeen < RECENT_THRESHOLD_MS) status = "recent";
+    else status = "departed";
+
     return {
-      ...log,
-      properties: { ...props, geo: geo || null },
+      id: s.ip,
+      ip: s.ip,
+      userAgent: s.userAgent,
+      firstSeen: s.firstSeen,
+      lastSeen: s.lastSeen,
+      durationMs,
+      status,
+      eventCount: s.events.length,
+      rolesSelected: s.rolesSelected,
+      pagesVisited: Array.from(s.pagesVisited),
+      geo: geoMap.get(s.ip) || null,
     };
   });
+
+  // Sort: active first, then by lastSeen desc
+  sessions.sort((a, b) => {
+    const statusOrder = { active: 0, recent: 1, departed: 2 };
+    const diff = statusOrder[a.status] - statusOrder[b.status];
+    if (diff !== 0) return diff;
+    return b.lastSeen.getTime() - a.lastSeen.getTime();
+  });
+
+  return sessions.slice(0, 50);
 }
 
 export async function fetchTenantUsers(tenantId: string) {
