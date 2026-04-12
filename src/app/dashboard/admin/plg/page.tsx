@@ -18,8 +18,7 @@ type PlgData = Awaited<ReturnType<typeof fetchPlgStats>>;
 type DemoLog = Awaited<ReturnType<typeof fetchDemoAccessLog>>[number];
 type TenantUser = Awaited<ReturnType<typeof fetchTenantUsers>>[number];
 
-// Cole's known IP — update this if your IP changes
-const COLE_IP = "";
+// Your IP is filtered server-side (see EXCLUDED_IPS in src/server/actions.ts)
 
 function truncateUA(ua?: string) {
   if (!ua || ua === "unknown") return "—";
@@ -595,25 +594,46 @@ export default function PlgPage() {
             {data.recentEvents.length === 0 ? (
               <p className="text-sm text-text-muted text-center py-4">No events recorded yet</p>
             ) : (
-              <div className="space-y-1.5 max-h-96 overflow-y-auto">
-                {data.recentEvents.map(ev => (
-                  <div key={ev.id} className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border-light last:border-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0",
-                        EVENT_BADGE_VARIANT[ev.eventName] ?? "bg-bg-primary text-text-muted"
-                      )}>
-                        {ev.eventName.replace(/_/g, " ")}
+              <div className="space-y-1 max-h-[28rem] overflow-y-auto">
+                {data.recentEvents.map(ev => {
+                  const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+                  const isAnon = ev.userId === ZERO_UUID;
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const props = ev.properties as any;
+                  const detail = props?.role
+                    ? `as ${props.label || props.role}`
+                    : props?.ip && props.ip !== "unknown"
+                    ? `from ${props.ip}`
+                    : null;
+                  return (
+                    <div key={ev.id} className="flex items-center justify-between gap-3 text-xs py-1.5 px-2 rounded hover:bg-bg-primary border-b border-border-light last:border-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className={cn(
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0",
+                          EVENT_BADGE_VARIANT[ev.eventName] ?? "bg-bg-primary text-text-muted"
+                        )}>
+                          {ev.eventName.replace(/_/g, " ")}
+                        </span>
+                        <div className="min-w-0 flex-1 truncate">
+                          {isAnon ? (
+                            <span className="text-text-muted italic">Anonymous visitor</span>
+                          ) : (
+                            <>
+                              <span className="font-medium text-text-primary">{ev.userName || ev.userEmail || "Unknown user"}</span>
+                              {ev.tenantName && <span className="text-text-muted"> · {ev.tenantName}</span>}
+                            </>
+                          )}
+                          {detail && <span className="text-text-muted"> · {detail}</span>}
+                        </div>
+                      </div>
+                      <span className="text-text-muted shrink-0 text-[11px]">
+                        {ev.occurredAt
+                          ? new Date(ev.occurredAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                          : ""}
                       </span>
-                      <span className="text-text-muted truncate font-mono text-[11px]">{ev.userId.slice(0, 8)}…</span>
                     </div>
-                    <span className="text-text-muted shrink-0">
-                      {ev.occurredAt
-                        ? new Date(ev.occurredAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                        : ""}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -626,7 +646,7 @@ export default function PlgPage() {
               <Globe className="h-4 w-4 text-accent" />
               <CardTitle className="text-sm">Demo Access Log</CardTitle>
             </div>
-            <p className="text-xs text-text-muted mt-1">External visitors accessing /try — rows highlighted gold are not your IP</p>
+            <p className="text-xs text-text-muted mt-1">External visitors to /try — your own IP is filtered out</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto rounded-b-xl">
@@ -635,7 +655,8 @@ export default function PlgPage() {
                   <tr>
                     <th className="text-left p-3 font-medium text-text-muted">Time</th>
                     <th className="text-left p-3 font-medium text-text-muted">Event</th>
-                    <th className="text-left p-3 font-medium text-text-muted">IP Address</th>
+                    <th className="text-left p-3 font-medium text-text-muted">Location</th>
+                    <th className="text-left p-3 font-medium text-text-muted">IP / Browser</th>
                     <th className="text-left p-3 font-medium text-text-muted">Details</th>
                   </tr>
                 </thead>
@@ -644,10 +665,9 @@ export default function PlgPage() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const props = log.properties as any;
                     const ip = props?.ip as string | undefined;
-                    const isOwnIP = COLE_IP && ip === COLE_IP;
-                    const isExternal = !isOwnIP && ip && ip !== "unknown";
+                    const geo = props?.geo as { city: string; country: string; region?: string } | null;
                     return (
-                      <tr key={log.id} className={cn("border-t border-border", isExternal && "bg-gold/5")}>
+                      <tr key={log.id} className="border-t border-border hover:bg-bg-primary/50">
                         <td className="p-3 text-text-secondary whitespace-nowrap">{formatTimeAgo(log.occurredAt)}</td>
                         <td className="p-3">
                           <span className={cn(
@@ -657,16 +677,29 @@ export default function PlgPage() {
                             {log.eventName === "demo_login_requested" ? "Page Visit" : "Role Selected"}
                           </span>
                         </td>
-                        <td className="p-3 font-mono text-text-muted">
-                          {ip || "—"}
-                          {isExternal && (
-                            <span className="ml-1.5 text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded">External</span>
+                        <td className="p-3">
+                          {geo ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-text-primary font-medium">{geo.city}</span>
+                              <span className="text-text-muted">·</span>
+                              <span className="text-text-muted">{geo.country}</span>
+                            </div>
+                          ) : (
+                            <span className="text-text-muted italic">Unknown</span>
                           )}
                         </td>
+                        <td className="p-3">
+                          <div className="font-mono text-text-muted text-[11px]">{ip || "—"}</div>
+                          <div className="text-text-muted text-[10px] mt-0.5">{truncateUA(props?.userAgent as string | undefined)}</div>
+                        </td>
                         <td className="p-3 text-text-muted">
-                          {props?.role
-                            ? `Selected: ${props.label || props.role}`
-                            : truncateUA(props?.userAgent as string | undefined)}
+                          {props?.role ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-medium">
+                              {props.label || props.role}
+                            </span>
+                          ) : (
+                            <span className="text-text-muted/60">—</span>
+                          )}
                         </td>
                       </tr>
                     );

@@ -7581,7 +7581,14 @@ export async function fetchPlgStats() {
       eventName: userEvents.eventName,
       properties: userEvents.properties,
       occurredAt: userEvents.occurredAt,
-    }).from(userEvents).orderBy(desc(userEvents.occurredAt)).limit(50),
+      userName: users.name,
+      userEmail: users.email,
+      tenantName: tenants.name,
+    }).from(userEvents)
+      .leftJoin(users, eq(userEvents.userId, users.id))
+      .leftJoin(tenants, eq(userEvents.tenantId, tenants.id))
+      .orderBy(desc(userEvents.occurredAt))
+      .limit(50),
 
     db.select({ status: referrals.status }).from(referrals).limit(1000),
 
@@ -7955,6 +7962,32 @@ export async function markOnboardingComplete() {
   } catch {}
 }
 
+// Cole's known IP — log entries with this IP are filtered out entirely
+const EXCLUDED_IPS = new Set(["107.222.110.158"]);
+
+// In-memory cache for IP geolocation (reset on server restart)
+const ipGeoCache = new Map<string, { city: string; country: string; region?: string }>();
+
+async function lookupIpGeo(ip: string): Promise<{ city: string; country: string; region?: string } | null> {
+  if (!ip || ip === "unknown" || ip.startsWith("127.") || ip.startsWith("10.") || ip.startsWith("192.168.")) return null;
+  if (ipGeoCache.has(ip)) return ipGeoCache.get(ip)!;
+
+  try {
+    // ip-api.com free tier: 45 req/min, no key required, HTTPS on pro only
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== "success") return null;
+    const geo = { city: data.city || "Unknown", country: data.country || "Unknown", region: data.regionName };
+    ipGeoCache.set(ip, geo);
+    return geo;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchDemoAccessLog() {
   const isSuperAdmin = await checkSuperAdmin();
   if (!isSuperAdmin) throw new Error("Unauthorized");
@@ -7972,9 +8005,32 @@ export async function fetchDemoAccessLog() {
       )
     )
     .orderBy(desc(userEvents.occurredAt))
-    .limit(100);
+    .limit(200); // fetch more so we have enough after filtering
 
-  return logs;
+  // Filter out excluded IPs (Cole's IP)
+  const filtered = logs.filter(log => {
+    const props = log.properties as { ip?: string } | null;
+    const ip = props?.ip;
+    return !ip || !EXCLUDED_IPS.has(ip);
+  }).slice(0, 100);
+
+  // Enrich with geolocation — collect unique IPs, look up in parallel
+  const uniqueIps = Array.from(new Set(
+    filtered.map(l => (l.properties as { ip?: string } | null)?.ip).filter((ip): ip is string => !!ip && ip !== "unknown")
+  ));
+  const geoResults = await Promise.all(uniqueIps.map(async ip => [ip, await lookupIpGeo(ip)] as const));
+  const geoMap = new Map(geoResults.filter(([, g]) => g).map(([ip, g]) => [ip, g!]));
+
+  // Attach geo to each log's properties
+  return filtered.map(log => {
+    const props = (log.properties as Record<string, unknown> | null) || {};
+    const ip = (props.ip as string) || null;
+    const geo = ip ? geoMap.get(ip) : null;
+    return {
+      ...log,
+      properties: { ...props, geo: geo || null },
+    };
+  });
 }
 
 export async function fetchTenantUsers(tenantId: string) {
