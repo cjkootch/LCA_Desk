@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Plus, BookOpen, Clock, ChevronRight, Trash2, Send, EyeOff } from "lucide-react";
-import { checkSuperAdmin, fetchAdminCourses, createCourse, addModule, deleteCourse, publishCourse, unpublishCourse } from "@/server/actions";
+import { checkSuperAdmin, fetchAdminCourses, createCourse, addModule, deleteCourse, publishCourse, unpublishCourse, publishAllActiveCourses } from "@/server/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -83,6 +83,15 @@ export default function AdminCoursesPage() {
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to unpublish"); }
   }
 
+  async function handlePublishAllSeeded() {
+    if (!confirm("Publish all active courses that were seeded into the database? This will make every existing course visible to learners.")) return;
+    try {
+      const result = await publishAllActiveCourses();
+      toast.success(`Published ${result.updated} course${result.updated !== 1 ? "s" : ""}`);
+      await load();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to publish"); }
+  }
+
   async function handleWizardSave(data: {
     title: string;
     slug: string;
@@ -141,9 +150,21 @@ export default function AdminCoursesPage() {
               {drafts.length} draft{drafts.length !== 1 ? "s" : ""} · {published.length} published
             </p>
           </div>
-          <Button onClick={() => setShowWizard(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> New Course
-          </Button>
+          <div className="flex items-center gap-2">
+            {drafts.filter(c => !c.createdBy).length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handlePublishAllSeeded}
+                className="gap-2"
+                title="Mark all seeded courses as published"
+              >
+                <Send className="h-4 w-4" /> Publish seeded ({drafts.filter(c => !c.createdBy).length})
+              </Button>
+            )}
+            <Button onClick={() => setShowWizard(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> New Course
+            </Button>
+          </div>
         </div>
 
         {courses.length === 0 && (

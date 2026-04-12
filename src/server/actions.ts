@@ -7677,10 +7677,15 @@ async function _checkSecretariatMember(userId: string) {
   return !!member;
 }
 
+async function _checkIsSuperAdmin(userId: string): Promise<boolean> {
+  const [u] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  return !!u?.isSuperAdmin;
+}
+
 export async function fetchCourseModulesByAdmin(courseId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7707,12 +7712,7 @@ export async function fetchCourseModulesByAdmin(courseId: string) {
 export async function fetchAdminCourses() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-  const isSuperAdmin = !!user?.isSuperAdmin;
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7762,7 +7762,7 @@ export async function createCourse(input: {
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7804,7 +7804,7 @@ export async function updateCourse(courseId: string, input: {
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7824,7 +7824,7 @@ export async function updateCourse(courseId: string, input: {
 export async function deleteCourse(courseId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7841,10 +7841,30 @@ export async function deleteCourse(courseId: string) {
   await db.delete(courses).where(eq(courses.id, courseId));
 }
 
+/**
+ * One-off helper: publish all active, unpublished courses.
+ * Used to fix existing seeded courses that were inserted with the
+ * default isPublished = false after the migration ran.
+ * Super admin only.
+ */
+export async function publishAllActiveCourses() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  const result = await db.update(courses)
+    .set({ isPublished: true })
+    .where(and(eq(courses.active, true), eq(courses.isPublished, false)))
+    .returning({ id: courses.id, title: courses.title });
+
+  return { updated: result.length, courses: result };
+}
+
 export async function publishCourse(courseId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7862,7 +7882,7 @@ export async function publishCourse(courseId: string) {
 export async function unpublishCourse(courseId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7879,7 +7899,7 @@ export async function addModule(courseId: string, input: {
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7915,7 +7935,7 @@ export async function updateModule(moduleId: string, input: {
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
@@ -7937,7 +7957,7 @@ export async function updateModule(moduleId: string, input: {
 export async function deleteModule(moduleId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
