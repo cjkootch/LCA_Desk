@@ -7700,7 +7700,12 @@ export async function fetchCourseModulesByAdmin(courseId: string) {
 export async function fetchAdminCourses() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
-  const isSuperAdmin = (session.user as { userRole?: string }).userRole === "super_admin";
+  const [user] = await db
+    .select({ isSuperAdmin: users.isSuperAdmin })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  const isSuperAdmin = !!user?.isSuperAdmin;
   const isSecretary = await _checkSecretariatMember(session.user.id);
   if (!isSuperAdmin && !isSecretary) throw new Error("Unauthorized");
 
