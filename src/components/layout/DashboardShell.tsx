@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
-import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { PlatformBriefing, FILER_BRIEFING } from "@/components/onboarding/PlatformBriefing";
 import { UsageBanner } from "@/components/billing/UsageBanner";
 import { Menu } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { BillingAccess } from "@/lib/plans";
 import { UpgradePromptProvider } from "@/hooks/useUpgradePrompt";
+import { markOnboardingComplete } from "@/server/actions";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -24,12 +24,24 @@ const ALLOWED_PATHS = [
   "/dashboard/activate",
 ];
 
+const FILER_BRIEFING_KEY = "filer-briefing-completed";
+
 export function DashboardShell({ children, billingAccess }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [briefingActive, setBriefingActive] = useState(false);
 
+  // Auto-start the AI briefing for new users who haven't completed it
+  useEffect(() => {
+    const completed = localStorage.getItem(FILER_BRIEFING_KEY);
+    if (completed) return;
+    // Delay so the dashboard renders first
+    const timer = setTimeout(() => setBriefingActive(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Manual trigger (from Support / replay buttons)
   useEffect(() => {
     const handler = () => setBriefingActive(true);
     window.addEventListener("start-briefing", handler);
@@ -79,13 +91,13 @@ export function DashboardShell({ children, billingAccess }: DashboardShellProps)
         </div>
         {children}
       </main>
-      <OnboardingTour />
       {briefingActive && (
         <PlatformBriefing
           steps={FILER_BRIEFING}
           onComplete={() => {
-            localStorage.setItem("filer-briefing-completed", "true");
+            localStorage.setItem(FILER_BRIEFING_KEY, "true");
             setBriefingActive(false);
+            markOnboardingComplete().catch(() => {});
           }}
         />
       )}

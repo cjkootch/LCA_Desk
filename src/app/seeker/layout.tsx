@@ -2,15 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { SeekerSidebar } from "@/components/seeker/SeekerSidebar";
-import { SeekerTour } from "@/components/onboarding/SeekerTour";
 import { PlatformBriefing, SEEKER_BRIEFING } from "@/components/onboarding/PlatformBriefing";
 import { Menu } from "lucide-react";
 import { SessionProvider } from "next-auth/react";
+import { markOnboardingComplete } from "@/server/actions";
+
+const SEEKER_BRIEFING_KEY = "seeker-briefing-completed";
 
 function SeekerShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [briefingActive, setBriefingActive] = useState(false);
 
+  // Auto-start the AI briefing for new users who haven't completed it
+  useEffect(() => {
+    const completed = localStorage.getItem(SEEKER_BRIEFING_KEY);
+    if (completed) return;
+    const timer = setTimeout(() => setBriefingActive(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Manual trigger (from Support / replay buttons)
   useEffect(() => {
     const handler = () => setBriefingActive(true);
     window.addEventListener("start-briefing", handler);
@@ -43,13 +54,13 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
       <main className="lg:ml-60 min-h-screen">
         {children}
       </main>
-      <SeekerTour />
       {briefingActive && (
         <PlatformBriefing
           steps={SEEKER_BRIEFING}
           onComplete={() => {
-            localStorage.setItem("seeker-briefing-completed", "true");
+            localStorage.setItem(SEEKER_BRIEFING_KEY, "true");
             setBriefingActive(false);
+            markOnboardingComplete().catch(() => {});
           }}
         />
       )}
