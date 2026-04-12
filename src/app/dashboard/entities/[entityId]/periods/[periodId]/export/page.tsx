@@ -307,17 +307,23 @@ export default function ExportPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-text-secondary">
-                  Export your report files and email them to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"}.
+                  Email your downloaded report files to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Local Content Secretariat"}, then confirm below to lock the submission in LCA Desk.
                 </p>
 
                 {/* TODO: Restore method-selection grid when secretariat API integration is live.
                     Platform submission ("Submit via LCA Desk") is hidden until then.
                     When restoring: set default submitMethod back to null and uncomment the grid. */}
 
-                {/* Email compose section */}
+                {/* Step 1: Send the email */}
                 {submitMethod === "email" && (
                   <div className="bg-bg-primary rounded-lg p-4 space-y-3 border border-border">
-                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Email Submission Details</p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center h-5 w-5 rounded-full bg-accent text-white text-[11px] font-bold">1</span>
+                      <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Send the Submission Email</p>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Use the button below to open your email client pre-filled, <strong>or</strong> compose the email yourself in Outlook, Gmail, or any other mail app using these details:
+                    </p>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">To:</span><span className="font-mono text-accent">{getJurisdictionTemplate(jurisdictionCode).submissionEmail || "localcontent@nre.gov.gy"}</span></div>
                       <div className="flex items-start gap-2"><span className="text-text-muted w-16 shrink-0">Subject:</span><span className="font-mono text-text-primary text-xs">{subjectLine}</span></div>
@@ -328,29 +334,26 @@ export default function ExportPage() {
                       )}`}
                     >
                       <Button variant="secondary" className="w-full gap-2">
-                        <Mail className="h-4 w-4" /> Compose Submission Email
+                        <Mail className="h-4 w-4" /> Open Pre-filled Email
                       </Button>
                     </a>
-                    <p className="text-xs text-text-muted">
-                      Remember to attach both downloaded files before sending.
+                    <p className="text-xs text-text-muted leading-relaxed">
+                      <AlertTriangle className="inline h-3 w-3 mr-1 -mt-0.5 text-warning" />
+                      Remember to attach both downloaded files before sending — the Excel report and the Comparative Analysis PDF.
                     </p>
                   </div>
                 )}
 
-                {/* Platform submit info — hidden until secretariat integration is live */}
-
-                {/* Attestation */}
+                {/* Step 2: Attestation & manual completion */}
                 {submitMethod && (
                   <div className="border-t border-border pt-4 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <Shield className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                      <div>
-                        <h3 className="text-sm font-semibold text-text-primary">Attestation & Final Submission</h3>
-                        <p className="text-xs text-text-muted mt-0.5">
-                          This action is irreversible. The report will be locked and a snapshot saved.
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center h-5 w-5 rounded-full bg-accent text-white text-[11px] font-bold">2</span>
+                      <h3 className="text-sm font-semibold text-text-primary">Confirm Submission in LCA Desk</h3>
                     </div>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      Once you&apos;ve sent the email (either via the button above or through your own email client), complete this step to mark the report as submitted in LCA Desk. This locks the report, saves a snapshot of the data, and records the submission in your audit trail. <strong>This action is irreversible.</strong>
+                    </p>
 
                     <div className="bg-warning-light border border-warning/20 rounded-lg p-3">
                       <div className="flex items-start gap-2">
@@ -367,7 +370,7 @@ export default function ExportPage() {
                         className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
                       />
                       <span className="text-sm text-text-primary font-medium">
-                        I have read and agree to the attestation above
+                        I have sent the email to the {getJurisdictionTemplate(jurisdictionCode).regulatoryBodyShort || "Secretariat"} and agree to the attestation above
                       </span>
                     </label>
 
@@ -378,7 +381,7 @@ export default function ExportPage() {
                       size="lg"
                       className="w-full gap-2"
                     >
-                      <Lock className="h-5 w-5" /> Attest & Submit Report
+                      <CheckCircle className="h-5 w-5" /> Mark as Submitted
                     </Button>
                   </div>
                 )}
