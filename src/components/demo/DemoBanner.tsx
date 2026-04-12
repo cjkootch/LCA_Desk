@@ -27,6 +27,23 @@ export function DemoBanner() {
     return () => { document.documentElement.style.setProperty("--demo-banner-h", "0px"); };
   }, [isDemo]);
 
+  // Heartbeat — fire every 30s while user is on any authenticated demo page
+  // so PLG Demo Visitors can track the full journey (arrival → product exploration)
+  useEffect(() => {
+    if (!isDemo || !email) return;
+    const ping = () => fetch("/api/demo/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page: typeof window !== "undefined" ? window.location.pathname : null,
+        demoRole: email,
+      }),
+    }).catch(() => {});
+    ping();
+    const interval = setInterval(ping, 30000);
+    return () => clearInterval(interval);
+  }, [isDemo, email]);
+
   if (!isDemo || !email) return null;
 
   const viewingAs = email.includes("secretariat") ? "Secretariat" :

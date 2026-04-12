@@ -8027,13 +8027,27 @@ export async function fetchDemoAccessLog() {
     userAgent: string;
     firstSeen: Date;
     lastSeen: Date;
+    lastPage: string | null;
+    lastDemoRole: string | null;
     events: SessionEvent[];
-    rolesSelected: string[];
+    rolesSelected: Set<string>;
     pagesVisited: Set<string>;
   }>();
 
-  for (const log of filtered) {
-    const props = log.properties as { ip?: string; userAgent?: string; role?: string; label?: string; page?: string } | null;
+  // Process in chronological order so "last page" is accurate
+  const chronological = [...filtered].sort((a, b) =>
+    (a.occurredAt ? new Date(a.occurredAt).getTime() : 0) - (b.occurredAt ? new Date(b.occurredAt).getTime() : 0)
+  );
+
+  for (const log of chronological) {
+    const props = log.properties as {
+      ip?: string;
+      userAgent?: string;
+      role?: string;
+      label?: string;
+      page?: string;
+      demoRole?: string;
+    } | null;
     const ip = props?.ip;
     if (!ip || ip === "unknown" || !log.occurredAt) continue;
 
@@ -8045,8 +8059,10 @@ export async function fetchDemoAccessLog() {
         userAgent: props.userAgent || "unknown",
         firstSeen: ts,
         lastSeen: ts,
+        lastPage: null,
+        lastDemoRole: null,
         events: [],
-        rolesSelected: [],
+        rolesSelected: new Set(),
         pagesVisited: new Set(),
       };
       sessionsByIp.set(ip, s);
@@ -8055,9 +8071,26 @@ export async function fetchDemoAccessLog() {
     if (ts > s.lastSeen) s.lastSeen = ts;
     s.events.push({ eventName: log.eventName, occurredAt: log.occurredAt, role: props.role, page: props.page });
     if (log.eventName === "demo_role_selected" && (props.label || props.role)) {
-      s.rolesSelected.push(props.label || props.role || "");
+      s.rolesSelected.add(props.label || props.role || "");
     }
-    if (props.page) s.pagesVisited.add(props.page);
+    if (props.page) {
+      s.pagesVisited.add(props.page);
+      s.lastPage = props.page;
+    }
+    if (props.demoRole) {
+      // e.g. demo-filer-pro@lcadesk.com → "Contractor (Pro)"
+      const email = props.demoRole;
+      const label = email.includes("secretariat") ? "Secretariat"
+        : email.includes("seeker") ? "Job Seeker"
+        : email.includes("filer-pro") ? "Contractor (Pro)"
+        : email.includes("filer-lite") ? "Contractor (Lite)"
+        : email.includes("filer-trial") ? "Contractor (Trial)"
+        : email.includes("supplier") ? "Supplier"
+        : email.includes("affiliate") ? "Affiliate"
+        : "Demo User";
+      s.lastDemoRole = label;
+      s.rolesSelected.add(label);
+    }
   }
 
   // Enrich with geolocation
@@ -8087,8 +8120,10 @@ export async function fetchDemoAccessLog() {
       durationMs,
       status,
       eventCount: s.events.length,
-      rolesSelected: s.rolesSelected,
+      rolesSelected: Array.from(s.rolesSelected),
       pagesVisited: Array.from(s.pagesVisited),
+      lastPage: s.lastPage,
+      lastDemoRole: s.lastDemoRole,
       geo: geoMap.get(s.ip) || null,
     };
   });

@@ -757,6 +757,11 @@ export default function PlgPage() {
                           ) : (
                             <span className="text-text-muted/60 text-[10px]">Browsing</span>
                           )}
+                          {session.lastPage && (
+                            <div className="text-[10px] text-text-muted mt-1 truncate max-w-[160px] font-mono">
+                              {session.status === "active" ? "→ " : "last: "}{session.lastPage}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="font-mono text-text-muted text-[11px]">{session.ip}</div>

@@ -71,7 +71,10 @@ export default function DemoSelectPublicPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-4">
+    <div
+      className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-4 py-8"
+      style={{ paddingTop: "calc(var(--demo-banner-h, 0px) + 2rem)" }}
+    >
       <div className="max-w-lg w-full">
         <div className="text-center mb-8">
           <Image src="/logo-full.svg" alt="LCA Desk" width={160} height={48} className="mx-auto mb-6" priority />
