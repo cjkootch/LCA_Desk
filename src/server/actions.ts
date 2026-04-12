@@ -7588,7 +7588,7 @@ export async function fetchPlgStats() {
       .leftJoin(users, eq(userEvents.userId, users.id))
       .leftJoin(tenants, eq(userEvents.tenantId, tenants.id))
       .orderBy(desc(userEvents.occurredAt))
-      .limit(50),
+      .limit(300), // fetch more so we have enough after filtering excluded IPs
 
     db.select({ status: referrals.status }).from(referrals).limit(1000),
 
@@ -7644,6 +7644,13 @@ export async function fetchPlgStats() {
 
   const trialList = [...activeTrials].sort((a, b) => (a.daysRemaining ?? 999) - (b.daysRemaining ?? 999));
 
+  // Filter out events from excluded IPs (Cole's IP) before slicing to 50
+  const filteredRecentEvents = recentEvents.filter(ev => {
+    const props = ev.properties as { ip?: string } | null;
+    const ip = props?.ip;
+    return !ip || !EXCLUDED_IPS.has(ip);
+  }).slice(0, 50);
+
   return {
     totalTenants: enrichedTenants.length,
     activeTrials: activeTrials.length,
@@ -7657,7 +7664,7 @@ export async function fetchPlgStats() {
     allTenants: enrichedTenants,
     funnel,
     eventMap,
-    recentEvents,
+    recentEvents: filteredRecentEvents,
     referralStats,
     cronHealth,
   };
