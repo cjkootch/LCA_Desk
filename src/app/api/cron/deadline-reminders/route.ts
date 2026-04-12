@@ -1,6 +1,6 @@
 import { db } from "@/server/db";
 import { reportingPeriods, entities, tenantMembers, users, expenditureRecords, employmentRecords, capacityDevelopmentRecords, narrativeDrafts } from "@/server/db/schema";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, and, or, inArray } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { notifyDeadlineReminder } from "@/lib/email/unified-notify";
 import { startCronRun, completeCronRun, isAlreadyRunning } from "@/lib/cron-logger";
@@ -125,12 +125,82 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    recordsProcessed = sent;
+    // ─── Draft Stagnation Reminders ────────────────────────────────
+    // Catches drafts abandoned early in the reporting cycle (before
+    // the 30-day-out deadline reminder kicks in).
+    // Fires at 7, 14, 21 days of inactivity.
+    let stagnationSent = 0;
+
+    const stagnantDrafts = await db.select({
+      periodId: reportingPeriods.id,
+      reportType: reportingPeriods.reportType,
+      periodStart: reportingPeriods.periodStart,
+      periodEnd: reportingPeriods.periodEnd,
+      dueDate: reportingPeriods.dueDate,
+      status: reportingPeriods.status,
+      entityId: reportingPeriods.entityId,
+      tenantId: reportingPeriods.tenantId,
+      updatedAt: reportingPeriods.updatedAt,
+      createdAt: reportingPeriods.createdAt,
+      entityName: entities.legalName,
+    }).from(reportingPeriods)
+      .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
+      .where(or(
+        eq(reportingPeriods.status, "not_started"),
+        eq(reportingPeriods.status, "in_progress"),
+      ))
+      .limit(500);
+
+    const reportTypeNamesFull: Record<string, string> = {
+      half_yearly_h1: "Half-Yearly (H1)", half_yearly_h2: "Half-Yearly (H2)",
+      annual_plan: "Annual Plan", performance_report: "Performance Report",
+    };
+
+    for (const period of stagnantDrafts) {
+      const lastActivity = period.updatedAt || period.createdAt;
+      if (!lastActivity) continue;
+      const daysInactive = Math.floor((now.getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24));
+
+      // Fire at 7, 14, 21 days of inactivity — skip if already within 30-day deadline window
+      // (the deadline reminder above handles that window)
+      if (![7, 14, 21].includes(daysInactive)) continue;
+      const dueDate = new Date(period.dueDate);
+      const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysUntilDue <= 30) continue;
+
+      const members = await db.select({
+        userId: tenantMembers.userId,
+        email: users.email,
+        name: users.name,
+      }).from(tenantMembers)
+        .innerJoin(users, eq(tenantMembers.userId, users.id))
+        .where(eq(tenantMembers.tenantId, period.tenantId));
+
+      for (const member of members) {
+        if (!member.userId) continue;
+        await notifyDeadlineReminder({
+          userId: member.userId,
+          tenantId: period.tenantId,
+          userName: member.name || "Team Member",
+          entityName: period.entityName || "",
+          reportType: reportTypeNamesFull[period.reportType] || period.reportType,
+          periodLabel: `${period.periodStart} to ${period.periodEnd}`,
+          dueDate: dueDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+          daysRemaining: daysUntilDue,
+          missingItems: [`Draft has been inactive for ${daysInactive} days — pick up where you left off before the deadline sneaks up.`],
+          link: `/dashboard/entities/${period.entityId}/periods/${period.periodId}`,
+        });
+        stagnationSent++;
+      }
+    }
+
+    recordsProcessed = sent + stagnationSent;
     return NextResponse.json({
       success: true,
       periodsChecked: upcomingPeriods.length,
       remindersNeeded: needsReminder.length,
       emailsSent: sent,
+      stagnationReminders: stagnationSent,
     });
   } catch (error) {
     cronError = error instanceof Error ? error.message : String(error);

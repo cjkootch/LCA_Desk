@@ -16,10 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-import { Building2, Plus, ArrowRight, FileText, Play } from "lucide-react";
+import { Building2, Plus, ArrowRight, FileText, Play, AlertTriangle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
-import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage } from "@/server/actions";
+import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage, fetchDraftPeriods } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
 import type { Entity } from "@/types/database.types";
@@ -41,6 +41,8 @@ export default function DashboardPage() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBriefingCard, setShowBriefingCard] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [drafts, setDrafts] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export default function DashboardPage() {
         setIsPro(p.effectivePlan === "pro" || p.effectivePlan === "enterprise");
         setTrialDaysRemaining(p.trialDaysRemaining ?? null);
       }).catch(() => {});
+      fetchDraftPeriods().then(setDrafts).catch(() => {});
     };
     load();
   }, []);
@@ -87,9 +90,122 @@ export default function DashboardPage() {
   const lcRate = health?.lcRate || 0;
   const billingState = ctx?.billing?.state;
 
+  // Report type labels (match the cron labels)
+  const reportTypeLabel = (t: string) => ({
+    half_yearly_h1: "H1 Half-Yearly",
+    half_yearly_h2: "H2 Half-Yearly",
+    annual_plan: "Annual Plan",
+    performance_report: "Performance Report",
+  }[t] || t);
+
+  const statusLabel = (s: string) => ({
+    not_started: "Not Started",
+    in_progress: "In Progress",
+    in_review: "In Review",
+    approved: "Approved — Not Submitted",
+  }[s] || s);
+
+  const hasUrgentDrafts = drafts.some(d => d.urgency === "overdue" || d.urgency === "urgent");
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl">
       <AnnouncementBanner userRole="filer" />
+
+      {/* Draft submissions banner — surfaces unfinished reports */}
+      {drafts.length > 0 && (
+        <div className={cn(
+          "rounded-2xl border-2 mb-6 overflow-hidden",
+          hasUrgentDrafts
+            ? "border-warning bg-gradient-to-br from-warning/10 to-transparent"
+            : "border-accent/30 bg-gradient-to-br from-accent/5 to-transparent"
+        )}>
+          <div className="p-5 sm:p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className={cn(
+                "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                hasUrgentDrafts ? "bg-warning/15" : "bg-accent/10"
+              )}>
+                {hasUrgentDrafts
+                  ? <AlertTriangle className="h-5 w-5 text-warning" />
+                  : <FileText className="h-5 w-5 text-accent" />
+                }
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-heading font-bold text-text-primary">
+                    {drafts.length === 1 ? "1 Report in Draft" : `${drafts.length} Reports in Draft`}
+                  </h3>
+                  {hasUrgentDrafts && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[10px] font-bold uppercase tracking-wider">
+                      Action Needed
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Complete and submit these before the deadline to stay compliant. We&apos;ll remind you as deadlines approach.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {drafts.slice(0, 4).map(draft => {
+                const urgencyClass = {
+                  overdue: "border-danger bg-danger/5",
+                  urgent: "border-warning bg-warning/5",
+                  soon: "border-accent/40 bg-accent/5",
+                  normal: "border-border bg-bg-surface",
+                }[draft.urgency as string] || "border-border bg-bg-surface";
+
+                const urgencyBadge = {
+                  overdue: { cls: "bg-danger text-white", label: `${Math.abs(draft.daysUntilDue)} days overdue` },
+                  urgent: { cls: "bg-warning text-white", label: `${draft.daysUntilDue}d left` },
+                  soon: { cls: "bg-accent/15 text-accent", label: `${draft.daysUntilDue}d left` },
+                  normal: { cls: "bg-bg-primary text-text-muted", label: draft.daysUntilDue !== null ? `${draft.daysUntilDue}d left` : "No deadline" },
+                }[draft.urgency as string] || { cls: "bg-bg-primary text-text-muted", label: "" };
+
+                return (
+                  <Link
+                    key={draft.id}
+                    href={`/dashboard/entities/${draft.entityId}/periods/${draft.id}`}
+                    className={cn(
+                      "block rounded-lg border p-3 hover:shadow-md transition-all group",
+                      urgencyClass
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-semibold text-text-primary truncate">{draft.entityName}</p>
+                          <span className="text-xs text-text-muted shrink-0">·</span>
+                          <p className="text-xs text-text-secondary shrink-0">{reportTypeLabel(draft.reportType)} {draft.fiscalYear}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-text-muted">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {statusLabel(draft.status)}
+                          </span>
+                          {draft.daysSinceStart > 0 && (
+                            <span>Started {draft.daysSinceStart} {draft.daysSinceStart === 1 ? "day" : "days"} ago</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={cn("inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold shrink-0", urgencyBadge.cls)}>
+                        {urgencyBadge.label}
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all shrink-0" />
+                    </div>
+                  </Link>
+                );
+              })}
+              {drafts.length > 4 && (
+                <p className="text-xs text-text-muted text-center pt-1">
+                  + {drafts.length - 4} more draft{drafts.length - 4 === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Platform Briefing welcome card */}
       {showBriefingCard && (

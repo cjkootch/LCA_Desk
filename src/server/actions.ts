@@ -4009,6 +4009,55 @@ export async function fetchLcsJobs(filters?: { search?: string; category?: strin
 
 // ─── COMPLIANCE HEALTH MONITORING ────────────────────────────────
 
+/**
+ * Fetch in-progress draft submissions for the current tenant.
+ * Used by the dashboard to surface unfinished reports and remind
+ * filers about pending drafts.
+ */
+export async function fetchDraftPeriods() {
+  const { tenantId } = await getSessionTenant();
+
+  const drafts = await db.select({
+    id: reportingPeriods.id,
+    entityId: reportingPeriods.entityId,
+    reportType: reportingPeriods.reportType,
+    status: reportingPeriods.status,
+    periodStart: reportingPeriods.periodStart,
+    periodEnd: reportingPeriods.periodEnd,
+    fiscalYear: reportingPeriods.fiscalYear,
+    dueDate: reportingPeriods.dueDate,
+    updatedAt: reportingPeriods.updatedAt,
+    createdAt: reportingPeriods.createdAt,
+    entityName: entities.legalName,
+  }).from(reportingPeriods)
+    .innerJoin(entities, eq(reportingPeriods.entityId, entities.id))
+    .where(and(
+      eq(reportingPeriods.tenantId, tenantId),
+      or(
+        eq(reportingPeriods.status, "not_started"),
+        eq(reportingPeriods.status, "in_progress"),
+        eq(reportingPeriods.status, "in_review"),
+        eq(reportingPeriods.status, "approved"),
+      )
+    ))
+    .orderBy(asc(reportingPeriods.dueDate));
+
+  const now = Date.now();
+  return drafts.map(d => {
+    const dueMs = d.dueDate ? new Date(d.dueDate).getTime() : null;
+    const daysUntilDue = dueMs !== null ? Math.ceil((dueMs - now) / (1000 * 60 * 60 * 24)) : null;
+    const daysSinceStart = d.createdAt
+      ? Math.floor((now - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    let urgency: "overdue" | "urgent" | "soon" | "normal";
+    if (daysUntilDue !== null && daysUntilDue < 0) urgency = "overdue";
+    else if (daysUntilDue !== null && daysUntilDue <= 7) urgency = "urgent";
+    else if (daysUntilDue !== null && daysUntilDue <= 30) urgency = "soon";
+    else urgency = "normal";
+    return { ...d, daysUntilDue, daysSinceStart, urgency };
+  });
+}
+
 export async function fetchComplianceHealth() {
   const { tenantId } = await getSessionTenant();
 
