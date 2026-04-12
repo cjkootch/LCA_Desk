@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo } from "@/server/actions";
+import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 type PlgData = Awaited<ReturnType<typeof fetchPlgStats>>;
 type DemoLog = Awaited<ReturnType<typeof fetchDemoAccessLog>>[number];
 type TenantUser = Awaited<ReturnType<typeof fetchTenantUsers>>[number];
+type TenantActivity = Awaited<ReturnType<typeof fetchTenantActivity>>[number];
 
 // Your IP is filtered server-side (see EXCLUDED_IPS in src/server/actions.ts)
 
@@ -144,6 +145,23 @@ function TenantUserRow({
   );
 }
 
+function ActivityBadge({ label, kind }: { label: string; kind: "event" | "audit" }) {
+  const lower = label.toLowerCase();
+  let cls = kind === "audit" ? "bg-accent/10 text-accent" : "bg-bg-primary text-text-muted";
+  if (lower.includes("create") || lower.includes("added")) cls = "bg-success/15 text-success";
+  else if (lower.includes("delete") || lower.includes("removed")) cls = "bg-danger/15 text-danger";
+  else if (lower.includes("submit")) cls = "bg-gold/15 text-gold";
+  else if (lower.includes("trial")) cls = "bg-accent/15 text-accent";
+  else if (lower.includes("upgrade")) cls = "bg-gold/15 text-gold";
+  else if (lower.includes("dismiss") || lower.includes("fail")) cls = "bg-warning/15 text-warning";
+
+  return (
+    <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap", cls)}>
+      {label}
+    </span>
+  );
+}
+
 function TenantDrillDown({
   tenantId,
   onUserToggle,
@@ -152,10 +170,17 @@ function TenantDrillDown({
   onUserToggle: (tenantId: string, userId: string, newValue: boolean) => void;
 }) {
   const [users, setUsers] = useState<TenantUser[] | null>(null);
+  const [activity, setActivity] = useState<TenantActivity[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTenantUsers(tenantId).then(setUsers).finally(() => setLoading(false));
+    Promise.all([
+      fetchTenantUsers(tenantId),
+      fetchTenantActivity(tenantId).catch(() => [] as TenantActivity[]),
+    ]).then(([u, a]) => {
+      setUsers(u);
+      setActivity(a);
+    }).finally(() => setLoading(false));
   }, [tenantId]);
 
   async function handleToggle(userId: string, newValue: boolean) {
@@ -174,17 +199,9 @@ function TenantDrillDown({
         <td colSpan={10} className="py-4 px-4">
           <div className="flex items-center gap-2 text-xs text-text-muted">
             <div className="animate-spin rounded-full h-3 w-3 border-b border-accent" />
-            Loading users…
+            Loading users & activity…
           </div>
         </td>
-      </tr>
-    );
-  }
-
-  if (!users || users.length === 0) {
-    return (
-      <tr>
-        <td colSpan={10} className="py-3 px-4 text-xs text-text-muted italic">No users found for this tenant.</td>
       </tr>
     );
   }
@@ -193,22 +210,77 @@ function TenantDrillDown({
     <tr>
       <td colSpan={10} className="p-0">
         <div className="bg-bg-primary border-b border-border mx-2 mb-2 rounded-lg overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-bg-secondary border-b border-border">
-                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Name</th>
-                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Email</th>
-                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Role</th>
-                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Demo?</th>
-                <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <TenantUserRow key={u.userId} user={u} onToggle={handleToggle} />
-              ))}
-            </tbody>
-          </table>
+          {/* Users table */}
+          {users && users.length > 0 ? (
+            <>
+              <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">Team</div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-bg-secondary border-b border-border">
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Name</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Email</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Role</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Demo?</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <TenantUserRow key={u.userId} user={u} onToggle={handleToggle} />
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <div className="py-3 px-4 text-xs text-text-muted italic">No users found for this tenant.</div>
+          )}
+
+          {/* Activity timeline */}
+          <div className="px-4 pt-4 pb-1 flex items-center justify-between">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              Recent Activity (last 30 days)
+            </div>
+            {activity && (
+              <span className="text-[10px] text-text-muted">
+                {activity.length} {activity.length === 1 ? "action" : "actions"}
+              </span>
+            )}
+          </div>
+
+          {!activity || activity.length === 0 ? (
+            <div className="py-3 px-4 text-xs text-text-muted italic">No activity recorded yet.</div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-bg-secondary border-b border-border sticky top-0">
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">When</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">User</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Action</th>
+                    <th className="text-left py-2 px-4 text-xs text-text-muted font-medium">Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.map(row => (
+                    <tr key={row.id} className="border-b border-border-light last:border-0">
+                      <td className="py-2 px-4 text-text-muted whitespace-nowrap">
+                        {formatTimeAgo(row.occurredAt)}
+                      </td>
+                      <td className="py-2 px-4 text-text-primary whitespace-nowrap">
+                        {row.userName || row.userEmail || <span className="text-text-muted italic">System</span>}
+                      </td>
+                      <td className="py-2 px-4">
+                        <ActivityBadge label={row.label} kind={row.kind} />
+                      </td>
+                      <td className="py-2 px-4 text-text-muted font-mono text-[10px] truncate max-w-[280px]">
+                        {row.detail || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </td>
     </tr>

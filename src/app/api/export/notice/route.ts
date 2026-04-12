@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   y += 3;
 
   doc.setFont("helvetica", "bold");
-  doc.text("Attn: Mr. Martin Pertab, Director", margin, y);
+  doc.text("Attn: Local Content Secretariat", margin, y);
   y += 5;
   doc.setFont("helvetica", "normal");
   doc.text("Email: localcontent@nre.gov.gy", margin, y);

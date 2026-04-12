@@ -8189,6 +8189,102 @@ export async function fetchTenantUsers(tenantId: string) {
   return members;
 }
 
+/**
+ * Fetch recent user activity for a tenant — for PLG drill-down view.
+ * Combines analytics events and audit log entries into a single timeline.
+ */
+export async function fetchTenantActivity(tenantId: string) {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [events, audits] = await Promise.all([
+    db.select({
+      id: userEvents.id,
+      userId: userEvents.userId,
+      eventName: userEvents.eventName,
+      properties: userEvents.properties,
+      occurredAt: userEvents.occurredAt,
+      userName: users.name,
+      userEmail: users.email,
+    }).from(userEvents)
+      .leftJoin(users, eq(userEvents.userId, users.id))
+      .where(and(eq(userEvents.tenantId, tenantId), gte(userEvents.occurredAt, thirtyDaysAgo)))
+      .orderBy(desc(userEvents.occurredAt))
+      .limit(100),
+
+    db.select({
+      id: auditLogs.id,
+      userId: auditLogs.userId,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      metadata: auditLogs.metadata,
+      createdAt: auditLogs.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    }).from(auditLogs)
+      .leftJoin(users, eq(auditLogs.userId, users.id))
+      .where(and(eq(auditLogs.tenantId, tenantId), gte(auditLogs.createdAt, thirtyDaysAgo)))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(100),
+  ]);
+
+  type ActivityRow = {
+    kind: "event" | "audit";
+    id: string;
+    userId: string | null;
+    userName: string | null;
+    userEmail: string | null;
+    label: string;
+    detail: string | null;
+    occurredAt: Date | null;
+  };
+
+  const rows: ActivityRow[] = [];
+
+  for (const e of events) {
+    const props = (e.properties as Record<string, unknown> | null) || {};
+    let detail: string | null = null;
+    if (typeof props.page === "string") detail = props.page;
+    else if (typeof props.role === "string") detail = `role: ${props.role}`;
+    else if (typeof props.plan === "string") detail = `plan: ${props.plan}`;
+    rows.push({
+      kind: "event",
+      id: `evt-${e.id}`,
+      userId: e.userId,
+      userName: e.userName,
+      userEmail: e.userEmail,
+      label: e.eventName.replace(/_/g, " "),
+      detail,
+      occurredAt: e.occurredAt,
+    });
+  }
+
+  for (const a of audits) {
+    const entity = a.entityType ? a.entityType.replace(/_/g, " ") : "";
+    rows.push({
+      kind: "audit",
+      id: `aud-${a.id}`,
+      userId: a.userId,
+      userName: a.userName,
+      userEmail: a.userEmail,
+      label: `${a.action || "changed"} ${entity}`.trim(),
+      detail: a.entityId ? a.entityId.slice(0, 8) : null,
+      occurredAt: a.createdAt,
+    });
+  }
+
+  rows.sort((a, b) => {
+    const ta = a.occurredAt ? new Date(a.occurredAt).getTime() : 0;
+    const tb = b.occurredAt ? new Date(b.occurredAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  return rows.slice(0, 60);
+}
+
 export async function toggleUserDemo(userId: string, isDemo: boolean) {
   const isSuperAdmin = await checkSuperAdmin();
   if (!isSuperAdmin) throw new Error("Unauthorized");
