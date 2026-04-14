@@ -2,7 +2,7 @@
 import { useStepCompletion } from "@/hooks/useStepCompletion";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PeriodChecklist } from "@/components/reporting/PeriodChecklist";
@@ -30,6 +30,7 @@ import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRe
 
 export default function ExportPage() {
   const params = useParams();
+  const router = useRouter();
   const entityId = params.entityId as string;
   const periodId = params.periodId as string;
   const completedSteps = useStepCompletion(periodId);
@@ -143,6 +144,24 @@ export default function ExportPage() {
     try {
       await attestAndSubmit(periodId, getJurisdictionTemplate(jurisdictionCode).attestationText, method);
       setPeriod((prev: typeof period) => prev ? { ...prev, status: "submitted", submittedAt: new Date(), lockedAt: new Date() } : prev);
+
+      // Google Ads: fire close_convert_lead on first report submission per user
+      if (typeof window !== "undefined") {
+        try {
+          const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+          const alreadyFired = localStorage.getItem("gads_close_convert_fired");
+          if (gtag && !alreadyFired) {
+            gtag("event", "close_convert_lead", { event_category: "activation" });
+            localStorage.setItem("gads_close_convert_fired", "true");
+          }
+        } catch {}
+      }
+
+      // Invalidate the Next.js router cache so the dashboard shows the
+      // updated state (draft removed, submitted count incremented) when
+      // the user navigates back.
+      router.refresh();
+
       toast.success(
         method === "platform"
           ? "Report submitted directly to the Secretariat via LCA Desk."

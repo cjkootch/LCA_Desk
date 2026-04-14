@@ -28,7 +28,10 @@ export default function RootLayout({
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-J4T660ZKK3');`}
+gtag('config', 'G-J4T660ZKK3', {
+  cookie_domain: 'lcadesk.com',
+  cookie_flags: 'SameSite=None;Secure'
+});`}
         </Script>
       </head>
       <body className="min-h-full flex flex-col antialiased bg-bg-primary text-text-primary font-body">

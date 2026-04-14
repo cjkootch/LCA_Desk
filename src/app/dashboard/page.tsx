@@ -66,6 +66,36 @@ export default function DashboardPage() {
       fetchDraftPeriods().then(setDrafts).catch(() => {});
     };
     load();
+
+    // Refetch when the user returns to the tab or navigates back via bfcache.
+    // Ensures the dashboard reflects just-submitted reports without a manual refresh.
+    const refetch = () => {
+      fetchEntities().then(d => setEntities(d.map(mapDrizzleEntity))).catch(() => {});
+      fetchComplianceHealth().then(setHealth).catch(() => {});
+      fetchDraftPeriods().then(setDrafts).catch(() => {});
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") refetch(); };
+    window.addEventListener("focus", refetch);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", refetch);
+    return () => {
+      window.removeEventListener("focus", refetch);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", refetch);
+    };
+  }, []);
+
+  // Google Ads: fire qualify_lead on first dashboard load per user
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+      const alreadyFired = localStorage.getItem("gads_qualify_lead_fired");
+      if (gtag && !alreadyFired) {
+        gtag("event", "qualify_lead", { event_category: "activation" });
+        localStorage.setItem("gads_qualify_lead_fired", "true");
+      }
+    } catch {}
   }, []);
 
   const currentYear = new Date().getFullYear();

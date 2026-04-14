@@ -65,6 +65,27 @@ function SignupContent() {
         return;
       }
 
+      // Google Ads conversion — fire only after signup API returns success.
+      // Enhanced conversions: pass plaintext email/name; gtag handles hashing.
+      // Gated by localStorage so a returning user re-visiting signup doesn't refire.
+      if (typeof window !== "undefined") {
+        try {
+          const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+          const alreadyFired = localStorage.getItem("gads_purchase_fired");
+          if (gtag && !alreadyFired) {
+            const [firstName, ...rest] = (fullName || "").trim().split(" ");
+            const lastName = rest.join(" ");
+            gtag("event", "conversion_event_purchase", {
+              user_data: {
+                email: email.trim().toLowerCase(),
+                address: firstName ? { first_name: firstName, last_name: lastName || undefined } : undefined,
+              },
+            });
+            localStorage.setItem("gads_purchase_fired", "true");
+          }
+        } catch {}
+      }
+
       const result = await signIn("credentials", {
         email,
         password,
