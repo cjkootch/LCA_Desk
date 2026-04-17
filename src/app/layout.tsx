@@ -28,7 +28,13 @@ export default function RootLayout({
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
+// GA4 — analytics & reporting
 gtag('config', 'G-J4T660ZKK3', {
+  cookie_domain: 'lcadesk.com',
+  cookie_flags: 'SameSite=None;Secure'
+});
+// Google Ads — direct conversion tracking (lower latency than GA4 import)
+gtag('config', 'AW-18087842219', {
   cookie_domain: 'lcadesk.com',
   cookie_flags: 'SameSite=None;Secure'
 });`}

@@ -65,9 +65,13 @@ function SignupContent() {
         return;
       }
 
-      // Google Ads conversion — fire only after signup API returns success.
-      // Enhanced conversions: pass plaintext email/name; gtag handles hashing.
-      // Gated by localStorage so a returning user re-visiting signup doesn't refire.
+      // Conversion events — fire only after signup API returns success.
+      // We fire TWO separate events:
+      //   1. Direct Google Ads conversion (AW-...) — lower latency, primary
+      //      conversion in Google Ads for bidding optimization
+      //   2. GA4 conversion_event_purchase — for reporting & funnel analysis
+      // Enhanced conversions: plaintext email/name; gtag handles hashing.
+      // Gated by localStorage so repeat visits don't refire.
       if (typeof window !== "undefined") {
         try {
           const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
@@ -75,12 +79,20 @@ function SignupContent() {
           if (gtag && !alreadyFired) {
             const [firstName, ...rest] = (fullName || "").trim().split(" ");
             const lastName = rest.join(" ");
-            gtag("event", "conversion_event_purchase", {
-              user_data: {
-                email: email.trim().toLowerCase(),
-                address: firstName ? { first_name: firstName, last_name: lastName || undefined } : undefined,
-              },
+            const userData = {
+              email: email.trim().toLowerCase(),
+              address: firstName ? { first_name: firstName, last_name: lastName || undefined } : undefined,
+            };
+
+            // Direct Google Ads conversion (primary — used for bid optimization)
+            gtag("event", "conversion", {
+              send_to: "AW-18087842219/ppGnCIeHuZ0cEKuj-rBD",
+              user_data: userData,
             });
+
+            // GA4 conversion — imported into Google Ads as secondary for reporting
+            gtag("event", "conversion_event_purchase", { user_data: userData });
+
             localStorage.setItem("gads_purchase_fired", "true");
           }
         } catch {}
