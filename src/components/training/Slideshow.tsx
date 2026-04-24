@@ -838,7 +838,7 @@ export function Slideshow({ content, title, courseTitle, moduleTitle, onClose, o
             <h2 className={cn(
               "font-bold text-[#19544c] animate-[scaleIn_0.5s_ease_forwards] opacity-0",
               isIntro ? "text-3xl sm:text-5xl mb-8" : "text-2xl sm:text-4xl mb-6"
-            )} style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.03em" }}>
+            )} style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: "-0.03em" }}>
               {slide.heading}
             </h2>
           )}
