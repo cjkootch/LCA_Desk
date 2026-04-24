@@ -8,6 +8,7 @@ import { LayoutDashboard, Briefcase, FileText, BarChart3, UserCog, Settings, Log
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupplierTour } from "@/components/onboarding/SupplierTour";
+import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SessionProvider } from "next-auth/react";
@@ -136,6 +137,15 @@ function Shell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <SupplierTour />
+      <FloatingChatWidget
+        pageContext={pathname}
+        quickQuestions={[
+          "How do I get LCS certified?",
+          "How do I respond to opportunities?",
+          "What sectors have the most demand?",
+          "How does local content rate affect me?",
+        ]}
+      />
     </div>
   );
 }

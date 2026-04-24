@@ -9,6 +9,7 @@ import { LayoutDashboard, DollarSign, Gift, Settings, LogOut, X, Menu, Graduatio
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { SessionProvider } from "next-auth/react";
 
 /* eslint-disable @next/next/no-img-element */
@@ -98,6 +99,15 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </main>
+      <FloatingChatWidget
+        pageContext={pathname}
+        quickQuestions={[
+          "How do I earn commissions?",
+          "What's the referral process?",
+          "How do I share my referral link?",
+          "When do I get paid?",
+        ]}
+      />
     </div>
   );
 }

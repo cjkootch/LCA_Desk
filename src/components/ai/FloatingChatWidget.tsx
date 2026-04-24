@@ -135,9 +135,14 @@ export function FloatingChatWidget({
 
   return (
     <div className={cn(
-      "fixed z-50 bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200",
-      expanded ? "bottom-4 right-4 w-[480px] h-[600px]" : "bottom-6 right-6 w-[380px] h-[500px]"
-    )}>
+      "fixed z-50 bg-bg-card flex flex-col overflow-hidden transition-all duration-200",
+      // Mobile: full-screen overlay. Desktop: floating card.
+      "inset-0 sm:inset-auto",
+      "sm:border sm:border-border sm:rounded-2xl sm:shadow-2xl",
+      expanded
+        ? "sm:bottom-4 sm:right-4 sm:w-[480px] sm:h-[600px]"
+        : "sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[500px]"
+    )} style={{ paddingTop: "var(--demo-banner-h, 0px)" }}>
       {/* Header */}
       <div className={cn("flex items-center justify-between px-4 py-3 border-b border-border text-white shrink-0", accentColor)}>
         <div className="flex items-center gap-2">

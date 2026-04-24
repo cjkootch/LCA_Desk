@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { SeekerSidebar } from "@/components/seeker/SeekerSidebar";
+import { FloatingChatWidget } from "@/components/ai/FloatingChatWidget";
 import { PlatformBriefing, SEEKER_BRIEFING } from "@/components/onboarding/PlatformBriefing";
 import { Menu } from "lucide-react";
 import { SessionProvider } from "next-auth/react";
 import { markOnboardingComplete } from "@/server/actions";
+import { usePathname } from "next/navigation";
 
 const SEEKER_BRIEFING_KEY = "seeker-briefing-completed";
 
 function SeekerShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [briefingActive, setBriefingActive] = useState(false);
+  const pathname = usePathname();
 
   // Auto-start the AI briefing for new users who haven't completed it
   useEffect(() => {
@@ -64,6 +67,15 @@ function SeekerShell({ children }: { children: React.ReactNode }) {
           }}
         />
       )}
+      <FloatingChatWidget
+        pageContext={pathname || undefined}
+        quickQuestions={[
+          "What jobs are available in the petroleum sector?",
+          "What certifications do I need?",
+          "How do I improve my resume for oil & gas?",
+          "What does the LCA mean for my career?",
+        ]}
+      />
     </div>
   );
 }
