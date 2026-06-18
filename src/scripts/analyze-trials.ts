@@ -27,36 +27,53 @@ function domainOf(email: string | null): string {
   return at === -1 ? "" : email.slice(at + 1).toLowerCase();
 }
 
-/** Heuristic: does this look like a real company vs. an individual kicking tires? */
+// Domains that are NOT a real business: placeholder/test domains, the demo seed,
+// and obvious typos of free providers (e.g. 4gmail.com, gmail.come, gmale.com).
+const JUNK_DOMAINS = new Set([
+  "company.gy", "example.com", "email.com", "emil.com", "test.com",
+  "lcadesk.com", "mail.com",
+]);
+const FREE_ROOT = /(gmail|googlemail|gmale|gmai|gmial|gmil|hotmail|hotmal|hotmai|yahoo|yaho|ymail|outlook|outlok|icloud|proton|aol|gmx|yandex|zoho|emil|email|moblie|mobile)/i;
+
+/** A genuine business domain: not free, not a typo of a free provider, not junk/test. */
+function isCorporateDomain(domain: string): boolean {
+  if (!domain) return false;
+  if (FREE_EMAIL_DOMAINS.has(domain)) return false;
+  if (JUNK_DOMAINS.has(domain)) return false;
+  if (FREE_ROOT.test(domain)) return false; // catches 4gmail.com, gmail.come, gmale.com, *.emil.com
+  if (/\.(local|test|invalid|example)$/.test(domain)) return false;
+  return domain.includes("."); // must at least look like a real FQDN
+}
+
+// Tiers, strongest business signal first.
+type Tier = "corporate" | "named_business" | "individual";
+
+/** Heuristic: how strongly does this trial look like a real business? */
 function classify(tenantName: string, ownerEmail: string | null, entityCount: number): {
-  verdict: "company" | "individual";
+  tier: Tier;
   reasons: string[];
 } {
   const reasons: string[] = [];
   const domain = domainOf(ownerEmail);
-  const free = FREE_EMAIL_DOMAINS.has(domain);
+  const corporate = isCorporateDomain(domain);
 
-  if (domain && !free) reasons.push(`corporate email domain (@${domain})`);
-  if (free) reasons.push(`free email domain (@${domain})`);
+  if (corporate) reasons.push(`corporate email domain (@${domain})`);
+  else if (domain) reasons.push(`personal/junk email domain (@${domain})`);
 
-  // Company-name signals: suffixes / multi-word org-looking names.
+  // Company-name signals: org suffixes or business-y words.
   const name = (tenantName || "").trim();
-  const corpSuffix = /\b(inc|ltd|llc|llp|plc|corp|co|company|group|holdings|services|solutions|energy|oil|gas|petroleum|engineering|consult\w*|enterprises?|limited|n\.?v\.?|s\.?a\.?)\b/i;
-  const looksLikePersonName = /^[A-Z][a-z]+(\s+[A-Z]\.?)?\s+[A-Z][a-z]+$/.test(name) && !corpSuffix.test(name);
+  const corpSuffix = /\b(inc|ltd|llc|llp|plc|corp|co|company|companies|group|holdings|services|solutions|energy|oil|gas|petroleum|mining|construction|engineering|consult\w*|trading|logistics|enterprises?|limited|farm|n\.?v\.?|s\.?a\.?)\b/i;
+  const hasCorpName = corpSuffix.test(name);
 
-  if (corpSuffix.test(name)) reasons.push(`company-style name ("${name}")`);
-  else if (looksLikePersonName) reasons.push(`looks like a person's name ("${name}")`);
-
+  if (hasCorpName) reasons.push(`company-style name ("${name}")`);
   if (entityCount > 0) reasons.push(`${entityCount} entit${entityCount === 1 ? "y" : "ies"} created`);
 
-  // Score it: corporate domain OR company suffix => company. Otherwise individual.
-  const companyScore =
-    (domain && !free ? 2 : 0) +
-    (corpSuffix.test(name) ? 2 : 0) +
-    (entityCount > 0 ? 1 : 0) +
-    (looksLikePersonName ? -1 : 0);
-
-  return { verdict: companyScore >= 2 ? "company" : "individual", reasons };
+  // Tier A: a genuine corporate email domain is the strongest, hardest-to-fake signal.
+  if (corporate) return { tier: "corporate", reasons };
+  // Tier B: business-style name on a free/personal email — likely a small business.
+  if (hasCorpName) return { tier: "named_business", reasons };
+  // Otherwise: an individual.
+  return { tier: "individual", reasons };
 }
 
 async function main() {
@@ -75,7 +92,7 @@ async function main() {
 
   const now = Date.now();
   type Row = {
-    verdict: "company" | "individual";
+    tier: Tier;
     name: string;
     owner: string;
     email: string;
@@ -115,10 +132,10 @@ async function main() {
       ? Math.ceil((t.trialEndsAt.getTime() - now) / (1000 * 60 * 60 * 24))
       : null;
 
-    const { verdict, reasons } = classify(t.name, owner?.email ?? null, entityRows.length);
+    const { tier, reasons } = classify(t.name, owner?.email ?? null, entityRows.length);
 
     rows.push({
-      verdict,
+      tier,
       name: t.name,
       owner: owner?.userName ?? "—",
       email: owner?.email ?? "—",
@@ -131,16 +148,23 @@ async function main() {
     });
   }
 
+  const order: Record<Tier, number> = { corporate: 0, named_business: 1, individual: 2 };
   rows.sort((a, b) => {
-    if (a.verdict !== b.verdict) return a.verdict === "company" ? -1 : 1;
+    if (a.tier !== b.tier) return order[a.tier] - order[b.tier];
     return (b.entities - a.entities) || (b.members - a.members);
   });
 
-  const companies = rows.filter((r) => r.verdict === "company");
-  const individuals = rows.filter((r) => r.verdict === "individual");
+  const corporate = rows.filter((r) => r.tier === "corporate");
+  const named = rows.filter((r) => r.tier === "named_business");
+  const individuals = rows.filter((r) => r.tier === "individual");
+  const active = rows.filter((r) => r.status === "active").length;
+  const withEntity = rows.filter((r) => r.entities > 0).length;
 
-  console.log(`\n=== TRIAL TENANTS: ${rows.length} total ===`);
-  console.log(`Likely companies: ${companies.length}   |   Likely individuals: ${individuals.length}\n`);
+  console.log(`\n=== TRIAL TENANTS: ${rows.length} total (${active} active / ${rows.length - active} expired) ===`);
+  console.log(`Engaged (created ≥1 entity): ${withEntity}`);
+  console.log(`Tier A — corporate email domain: ${corporate.length}`);
+  console.log(`Tier B — business name, personal email: ${named.length}`);
+  console.log(`Individuals: ${individuals.length}\n`);
 
   const print = (label: string, list: typeof rows) => {
     console.log(`\n──────── ${label} (${list.length}) ────────`);
@@ -153,8 +177,11 @@ async function main() {
     }
   };
 
-  print("LIKELY COMPANIES", companies);
-  print("LIKELY INDIVIDUALS", individuals);
+  print("TIER A — LIKELY REAL COMPANIES (corporate email domain)", corporate);
+  print("TIER B — POSSIBLE SMALL BUSINESSES (business name, personal email)", named);
+  // Individuals are the long tail — print a compact count by status instead of all 150+.
+  console.log(`\n──────── INDIVIDUALS (${individuals.length}) ────────`);
+  console.log(`  active: ${individuals.filter((r) => r.status === "active").length}, expired: ${individuals.filter((r) => r.status === "expired").length}`);
 }
 
 main()
