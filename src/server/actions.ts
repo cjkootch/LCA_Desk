@@ -7576,6 +7576,86 @@ export async function fetchAnalyticsFunnel(days: number = 30) {
 }
 
 // ─── PLG ANALYTICS ────────────────────────────────────────────────
+// Free / personal email providers — a signup from one of these is a
+// signal the account is an individual rather than a company.
+const PERSONAL_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "ymail.com",
+  "hotmail.com", "hotmail.co.uk", "outlook.com", "live.com", "msn.com",
+  "icloud.com", "me.com", "mac.com", "aol.com", "proton.me", "protonmail.com",
+  "gmx.com", "gmx.net", "mail.com", "zoho.com", "yandex.com", "pm.me",
+]);
+
+function normalizeName(s: string): string {
+  return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Classify a tenant as a company vs individual signup using lightweight
+ * heuristics. Returns a type and the reasons behind the call so the admin
+ * can see why. No external calls — pure string analysis.
+ */
+function classifyAccountQuality(
+  companyName: string | null,
+  ownerEmail: string | null,
+  ownerName: string | null,
+): { type: "company" | "individual" | "unclear"; reasons: string[] } {
+  const reasons: string[] = [];
+  let individualSignals = 0;
+  let companySignals = 0;
+
+  const domain = ownerEmail?.split("@")[1]?.toLowerCase() || "";
+  const isPersonalEmail = !!domain && PERSONAL_EMAIL_DOMAINS.has(domain);
+  if (isPersonalEmail) {
+    individualSignals++;
+    reasons.push(`Personal email (${domain})`);
+  } else if (domain) {
+    companySignals++;
+    reasons.push(`Business email (${domain})`);
+  }
+
+  const co = normalizeName(companyName || "");
+  const on = normalizeName(ownerName || "");
+
+  // Company name overlaps the person's name → likely individual
+  if (co && on) {
+    const coWords = co.split(" ");
+    const onWords = on.split(" ");
+    const overlap = coWords.filter(w => w.length > 1 && onWords.includes(w));
+    if (co === on || overlap.length >= 1) {
+      individualSignals++;
+      reasons.push("Company name matches person's name");
+    }
+  }
+
+  // Trivial company name (one short word, or looks like a first name only)
+  if (co && co.split(" ").length === 1 && co.length <= 12) {
+    individualSignals++;
+    reasons.push("Single-word company name");
+  }
+
+  // Email local-part matches the person's name → individual
+  const local = normalizeName((ownerEmail?.split("@")[0] || "").replace(/[._\d]/g, " "));
+  if (local && on && on.split(" ").some(w => w.length > 2 && local.includes(w))) {
+    individualSignals++;
+    reasons.push("Email is the person's name");
+  }
+
+  // Corporate keywords in the company name → company
+  if (/\b(ltd|limited|inc|llc|corp|company|co|services|solutions|group|engineering|consulting|energy|oil|gas|petroleum|holdings|enterprises|industries|construction|logistics|marine|technologies|trading)\b/.test(co)) {
+    companySignals++;
+    reasons.push("Corporate keyword in company name");
+  }
+
+  let type: "company" | "individual" | "unclear";
+  if (individualSignals >= 2 && companySignals === 0) type = "individual";
+  else if (companySignals >= 1 && individualSignals <= 1) type = "company";
+  else if (individualSignals > companySignals) type = "individual";
+  else if (companySignals > individualSignals) type = "company";
+  else type = "unclear";
+
+  return { type, reasons };
+}
+
 export async function fetchPlgStats() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
@@ -7657,10 +7737,41 @@ export async function fetchPlgStats() {
     db.select({ id: users.id }).from(users).where(gte(users.createdAt, thirtyDaysAgo)),
   ]);
 
+  // Look up the owner (or earliest member) for each tenant so we can
+  // classify account quality (company vs individual signup).
+  const ownerRows = await db.select({
+    tenantId: tenantMembers.tenantId,
+    role: tenantMembers.role,
+    email: users.email,
+    name: users.name,
+    joinedAt: tenantMembers.createdAt,
+  }).from(tenantMembers)
+    .innerJoin(users, eq(tenantMembers.userId, users.id))
+    .orderBy(asc(tenantMembers.createdAt));
+
+  const ownerByTenant = new Map<string, { email: string | null; name: string | null }>();
+  for (const row of ownerRows) {
+    const existing = ownerByTenant.get(row.tenantId);
+    // Prefer an explicit owner; otherwise keep the earliest member.
+    if (!existing || row.role === "owner") {
+      if (!existing || row.role === "owner") ownerByTenant.set(row.tenantId, { email: row.email, name: row.name });
+    }
+  }
+
   const enrichedTenants = allTenants.map(t => {
     const access = getBillingAccess(t.plan, t.trialEndsAt, t.stripeSubscriptionId, t.stripeSubscriptionStatus);
     const daysRemaining = getTrialDaysRemaining(t.trialEndsAt);
-    return { ...t, billingState: access.state, daysRemaining };
+    const owner = ownerByTenant.get(t.id) || { email: null, name: null };
+    const quality = classifyAccountQuality(t.name, owner.email, owner.name);
+    return {
+      ...t,
+      billingState: access.state,
+      daysRemaining,
+      ownerEmail: owner.email,
+      ownerName: owner.name,
+      accountType: quality.type,
+      qualityReasons: quality.reasons,
+    };
   });
 
   const activeTrials = enrichedTenants.filter(t => t.billingState === "trial");
@@ -7693,6 +7804,20 @@ export async function fetchPlgStats() {
 
   const trialList = [...activeTrials].sort((a, b) => (a.daysRemaining ?? 999) - (b.daysRemaining ?? 999));
 
+  // Lead-quality breakdown across active trials
+  const accountQuality = {
+    trials: {
+      company: activeTrials.filter(t => t.accountType === "company").length,
+      individual: activeTrials.filter(t => t.accountType === "individual").length,
+      unclear: activeTrials.filter(t => t.accountType === "unclear").length,
+    },
+    allSignups: {
+      company: enrichedTenants.filter(t => t.accountType === "company").length,
+      individual: enrichedTenants.filter(t => t.accountType === "individual").length,
+      unclear: enrichedTenants.filter(t => t.accountType === "unclear").length,
+    },
+  };
+
   // Filter out events from excluded IPs (Cole's IP) before slicing to 50
   const filteredRecentEvents = recentEvents.filter(ev => {
     const props = ev.properties as { ip?: string } | null;
@@ -7716,6 +7841,7 @@ export async function fetchPlgStats() {
     recentEvents: filteredRecentEvents,
     referralStats,
     cronHealth,
+    accountQuality,
   };
 }
 

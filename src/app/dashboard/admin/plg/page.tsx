@@ -92,6 +92,22 @@ function daysColor(days: number | null | undefined) {
   return "text-success";
 }
 
+function AccountTypeBadge({ type, reasons }: { type?: string; reasons?: string[] }) {
+  const cfg = {
+    company: { label: "Company", cls: "bg-success/15 text-success" },
+    individual: { label: "Individual", cls: "bg-warning/15 text-warning" },
+    unclear: { label: "Unclear", cls: "bg-border text-text-muted" },
+  }[type || "unclear"] || { label: "Unclear", cls: "bg-border text-text-muted" };
+  return (
+    <span
+      className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium", cfg.cls)}
+      title={reasons && reasons.length ? reasons.join(" · ") : undefined}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
 function TenantUserRow({
   user,
   onToggle,
@@ -479,9 +495,33 @@ export default function PlgPage() {
         {/* ── Active Trials Table ────────────────────────────────────── */}
         <Card className="mb-4">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-accent" />
-              <CardTitle className="text-sm">Active Trials ({data.trialList.length})</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-accent" />
+                <CardTitle className="text-sm">Active Trials ({data.trialList.length})</CardTitle>
+              </div>
+              {data.accountQuality && (
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-text-muted">Lead quality:</span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-success" />
+                    <span className="font-medium text-text-primary">{data.accountQuality.trials.company}</span>
+                    <span className="text-text-muted">company</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-warning" />
+                    <span className="font-medium text-text-primary">{data.accountQuality.trials.individual}</span>
+                    <span className="text-text-muted">individual</span>
+                  </span>
+                  {data.accountQuality.trials.unclear > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-border" />
+                      <span className="font-medium text-text-primary">{data.accountQuality.trials.unclear}</span>
+                      <span className="text-text-muted">unclear</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -494,6 +534,8 @@ export default function PlgPage() {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium w-6" />
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Company</th>
+                      <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Owner</th>
+                      <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Type</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Plan</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Days Left</th>
                       <th className="text-left py-2 px-3 text-xs text-text-muted font-medium">Trial Started</th>
@@ -512,6 +554,14 @@ export default function PlgPage() {
                             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedTenant === t.id && "rotate-180")} />
                           </td>
                           <td className="py-2 px-3 font-medium text-text-primary">{t.name}</td>
+                          <td className="py-2 px-3 text-text-muted text-xs">
+                            {t.ownerEmail ? (
+                              <a href={`mailto:${t.ownerEmail}`} onClick={e => e.stopPropagation()} className="hover:text-accent">
+                                {t.ownerEmail}
+                              </a>
+                            ) : "—"}
+                          </td>
+                          <td className="py-2 px-3"><AccountTypeBadge type={t.accountType} reasons={t.qualityReasons} /></td>
                           <td className="py-2 px-3">
                             <Badge variant={t.plan === "pro" ? "accent" : t.plan === "enterprise" ? "gold" : "default"} className="text-xs">
                               {t.plan || "lite"}
