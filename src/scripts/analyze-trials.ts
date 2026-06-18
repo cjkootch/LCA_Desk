@@ -74,7 +74,19 @@ async function main() {
     .where(and(isNotNull(tenants.trialEndsAt), isNull(tenants.stripeSubscriptionId)));
 
   const now = Date.now();
-  const rows = [];
+  type Row = {
+    verdict: "company" | "individual";
+    name: string;
+    owner: string;
+    email: string;
+    members: number;
+    entities: number;
+    daysLeft: number | null;
+    status: string;
+    reasons: string[];
+    createdAt: Date | null;
+  };
+  const rows: Row[] = [];
 
   for (const t of trialTenants) {
     // Owner = first member by created date (fallback: any member).
