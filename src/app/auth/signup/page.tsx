@@ -21,7 +21,19 @@ function SignupContent() {
   const inviteEmail = searchParams.get("email");
   const refCode = searchParams.get("ref");
 
-  const [step, setStep] = useState<0 | 1 | 2>(initialRole ? (initialRole === "filer" ? 1 : 2) : 0);
+  // A query-param role may only SKIP the "How will you use the platform?" picker
+  // when it's authoritative: a team invite, or a non-filer intent link (supplier /
+  // job_seeker / etc.). Ambiguous paid traffic arriving with ?role=filer must still
+  // see the picker so job-seekers can self-select out of the (billable) filer trial.
+  const authoritativeRole: UserRole =
+    inviteToken ? initialRole
+    : initialRole && initialRole !== "filer" ? initialRole
+    : null;
+  const [step, setStep] = useState<0 | 1 | 2>(
+    authoritativeRole ? (authoritativeRole === "filer" ? 1 : 2) : 0
+  );
+  // Pre-select the role from the query param so a genuine filer CTA still lands
+  // with "I need to file LCA reports" highlighted (one click to continue).
   const [role, setRole] = useState<UserRole>(initialRole);
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [fullName, setFullName] = useState("");
@@ -42,6 +54,14 @@ function SignupContent() {
       return;
     }
 
+    // Require an explicit role — never silently default to a filer trial.
+    if (!role) {
+      toast.error("Please choose how you'll use LCA Desk");
+      setStep(0);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -52,7 +72,7 @@ function SignupContent() {
           password,
           companyName: companyName || undefined,
           accountType: role === "filer" ? accountType : undefined,
-          role: role || "filer",
+          role,
           ref: refCode || undefined,
         }),
       });
