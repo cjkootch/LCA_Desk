@@ -8460,6 +8460,116 @@ export async function fetchTenantActivity(tenantId: string) {
   return rows.slice(0, 60);
 }
 
+/**
+ * Fetch everything a tenant has entered — entities, their reporting periods, and
+ * the actual records (expenditure / employment / capacity / narratives) per
+ * period. Read-only, super-admin only. Powers the PLG drill-down "Reports" view
+ * so admins can inspect a company's saved reports without impersonating them.
+ */
+export async function fetchTenantReports(tenantId: string) {
+  const isSuperAdmin = await checkSuperAdmin();
+  if (!isSuperAdmin) throw new Error("Unauthorized");
+
+  const [ents, periods, exps, emps, caps, narrs] = await Promise.all([
+    db.select({
+      id: entities.id,
+      legalName: entities.legalName,
+      tradingName: entities.tradingName,
+      registrationNumber: entities.registrationNumber,
+      active: entities.active,
+      createdAt: entities.createdAt,
+    }).from(entities).where(eq(entities.tenantId, tenantId)).orderBy(asc(entities.createdAt)),
+
+    db.select({
+      id: reportingPeriods.id,
+      entityId: reportingPeriods.entityId,
+      reportType: reportingPeriods.reportType,
+      periodStart: reportingPeriods.periodStart,
+      periodEnd: reportingPeriods.periodEnd,
+      dueDate: reportingPeriods.dueDate,
+      status: reportingPeriods.status,
+      submittedAt: reportingPeriods.submittedAt,
+      acknowledgedAt: reportingPeriods.acknowledgedAt,
+      updatedAt: reportingPeriods.updatedAt,
+    }).from(reportingPeriods).where(eq(reportingPeriods.tenantId, tenantId)).orderBy(desc(reportingPeriods.periodStart)),
+
+    db.select({
+      id: expenditureRecords.id,
+      reportingPeriodId: expenditureRecords.reportingPeriodId,
+      typeOfItemProcured: expenditureRecords.typeOfItemProcured,
+      supplierName: expenditureRecords.supplierName,
+      supplierType: expenditureRecords.supplierType,
+      actualPayment: expenditureRecords.actualPayment,
+      currencyOfPayment: expenditureRecords.currencyOfPayment,
+    }).from(expenditureRecords).where(eq(expenditureRecords.tenantId, tenantId)),
+
+    db.select({
+      id: employmentRecords.id,
+      reportingPeriodId: employmentRecords.reportingPeriodId,
+      jobTitle: employmentRecords.jobTitle,
+      employmentCategory: employmentRecords.employmentCategory,
+      totalEmployees: employmentRecords.totalEmployees,
+      guyaneseEmployed: employmentRecords.guyanaeseEmployed,
+      totalRemunerationPaid: employmentRecords.totalRemunerationPaid,
+    }).from(employmentRecords).where(eq(employmentRecords.tenantId, tenantId)),
+
+    db.select({
+      id: capacityDevelopmentRecords.id,
+      reportingPeriodId: capacityDevelopmentRecords.reportingPeriodId,
+      activity: capacityDevelopmentRecords.activity,
+      category: capacityDevelopmentRecords.category,
+      totalParticipants: capacityDevelopmentRecords.totalParticipants,
+      guyaneseParticipantsOnly: capacityDevelopmentRecords.guyanaeseParticipantsOnly,
+      expenditureOnCapacity: capacityDevelopmentRecords.expenditureOnCapacity,
+    }).from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.tenantId, tenantId)),
+
+    db.select({
+      id: narrativeDrafts.id,
+      reportingPeriodId: narrativeDrafts.reportingPeriodId,
+      section: narrativeDrafts.section,
+      isApproved: narrativeDrafts.isApproved,
+      draftContent: narrativeDrafts.draftContent,
+    }).from(narrativeDrafts).where(eq(narrativeDrafts.tenantId, tenantId)),
+  ]);
+
+  // Group records by their reporting period.
+  const byPeriod = <T extends { reportingPeriodId: string }>(rows: T[]) => {
+    const map = new Map<string, T[]>();
+    for (const r of rows) {
+      const list = map.get(r.reportingPeriodId) ?? [];
+      list.push(r);
+      map.set(r.reportingPeriodId, list);
+    }
+    return map;
+  };
+  const expByPeriod = byPeriod(exps);
+  const empByPeriod = byPeriod(emps);
+  const capByPeriod = byPeriod(caps);
+  const narrByPeriod = byPeriod(narrs);
+
+  // Nest periods (with their records) under each entity.
+  return ents.map(e => ({
+    ...e,
+    periods: periods
+      .filter(p => p.entityId === e.id)
+      .map(p => ({
+        ...p,
+        counts: {
+          expenditures: expByPeriod.get(p.id)?.length ?? 0,
+          employment: empByPeriod.get(p.id)?.length ?? 0,
+          capacity: capByPeriod.get(p.id)?.length ?? 0,
+          narratives: narrByPeriod.get(p.id)?.length ?? 0,
+        },
+        records: {
+          expenditures: expByPeriod.get(p.id) ?? [],
+          employment: empByPeriod.get(p.id) ?? [],
+          capacity: capByPeriod.get(p.id) ?? [],
+          narratives: narrByPeriod.get(p.id) ?? [],
+        },
+      })),
+  }));
+}
+
 export async function toggleUserDemo(userId: string, isDemo: boolean) {
   const isSuperAdmin = await checkSuperAdmin();
   if (!isSuperAdmin) throw new Error("Unauthorized");
