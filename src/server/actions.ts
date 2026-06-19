@@ -5476,12 +5476,15 @@ export async function fetchAdminStats() {
   // Tenants
   const allTenants = await db.select({
     id: tenants.id, name: tenants.name, slug: tenants.slug, plan: tenants.plan, trialEndsAt: tenants.trialEndsAt, isDemo: tenants.isDemo,
-    stripeSubscriptionId: tenants.stripeSubscriptionId, createdAt: tenants.createdAt,
+    stripeSubscriptionId: tenants.stripeSubscriptionId, stripeSubscriptionStatus: tenants.stripeSubscriptionStatus, createdAt: tenants.createdAt,
     jurisdictionCode: jurisdictions.code, jurisdictionName: jurisdictions.name,
   }).from(tenants)
     .leftJoin(jurisdictions, eq(tenants.jurisdictionId, jurisdictions.id))
     .orderBy(desc(tenants.createdAt)).limit(200);
-  const paying = allTenants.filter(t => t.stripeSubscriptionId);
+  // Paying = a real, active subscription on a non-demo tenant. Excludes seed/demo
+  // accounts and non-active statuses (trialing/past_due/canceled) so the count
+  // reflects actual revenue, matching the PLG dashboard's definition.
+  const paying = allTenants.filter(t => !t.isDemo && t.stripeSubscriptionId && t.stripeSubscriptionStatus === "active");
   const trialing = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) > now && !t.stripeSubscriptionId);
   const expired = allTenants.filter(t => t.trialEndsAt && new Date(t.trialEndsAt) <= now && !t.stripeSubscriptionId);
 
