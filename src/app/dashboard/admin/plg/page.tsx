@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity } from "@/server/actions";
+import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity, fetchTenantReports } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ type PlgData = Awaited<ReturnType<typeof fetchPlgStats>>;
 type DemoLog = Awaited<ReturnType<typeof fetchDemoAccessLog>>[number];
 type TenantUser = Awaited<ReturnType<typeof fetchTenantUsers>>[number];
 type TenantActivity = Awaited<ReturnType<typeof fetchTenantActivity>>[number];
+type TenantReport = Awaited<ReturnType<typeof fetchTenantReports>>[number];
+type TenantReportPeriod = TenantReport["periods"][number];
 
 // Your IP is filtered server-side (see EXCLUDED_IPS in src/server/actions.ts)
 
@@ -178,6 +180,172 @@ function ActivityBadge({ label, kind }: { label: string; kind: "event" | "audit"
   );
 }
 
+function formatDay(d: Date | string | null) {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function PeriodStatusBadge({ status }: { status: string | null }) {
+  const s = status ?? "not_started";
+  const map: Record<string, string> = {
+    not_started: "bg-bg-primary text-text-muted",
+    in_progress: "bg-accent/15 text-accent",
+    in_review: "bg-warning/15 text-warning",
+    approved: "bg-success/15 text-success",
+    submitted: "bg-gold/15 text-gold",
+    acknowledged: "bg-success/20 text-success",
+  };
+  return (
+    <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap", map[s] ?? "bg-bg-primary text-text-muted")}>
+      {s.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+function RecordMiniTable({ title, headers, rows }: { title: string; headers: string[]; rows: (string | number)[][] }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mb-1">{title} ({rows.length})</div>
+      <div className="overflow-x-auto rounded border border-border-light">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr className="bg-bg-secondary">
+              {headers.map(h => (
+                <th key={h} className="text-left py-1 px-2 font-medium text-text-muted whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-t border-border-light">
+                {r.map((cell, j) => (
+                  <td key={j} className="py-1 px-2 text-text-primary align-top">{cell === "" || cell === null ? "—" : cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PeriodRow({ period }: { period: TenantReportPeriod }) {
+  const [open, setOpen] = useState(false);
+  const c = period.counts;
+  const totalRecords = c.expenditures + c.employment + c.capacity + c.narratives;
+
+  return (
+    <div className="border-t border-border-light first:border-t-0">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-3 py-2 px-3 text-left hover:bg-bg-secondary/50 transition-colors"
+      >
+        <ChevronDown className={cn("h-3 w-3 shrink-0 text-text-muted transition-transform", open && "rotate-180")} />
+        <span className="font-medium text-text-primary text-xs whitespace-nowrap">{period.reportType}</span>
+        <span className="text-[11px] text-text-muted whitespace-nowrap">{formatDay(period.periodStart)} – {formatDay(period.periodEnd)}</span>
+        <PeriodStatusBadge status={period.status} />
+        <span className="ml-auto text-[10px] text-text-muted whitespace-nowrap">
+          {totalRecords} record{totalRecords === 1 ? "" : "s"}
+          {period.submittedAt && <span className="text-gold"> · submitted {formatDay(period.submittedAt)}</span>}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-text-muted mb-1">
+            <span>Due {formatDay(period.dueDate)}</span>
+            <span>Expenditures: {c.expenditures}</span>
+            <span>Employment: {c.employment}</span>
+            <span>Capacity: {c.capacity}</span>
+            <span>Narratives: {c.narratives}</span>
+          </div>
+          {totalRecords === 0 ? (
+            <div className="text-[11px] text-text-muted italic py-1">No records entered for this period.</div>
+          ) : (
+            <>
+              <RecordMiniTable
+                title="Expenditures"
+                headers={["Item", "Supplier", "Type", "Actual Payment", "Currency"]}
+                rows={period.records.expenditures.map(r => [
+                  r.typeOfItemProcured, r.supplierName, r.supplierType ?? "", r.actualPayment ?? "", r.currencyOfPayment ?? "",
+                ])}
+              />
+              <RecordMiniTable
+                title="Employment"
+                headers={["Job Title", "Category", "Total", "Guyanese", "Remuneration"]}
+                rows={period.records.employment.map(r => [
+                  r.jobTitle, r.employmentCategory, r.totalEmployees, r.guyaneseEmployed, r.totalRemunerationPaid ?? "",
+                ])}
+              />
+              <RecordMiniTable
+                title="Capacity Development"
+                headers={["Activity", "Category", "Participants", "Guyanese", "Expenditure"]}
+                rows={period.records.capacity.map(r => [
+                  r.activity, r.category ?? "", r.totalParticipants ?? 0, r.guyaneseParticipantsOnly ?? 0, r.expenditureOnCapacity ?? "",
+                ])}
+              />
+              <RecordMiniTable
+                title="Narratives"
+                headers={["Section", "Approved?", "Content"]}
+                rows={period.records.narratives.map(r => [
+                  r.section, r.isApproved ? "Yes" : "No", r.draftContent.length > 140 ? r.draftContent.slice(0, 140) + "…" : r.draftContent,
+                ])}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TenantReports({ reports }: { reports: TenantReport[] | null }) {
+  const entityCount = reports?.length ?? 0;
+  const periodCount = reports?.reduce((n, e) => n + e.periods.length, 0) ?? 0;
+
+  return (
+    <>
+      <div className="px-4 pt-4 pb-1 flex items-center justify-between">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+          Reports &amp; Entered Data
+        </div>
+        <span className="text-[10px] text-text-muted">
+          {entityCount} {entityCount === 1 ? "entity" : "entities"} · {periodCount} {periodCount === 1 ? "period" : "periods"}
+        </span>
+      </div>
+
+      {!reports || reports.length === 0 ? (
+        <div className="py-3 px-4 text-xs text-text-muted italic">No entities or reports created yet.</div>
+      ) : (
+        <div className="px-2 pb-2 space-y-2">
+          {reports.map(e => (
+            <div key={e.id} className="rounded-lg border border-border-light bg-bg-secondary/30">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border-light">
+                <span className="font-semibold text-text-primary text-xs">{e.legalName}</span>
+                {e.tradingName && <span className="text-[11px] text-text-muted">({e.tradingName})</span>}
+                {e.registrationNumber && <span className="text-[10px] text-text-muted font-mono">#{e.registrationNumber}</span>}
+                {!e.active && <span className="text-[10px] text-danger">inactive</span>}
+                <span className="ml-auto text-[10px] text-text-muted">{e.periods.length} {e.periods.length === 1 ? "period" : "periods"}</span>
+              </div>
+              {e.periods.length === 0 ? (
+                <div className="py-2 px-3 text-[11px] text-text-muted italic">No reporting periods yet.</div>
+              ) : (
+                <div>
+                  {e.periods.map(p => <PeriodRow key={p.id} period={p} />)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function TenantDrillDown({
   tenantId,
   onUserToggle,
@@ -187,15 +355,18 @@ function TenantDrillDown({
 }) {
   const [users, setUsers] = useState<TenantUser[] | null>(null);
   const [activity, setActivity] = useState<TenantActivity[] | null>(null);
+  const [reports, setReports] = useState<TenantReport[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetchTenantUsers(tenantId),
       fetchTenantActivity(tenantId).catch(() => [] as TenantActivity[]),
-    ]).then(([u, a]) => {
+      fetchTenantReports(tenantId).catch(() => [] as TenantReport[]),
+    ]).then(([u, a, r]) => {
       setUsers(u);
       setActivity(a);
+      setReports(r);
     }).finally(() => setLoading(false));
   }, [tenantId]);
 
@@ -215,7 +386,7 @@ function TenantDrillDown({
         <td colSpan={10} className="py-4 px-4">
           <div className="flex items-center gap-2 text-xs text-text-muted">
             <div className="animate-spin rounded-full h-3 w-3 border-b border-accent" />
-            Loading users & activity…
+            Loading account data…
           </div>
         </td>
       </tr>
@@ -250,6 +421,9 @@ function TenantDrillDown({
           ) : (
             <div className="py-3 px-4 text-xs text-text-muted italic">No users found for this tenant.</div>
           )}
+
+          {/* Reports — everything the company has entered */}
+          <TenantReports reports={reports} />
 
           {/* Activity timeline */}
           <div className="px-4 pt-4 pb-1 flex items-center justify-between">
