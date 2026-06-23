@@ -68,6 +68,17 @@ export async function POST(req: NextRequest) {
     await run("referrals.commission_paid_at", sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS commission_paid_at TIMESTAMP`);
     await run("referrals.converted_plan", sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS converted_plan TEXT`);
 
+    // Password reset tokens
+    await run("password_reset_tokens", sql`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await run("idx_prt_token", sql`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token)`);
+
     return NextResponse.json({ success: true, results });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
