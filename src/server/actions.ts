@@ -51,6 +51,7 @@ import {
   referrals,
   userEvents,
   cronRuns,
+  userPurchases,
 } from "@/server/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc, isNull, ne } from "drizzle-orm";
 import { getPlan, getEffectivePlan, isInTrial, isTrialExpired, getTrialDaysRemaining, getBillingAccess } from "@/lib/plans";
@@ -2689,6 +2690,18 @@ export async function updateMySupplierProfile(data: Record<string, unknown>) {
     .where(eq(supplierProfiles.userId, session.user.id))
     .returning();
   return updated;
+}
+
+// ─── USER PURCHASES ──────────────────────────────────────────────
+
+export async function checkPurchase(productId: string): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+  const [purchase] = await db.select({ id: userPurchases.id })
+    .from(userPurchases)
+    .where(and(eq(userPurchases.userId, session.user.id), eq(userPurchases.productId, productId)))
+    .limit(1);
+  return !!purchase;
 }
 
 // ─── JOB SEEKER PORTAL (EXTENDED) ────────────────────────────────

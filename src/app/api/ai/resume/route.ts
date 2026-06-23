@@ -1,10 +1,29 @@
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { auth } from "@/auth";
 import { NextRequest } from "next/server";
+import { db } from "@/server/db";
+import { userPurchases } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
+  // Check purchase — resume AI features require payment
+  const [purchase] = await db.select({ id: userPurchases.id })
+    .from(userPurchases)
+    .where(and(eq(userPurchases.userId, session.user.id), eq(userPurchases.productId, "resume_builder")))
+    .limit(1);
+
+  // Allow super admins and demo users to bypass
+  const email = session.user.email || "";
+  const isDemo = email.startsWith("demo-") && email.endsWith("@lcadesk.com");
+  if (!purchase && !isDemo) {
+    return new Response(JSON.stringify({ error: "Resume Builder requires purchase", requiresPurchase: true }), {
+      status: 402,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { action, content, profile } = await req.json();

@@ -1,10 +1,24 @@
 import jsPDF from "jspdf";
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { db } from "@/server/db";
+import { userPurchases } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
+  const [purchase] = await db.select({ id: userPurchases.id })
+    .from(userPurchases)
+    .where(and(eq(userPurchases.userId, session.user.id), eq(userPurchases.productId, "resume_builder")))
+    .limit(1);
+  const email = session.user.email || "";
+  const isDemo = email.startsWith("demo-") && email.endsWith("@lcadesk.com");
+  if (!purchase && !isDemo) {
+    return new Response(JSON.stringify({ error: "Resume Builder requires purchase" }), { status: 402 });
+  }
+
   try {
     const { name, headline, content, skills, education, certifications } = await req.json();
 

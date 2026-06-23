@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users, stripeEvents } from "@/server/db/schema";
+import { tenants, lcsCertApplications, supplierProfiles, tenantMembers, users, stripeEvents, userPurchases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { qualifyReferral } from "@/server/actions";
 import { trackEvent } from "@/lib/analytics";
@@ -85,6 +85,23 @@ export async function POST(req: NextRequest) {
               });
             }
           } catch (err) { console.error("[stripe-webhook] sync error:", err instanceof Error ? err.message : err); }
+        }
+        break;
+      }
+
+      // Resume Builder one-time purchase
+      if (session.metadata?.type === "resume_builder") {
+        const userId = session.metadata.userId;
+        if (userId) {
+          await db.insert(userPurchases).values({
+            userId,
+            productId: "resume_builder",
+            stripeSessionId: session.id,
+            stripePaymentIntentId: session.payment_intent as string || null,
+            amountCents: session.amount_total ?? 1500,
+            currency: "usd",
+            paidAt: new Date(),
+          });
         }
         break;
       }

@@ -79,6 +79,20 @@ export async function POST(req: NextRequest) {
     )`);
     await run("idx_prt_token", sql`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token)`);
 
+    // User purchases (one-time payments)
+    await run("user_purchases", sql`CREATE TABLE IF NOT EXISTS user_purchases (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL,
+      stripe_session_id TEXT,
+      stripe_payment_intent_id TEXT,
+      amount_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'usd',
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await run("idx_up_user_product", sql`CREATE INDEX IF NOT EXISTS idx_user_purchases_user_product ON user_purchases(user_id, product_id)`);
+
     return NextResponse.json({ success: true, results });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });

@@ -10,8 +10,9 @@ import {
   FileText, Sparkles, Download, Upload, Wand2, RefreshCw,
   CheckCircle, User, Briefcase, GraduationCap, Plus, X,
 } from "lucide-react";
-import { fetchMyProfile, updateMyProfile } from "@/server/actions";
+import { fetchMyProfile, updateMyProfile, checkPurchase } from "@/server/actions";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function ResumeBuilderPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +25,8 @@ export default function ResumeBuilderPage() {
   const [resumeStyle, setResumeStyle] = useState<"modern" | "traditional" | "compact">("modern");
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+  const [unlocked, setUnlocked] = useState<boolean | null>(null); // null = loading
+  const [purchasing, setPurchasing] = useState(false);
 
   // Profile fields for generation
   const [education, setEducation] = useState("");
@@ -31,13 +34,42 @@ export default function ResumeBuilderPage() {
   const [skills, setSkills] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchMyProfile().then(p => {
+    Promise.all([
+      fetchMyProfile(),
+      checkPurchase("resume_builder"),
+    ]).then(([p, purchased]) => {
       if (p) {
         setProfile(p);
         setSkills(p.skills || []);
       }
+      setUnlocked(purchased);
       setLoading(false);
     }).catch(() => setLoading(false));
+  }, []);
+
+  const handlePurchase = async () => {
+    setPurchasing(true);
+    try {
+      const res = await fetch("/api/stripe/resume-checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || "Failed to start checkout");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+    setPurchasing(false);
+  };
+
+  // Check URL param for post-purchase unlock
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("unlocked") === "1") {
+      setUnlocked(true);
+      toast.success("Resume Builder unlocked! Generate your first resume.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   const handleEnhance = async () => {
@@ -196,7 +228,7 @@ export default function ResumeBuilderPage() {
     <>
       <SeekerTopBar
         title="Resume Builder"
-        action={
+        action={unlocked ? (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleExportPdf} loading={exporting} className="gap-1.5">
               <Download className="h-3.5 w-3.5" /> Export PDF
@@ -205,7 +237,7 @@ export default function ResumeBuilderPage() {
               <User className="h-3.5 w-3.5" /> Save to Talent Pool
             </Button>
           </div>
-        }
+        ) : undefined}
       />
 
       <div className="p-4 sm:p-6 max-w-5xl space-y-6">
@@ -250,18 +282,51 @@ export default function ResumeBuilderPage() {
           </CardContent>
         </Card>
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={handleGenerate} loading={generating} variant="outline" className="gap-1.5">
-            <Wand2 className="h-4 w-4" /> Generate from Profile
-          </Button>
-          <Button onClick={handleEnhance} loading={enhancing} className="gap-1.5">
-            <Sparkles className="h-4 w-4" /> AI Enhance
-          </Button>
-          <Button onClick={handleExtractSkills} loading={extracting} variant="outline" className="gap-1.5">
-            <RefreshCw className="h-4 w-4" /> Extract Skills to Profile
-          </Button>
-        </div>
+        {/* Paywall or Action buttons */}
+        {unlocked === false ? (
+          <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/5 via-transparent to-gold/5 overflow-hidden">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="h-8 w-8 text-accent" />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="text-lg font-heading font-bold text-text-primary mb-1">
+                    Unlock the AI Resume Builder
+                  </h3>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-3">
+                    One payment, lifetime access. Generate, enhance, and export professional petroleum-sector resumes with AI — optimized for the roles contractors are hiring for right now.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-text-muted">
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> AI-powered generation</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> 3 export templates</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Unlimited PDF downloads</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Auto-saves to Talent Pool</span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button onClick={handlePurchase} loading={purchasing} className="gap-2 shadow-md">
+                      <Sparkles className="h-4 w-4" />
+                      Unlock for $15
+                    </Button>
+                    <span className="text-xs text-text-muted">One-time payment · No subscription</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleGenerate} loading={generating} variant="outline" className="gap-1.5">
+              <Wand2 className="h-4 w-4" /> Generate from Profile
+            </Button>
+            <Button onClick={handleEnhance} loading={enhancing} className="gap-1.5">
+              <Sparkles className="h-4 w-4" /> AI Enhance
+            </Button>
+            <Button onClick={handleExtractSkills} loading={extracting} variant="outline" className="gap-1.5">
+              <RefreshCw className="h-4 w-4" /> Extract Skills to Profile
+            </Button>
+          </div>
+        )}
 
         {/* Resume style selector */}
         <div className="flex items-center gap-3">
