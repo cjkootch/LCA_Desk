@@ -172,31 +172,28 @@ function SignupContent() {
                 How will you use the platform?
               </p>
 
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3">
                 {[
                   { id: "filer" as const, icon: Building2, label: "I need to file LCA reports", desc: "Contractor, Sub-Contractor, or Licensee with a filing obligation" },
                   { id: "supplier" as const, icon: Truck, label: "I'm a local supplier", desc: "Registered or seeking to be listed in the supplier directory" },
                   { id: "job_seeker" as const, icon: Search, label: "I'm looking for work", desc: "Search petroleum sector jobs and build your professional profile" },
                   { id: "affiliate" as const, icon: Gift, label: "I want to refer businesses", desc: "Earn commissions by referring companies to LCA Desk" },
                 ].map(r => (
-                  <button key={r.id} onClick={() => setRole(r.id)}
-                    className={cn("w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                      role === r.id ? "border-accent bg-accent-light" : "border-border hover:border-accent/30"
+                  <button key={r.id} onClick={() => { setRole(r.id); setStep(r.id === "filer" ? 1 : 2); }}
+                    className={cn("group w-full flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:border-accent hover:shadow-sm",
+                      role === r.id ? "border-accent bg-accent-light" : "border-border"
                     )}>
-                    <div className={cn("p-2.5 rounded-lg shrink-0", role === r.id ? "bg-accent text-white" : "bg-bg-primary text-text-muted")}>
+                    <div className={cn("p-2.5 rounded-lg shrink-0 transition-colors", role === r.id ? "bg-accent text-white" : "bg-bg-primary text-text-muted group-hover:bg-accent group-hover:text-white")}>
                       <r.icon className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold text-text-primary">{r.label}</p>
                       <p className="text-sm text-text-secondary mt-0.5">{r.desc}</p>
                     </div>
+                    <ArrowRight className="h-4 w-4 text-text-muted shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
                   </button>
                 ))}
               </div>
-
-              <Button className="w-full" disabled={!role} onClick={() => setStep(role === "filer" ? 1 : 2)}>
-                Continue <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
             </>
           )}
 
@@ -214,37 +211,35 @@ function SignupContent() {
                 This helps us set up your account correctly.
               </p>
 
-              <div className="space-y-3 mb-6">
-                <button onClick={() => setAccountType("self")}
-                  className={cn("w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                    accountType === "self" ? "border-accent bg-accent-light" : "border-border hover:border-accent/30"
+              <div className="space-y-3">
+                <button onClick={() => { setAccountType("self"); setStep(2); }}
+                  className={cn("group w-full flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:border-accent hover:shadow-sm",
+                    accountType === "self" ? "border-accent bg-accent-light" : "border-border"
                   )}>
-                  <div className={cn("p-2.5 rounded-lg shrink-0", accountType === "self" ? "bg-accent text-white" : "bg-bg-primary text-text-muted")}>
+                  <div className={cn("p-2.5 rounded-lg shrink-0 transition-colors", accountType === "self" ? "bg-accent text-white" : "bg-bg-primary text-text-muted group-hover:bg-accent group-hover:text-white")}>
                     <Building2 className="h-5 w-5" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold text-text-primary">Filing for my own company</p>
                     <p className="text-sm text-text-secondary mt-0.5">I'm a Contractor, Sub-Contractor, or Licensee filing my own Local Content reports.</p>
                   </div>
+                  <ArrowRight className="h-4 w-4 text-text-muted shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
                 </button>
 
-                <button onClick={() => setAccountType("others")}
-                  className={cn("w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                    accountType === "others" ? "border-accent bg-accent-light" : "border-border hover:border-accent/30"
+                <button onClick={() => { setAccountType("others"); setStep(2); }}
+                  className={cn("group w-full flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:border-accent hover:shadow-sm",
+                    accountType === "others" ? "border-accent bg-accent-light" : "border-border"
                   )}>
-                  <div className={cn("p-2.5 rounded-lg shrink-0", accountType === "others" ? "bg-accent text-white" : "bg-bg-primary text-text-muted")}>
+                  <div className={cn("p-2.5 rounded-lg shrink-0 transition-colors", accountType === "others" ? "bg-accent text-white" : "bg-bg-primary text-text-muted group-hover:bg-accent group-hover:text-white")}>
                     <Users className="h-5 w-5" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold text-text-primary">Filing on behalf of clients</p>
                     <p className="text-sm text-text-secondary mt-0.5">I'm a consultant, law firm, or compliance service provider managing reports for multiple companies.</p>
                   </div>
+                  <ArrowRight className="h-4 w-4 text-text-muted shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
                 </button>
               </div>
-
-              <Button className="w-full" disabled={!accountType} onClick={() => setStep(2)}>
-                Continue <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
             </>
           )}
 
