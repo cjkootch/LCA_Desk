@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity, fetchTenantReports } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -718,9 +718,8 @@ export default function PlgPage() {
                   </thead>
                   <tbody>
                     {data.trialList.map(t => (
-                      <>
+                      <Fragment key={t.id}>
                         <tr
-                          key={t.id}
                           className="border-b border-border-light hover:bg-bg-primary/50 cursor-pointer"
                           onClick={() => handleTenantClick(t.id)}
                         >
@@ -751,12 +750,11 @@ export default function PlgPage() {
                         </tr>
                         {expandedTenant === t.id && (
                           <TenantDrillDown
-                            key={`drill-${t.id}`}
                             tenantId={t.id}
                             onUserToggle={handleUserToggle}
                           />
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -865,9 +863,8 @@ export default function PlgPage() {
                   </thead>
                   <tbody>
                     {data.allTenants.map(t => (
-                      <>
+                      <Fragment key={t.id}>
                         <tr
-                          key={t.id}
                           className="border-b border-border-light hover:bg-bg-primary/50 cursor-pointer"
                           onClick={() => handleTenantClick(t.id)}
                         >
@@ -893,12 +890,11 @@ export default function PlgPage() {
                         </tr>
                         {expandedTenant === t.id && (
                           <TenantDrillDown
-                            key={`drill-${t.id}`}
                             tenantId={t.id}
                             onUserToggle={handleUserToggle}
                           />
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
