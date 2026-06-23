@@ -9,7 +9,7 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
-const PRICE_CENTS = 1500; // $15
+const RESUME_PRICE_ID = "price_1TlaC4FwVjbpJ19NL0IJ3ZpY";
 
 export async function POST() {
   const session = await auth();
@@ -37,14 +37,7 @@ export async function POST() {
       mode: "payment",
       payment_method_types: ["card"],
       line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "AI Resume Builder — Lifetime Access",
-            description: "Generate, enhance, and export professional petroleum-sector resumes with AI. Includes 3 templates and unlimited PDF exports.",
-          },
-          unit_amount: PRICE_CENTS,
-        },
+        price: RESUME_PRICE_ID,
         quantity: 1,
       }],
       metadata: {
