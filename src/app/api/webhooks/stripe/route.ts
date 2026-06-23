@@ -106,6 +106,24 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // Per-report export purchase
+      if (session.metadata?.type === "report_export") {
+        const userId = session.metadata.userId;
+        const periodId = session.metadata.periodId;
+        if (userId && periodId) {
+          await db.insert(userPurchases).values({
+            userId,
+            productId: `report_export:${periodId}`,
+            stripeSessionId: session.id,
+            stripePaymentIntentId: session.payment_intent as string || null,
+            amountCents: session.amount_total ?? 2900,
+            currency: "usd",
+            paidAt: new Date(),
+          });
+        }
+        break;
+      }
+
       // Supplier Pro checkout
       if (session.metadata?.type === "supplier_pro") {
         const supplierId = session.metadata.supplierId;

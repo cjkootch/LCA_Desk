@@ -21,7 +21,7 @@ import { useJurisdiction } from "@/hooks/useJurisdiction";
 import {
   fetchEntity, fetchPeriod, fetchExpenditures, fetchEmployment,
   fetchCapacity, fetchNarratives, attestAndSubmit, updatePeriodStatus,
-  fetchPlanAndUsage, fetchAuditLog,
+  fetchPlanAndUsage, fetchAuditLog, checkPurchase,
 } from "@/server/actions";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { Entity, ExpenditureRecord, EmploymentRecord, CapacityDevelopmentRecord } from "@/types/database.types";
@@ -49,9 +49,32 @@ export default function ExportPage() {
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
   // Default to email — platform submission hidden until secretariat integration is live
   const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>("email");
+  const [hasExportAccess, setHasExportAccess] = useState<boolean | null>(null); // null = loading
+  const [purchasingReport, setPurchasingReport] = useState(false);
+  // Check URL param for post-purchase unlock
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("purchased") === "1") {
+      setHasExportAccess(true);
+      toast.success("Report export unlocked! Download your files and submit.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
-      fetchPlanAndUsage().then(d => setCurrentPlan(d.plan)).catch(() => {});
+      const planData = await fetchPlanAndUsage().catch(() => null);
+      const plan = planData?.plan || "lite";
+      setCurrentPlan(plan);
+
+      // Determine export access: active subscription OR per-report purchase
+      const hasSubscription = planData?.stripeSubscriptionId && planData?.stripeSubscriptionStatus === "active";
+      const hasTrial = planData?.trialDaysRemaining && planData.trialDaysRemaining > 0;
+      if (hasSubscription || hasTrial) {
+        setHasExportAccess(true);
+      } else {
+        const purchased = await checkPurchase(`report_export:${periodId}`);
+        setHasExportAccess(purchased);
+      }
       const [rawEntity, rawPeriod, rawExp, rawEmp, rawCap, rawNar] = await Promise.all([
         fetchEntity(entityId), fetchPeriod(periodId), fetchExpenditures(periodId), fetchEmployment(periodId), fetchCapacity(periodId), fetchNarratives(periodId),
       ]);
@@ -249,8 +272,65 @@ export default function ExportPage() {
           </CardContent>
         </Card>
 
+        {/* Per-report purchase paywall */}
+        {hasExportAccess === false && !isSubmitted && (
+          <Card className="mb-6 border-2 border-accent/30 bg-gradient-to-br from-accent/5 via-transparent to-gold/5 overflow-hidden">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <Download className="h-8 w-8 text-accent" />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="text-lg font-heading font-bold text-text-primary mb-1">
+                    Ready to Export & Submit
+                  </h3>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-3">
+                    Your report data is complete. Unlock the export to download your official compliance files (Excel report, Comparative Analysis PDF, and Notice of Submission) and submit to the Secretariat.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-text-muted">
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Official LCS Template v4.1</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> AI-drafted narrative report</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Notice of Submission PDF</span>
+                    <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-success" /> Submission tracking & audit trail</span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button
+                      onClick={async () => {
+                        setPurchasingReport(true);
+                        try {
+                          const res = await fetch("/api/stripe/report-checkout", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ periodId, entityId }),
+                          });
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                          else if (data.alreadyPurchased) { setHasExportAccess(true); toast.success("Already unlocked!"); }
+                          else toast.error(data.error || "Failed to start checkout");
+                        } catch { toast.error("Something went wrong"); }
+                        setPurchasingReport(false);
+                      }}
+                      loading={purchasingReport}
+                      className="gap-2 shadow-md"
+                    >
+                      <Download className="h-4 w-4" />
+                      Unlock Export for $29
+                    </Button>
+                    <span className="text-xs text-text-muted">One-time · This report only</span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-xs text-text-muted">
+                      Or <a href="/dashboard/settings/billing" className="text-accent hover:underline font-medium">subscribe to a plan</a> for unlimited exports, AI narrative drafting, and more.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Export files */}
-        {(
+        {hasExportAccess !== false && (
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -289,8 +369,8 @@ export default function ExportPage() {
           </Card>
         )}
 
-        {/* Submission method choice (paid plans) */}
-        {!isSubmitted && (
+        {/* Submission method choice — only visible with export access */}
+        {!isSubmitted && hasExportAccess !== false && (
           <>
             {/* Workflow status buttons */}
             {(period.status === "not_started" || period.status === "in_progress" || period.status === "in_review") && (
