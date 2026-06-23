@@ -19,7 +19,8 @@ import Link from "next/link";
 import { Building2, Plus, ArrowRight, FileText, Play, AlertTriangle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { calculateDeadlines, enrichDeadline } from "@/lib/compliance/deadlines";
-import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage, fetchDraftPeriods } from "@/server/actions";
+import { fetchEntities, fetchComplianceHealth, fetchUserContext, fetchPlanAndUsage, fetchDraftPeriods, fetchFirstReportProgress } from "@/server/actions";
+import { FirstReportGuide } from "@/components/dashboard/FirstReportGuide";
 import { mapDrizzleEntity } from "@/lib/mappers";
 import type { DeadlineWithStatus } from "@/types/jurisdiction.types";
 import type { Entity } from "@/types/database.types";
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [showBriefingCard, setShowBriefingCard] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [drafts, setDrafts] = useState<any[]>([]);
+  const [firstReport, setFirstReport] = useState<Awaited<ReturnType<typeof fetchFirstReportProgress>> | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function DashboardPage() {
         setTrialDaysRemaining(p.trialDaysRemaining ?? null);
       }).catch(() => {});
       fetchDraftPeriods().then(setDrafts).catch(() => {});
+      fetchFirstReportProgress().then(setFirstReport).catch(() => {});
     };
     load();
 
@@ -73,6 +76,7 @@ export default function DashboardPage() {
       fetchEntities().then(d => setEntities(d.map(mapDrizzleEntity))).catch(() => {});
       fetchComplianceHealth().then(setHealth).catch(() => {});
       fetchDraftPeriods().then(setDrafts).catch(() => {});
+      fetchFirstReportProgress().then(setFirstReport).catch(() => {});
     };
     const onVisibility = () => { if (document.visibilityState === "visible") refetch(); };
     window.addEventListener("focus", refetch);
@@ -141,8 +145,16 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 max-w-6xl">
       <AnnouncementBanner userRole="filer" />
 
-      {/* Draft submissions banner — surfaces unfinished reports */}
-      {drafts.length > 0 && (
+      {/* First-report guided activation — new filers who haven't submitted yet */}
+      {firstReport?.hasEntity && !firstReport.hasEverSubmitted && (
+        <FirstReportGuide
+          progress={firstReport}
+          jurisdictionCode={(entities[0] as unknown as Record<string, string>)?.country || "GY"}
+        />
+      )}
+
+      {/* Draft submissions banner — for returning filers (the guide covers new filers) */}
+      {drafts.length > 0 && !(firstReport?.hasEntity && !firstReport.hasEverSubmitted) && (
         <div className={cn(
           "rounded-2xl border-2 mb-6 overflow-hidden",
           hasUrgentDrafts

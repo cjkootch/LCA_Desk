@@ -4085,6 +4085,64 @@ export async function fetchDraftPeriods() {
   });
 }
 
+/**
+ * Lightweight progress signal for the "File Your First Report" guided
+ * card on the filer dashboard. Returns just enough to drive a 3-step
+ * activation path: start a period -> enter data -> submit.
+ */
+export async function fetchFirstReportProgress() {
+  const { tenantId } = await getSessionTenant();
+
+  const allEntities = await db.select({
+    id: entities.id,
+    legalName: entities.legalName,
+    jurisdictionId: entities.jurisdictionId,
+  }).from(entities)
+    .where(and(eq(entities.tenantId, tenantId), eq(entities.active, true)))
+    .orderBy(asc(entities.createdAt));
+
+  if (allEntities.length === 0) {
+    return {
+      hasEntity: false, hasEverSubmitted: false,
+      primaryEntityId: null, primaryEntityName: null, primaryEntityJurisdictionId: null,
+      activePeriodId: null, activePeriodEntityId: null,
+      expCount: 0, empCount: 0, capCount: 0,
+    };
+  }
+
+  const periods = await db.select({
+    id: reportingPeriods.id,
+    entityId: reportingPeriods.entityId,
+    status: reportingPeriods.status,
+    reportType: reportingPeriods.reportType,
+    fiscalYear: reportingPeriods.fiscalYear,
+  }).from(reportingPeriods)
+    .where(eq(reportingPeriods.tenantId, tenantId))
+    .orderBy(desc(reportingPeriods.createdAt));
+
+  const hasEverSubmitted = periods.some(p => p.status === "submitted" || p.status === "acknowledged");
+  const active = periods.find(p => p.status !== "submitted" && p.status !== "acknowledged") || null;
+
+  let expCount = 0, empCount = 0, capCount = 0;
+  if (active) {
+    const [e] = await db.select({ c: sql<number>`cast(count(*) as int)` }).from(expenditureRecords).where(eq(expenditureRecords.reportingPeriodId, active.id));
+    const [m] = await db.select({ c: sql<number>`cast(count(*) as int)` }).from(employmentRecords).where(eq(employmentRecords.reportingPeriodId, active.id));
+    const [c] = await db.select({ c: sql<number>`cast(count(*) as int)` }).from(capacityDevelopmentRecords).where(eq(capacityDevelopmentRecords.reportingPeriodId, active.id));
+    expCount = e?.c ?? 0; empCount = m?.c ?? 0; capCount = c?.c ?? 0;
+  }
+
+  return {
+    hasEntity: true,
+    hasEverSubmitted,
+    primaryEntityId: allEntities[0].id,
+    primaryEntityName: allEntities[0].legalName,
+    primaryEntityJurisdictionId: allEntities[0].jurisdictionId,
+    activePeriodId: active?.id ?? null,
+    activePeriodEntityId: active?.entityId ?? null,
+    expCount, empCount, capCount,
+  };
+}
+
 export async function fetchComplianceHealth() {
   const { tenantId } = await getSessionTenant();
 
