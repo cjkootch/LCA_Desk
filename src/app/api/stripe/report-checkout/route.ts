@@ -39,9 +39,24 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.lcadesk.com";
 
   try {
-    const checkoutOptions: Stripe.Checkout.SessionCreateParams = {
+    const checkoutSession = await getStripe().checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
+      line_items: [
+        REPORT_PRICE_ID
+          ? { price: REPORT_PRICE_ID, quantity: 1 }
+          : {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: "Single Report Export & Submit",
+                  description: "Export your compliance report files (Excel + PDF + Notice) and submit to the Secretariat. One-time payment for this reporting period.",
+                },
+                unit_amount: 2900,
+              },
+              quantity: 1,
+            },
+      ],
       metadata: {
         userId: session.user.id,
         type: "report_export",
@@ -51,25 +66,7 @@ export async function POST(req: NextRequest) {
       customer_email: session.user.email || undefined,
       success_url: `${appUrl}/dashboard/entities/${entityId}/periods/${periodId}/export?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/dashboard/entities/${entityId}/periods/${periodId}/export`,
-    };
-
-    if (REPORT_PRICE_ID) {
-      checkoutOptions.line_items = [{ price: REPORT_PRICE_ID, quantity: 1 }];
-    } else {
-      checkoutOptions.line_items = [{
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "Single Report Export & Submit",
-            description: "Export your compliance report files (Excel + PDF + Notice) and submit to the Secretariat. One-time payment for this reporting period.",
-          },
-          unit_amount: 2900,
-        },
-        quantity: 1,
-      }];
-    }
-
-    const checkoutSession = await getStripe().checkout.sessions.create(checkoutOptions);
+    });
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
     console.error("Stripe checkout error:", error);
