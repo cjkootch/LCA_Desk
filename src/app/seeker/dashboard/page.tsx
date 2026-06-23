@@ -10,7 +10,7 @@ import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import { DashboardIdentity, DashboardStats, StatusCard, DashboardSection } from "@/components/dashboard/shared/DashboardTemplate";
 import { PromoCTA } from "@/components/shared/PromoCTA";
 import {
-  ArrowRight, AlertCircle, Play,
+  ArrowRight, AlertCircle, Play, FileText, TrendingUp, Target, Clock, Sparkles,
 } from "lucide-react";
 import { fetchSeekerDashboardStats, fetchMyApplications } from "@/server/actions";
 import { IndustryNewsFeed } from "@/components/dashboard/IndustryNewsFeed";
@@ -161,6 +161,68 @@ export default function SeekerDashboard() {
           />
         )}
 
+        {/* Resume Builder promo — with compelling stats */}
+        {!stats?.profile?.resumeContent && (
+          <Card className="border-2 border-accent/20 bg-gradient-to-br from-accent/5 via-transparent to-gold/5 overflow-hidden">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-1 rounded-full">
+                      AI-Powered
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 px-2.5 py-1 rounded-full">
+                      Free
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-heading font-bold text-text-primary mb-2">
+                    Build a Resume That Gets Interviews
+                  </h3>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-4">
+                    Our AI resume builder is trained on petroleum sector hiring patterns. Generate a professional resume in under 2 minutes, optimized for the roles contractors are hiring for.
+                  </p>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    {[
+                      { icon: TrendingUp, stat: "7.4 seconds", label: "Average recruiter review time", subtext: "Make every second count" },
+                      { icon: Target, stat: "75%", label: "Resumes rejected by ATS", subtext: "Before a human ever sees them" },
+                      { icon: Clock, stat: "< 2 min", label: "To generate yours", subtext: "From your profile data" },
+                      { icon: Sparkles, stat: "3x", label: "More interviews", subtext: "With keyword-optimized resumes" },
+                    ].map(({ icon: Icon, stat, label, subtext }) => (
+                      <div key={label} className="rounded-lg border border-border bg-white/60 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Icon className="h-3.5 w-3.5 text-accent" />
+                          <span className="text-base font-bold text-text-primary">{stat}</span>
+                        </div>
+                        <p className="text-[11px] font-medium text-text-secondary">{label}</p>
+                        <p className="text-[10px] text-text-muted">{subtext}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Link href="/seeker/resume">
+                      <Button className="gap-2 shadow-md">
+                        <FileText className="h-4 w-4" />
+                        Build Your Resume
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <div className="flex items-center gap-2 text-xs text-text-muted">
+                      <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-success" /> 3 export templates</span>
+                      <span>·</span>
+                      <span>PDF download</span>
+                      <span>·</span>
+                      <span>Auto-saves to Talent Pool</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Recent applications */}
           <DashboardSection title="Recent Applications" action={
@@ -222,16 +284,18 @@ export default function SeekerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PromoCTA
             variant="accent"
-            title="Build Your Resume"
-            description="Create a professional resume that highlights your petroleum sector experience."
-            tags={["3 Templates", "Export PDF", "Auto-fill"]}
+            title={stats?.profile?.resumeContent ? "Update Your Resume" : "Build Your Resume"}
+            description={stats?.profile?.resumeContent
+              ? "Keep your resume current — employers see outdated resumes as a red flag."
+              : "75% of resumes are rejected by ATS before a human sees them. Our AI optimizes yours for petroleum sector roles."}
+            tags={["AI-Powered", "3 Templates", "PDF Export"]}
             buttonText="Resume Builder"
             buttonHref="/seeker/resume"
           />
           <PromoCTA
             variant="dark"
             title="Get Certified"
-            description="Complete compliance courses to earn badges that boost your visibility."
+            description="Complete compliance courses to earn badges that boost your visibility with employers."
             tags={["Free Courses", "Earn Badges", "Stand Out"]}
             buttonText="Start Learning"
             buttonHref="/seeker/learn"
