@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         entityId,
       },
       customer_email: session.user.email || undefined,
-      success_url: `${appUrl}/dashboard/entities/${entityId}/periods/${periodId}/export?purchased=1`,
+      success_url: `${appUrl}/dashboard/entities/${entityId}/periods/${periodId}/export?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/dashboard/entities/${entityId}/periods/${periodId}/export`,
     };
 

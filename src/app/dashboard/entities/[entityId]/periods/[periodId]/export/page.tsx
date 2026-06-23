@@ -51,29 +51,45 @@ export default function ExportPage() {
   const [submitMethod, setSubmitMethod] = useState<"platform" | "email" | null>("email");
   const [hasExportAccess, setHasExportAccess] = useState<boolean | null>(null); // null = loading
   const [purchasingReport, setPurchasingReport] = useState(false);
-  // Check URL param for post-purchase unlock
-  useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("purchased") === "1") {
-      setHasExportAccess(true);
-      toast.success("Report export unlocked! Download your files and submit.");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
-
   useEffect(() => {
     const load = async () => {
       const planData = await fetchPlanAndUsage().catch(() => null);
       const plan = planData?.plan || "lite";
       setCurrentPlan(plan);
 
-      // Determine export access: active subscription OR per-report purchase
+      // Determine export access: active subscription OR active trial OR
+      // per-report purchase. If returning from Stripe, verify the session
+      // first so the unlock doesn't race against the webhook.
       const hasSubscription = planData?.stripeSubscriptionId && planData?.stripeSubscriptionStatus === "active";
       const hasTrial = planData?.trialDaysRemaining && planData.trialDaysRemaining > 0;
+
       if (hasSubscription || hasTrial) {
         setHasExportAccess(true);
       } else {
-        const purchased = await checkPurchase(`report_export:${periodId}`);
-        setHasExportAccess(purchased);
+        const sessionId = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("session_id")
+          : null;
+        if (sessionId) {
+          try {
+            const res = await fetch("/api/stripe/verify-session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId }),
+            });
+            const data = await res.json();
+            if (data.paid) {
+              setHasExportAccess(true);
+              toast.success("Report export unlocked! Download your files and submit.");
+            } else {
+              setHasExportAccess(await checkPurchase(`report_export:${periodId}`));
+            }
+          } catch {
+            setHasExportAccess(await checkPurchase(`report_export:${periodId}`));
+          }
+          window.history.replaceState({}, "", window.location.pathname);
+        } else {
+          setHasExportAccess(await checkPurchase(`report_export:${periodId}`));
+        }
       }
       const [rawEntity, rawPeriod, rawExp, rawEmp, rawCap, rawNar] = await Promise.all([
         fetchEntity(entityId), fetchPeriod(periodId), fetchExpenditures(periodId), fetchEmployment(periodId), fetchCapacity(periodId), fetchNarratives(periodId),

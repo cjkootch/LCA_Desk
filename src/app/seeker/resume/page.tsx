@@ -34,17 +34,46 @@ export default function ResumeBuilderPage() {
   const [skills, setSkills] = useState<string[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      fetchMyProfile(),
-      checkPurchase("resume_builder"),
-    ]).then(([p, purchased]) => {
+    const init = async () => {
+      // Load profile first
+      const p = await fetchMyProfile().catch(() => null);
       if (p) {
         setProfile(p);
         setSkills(p.skills || []);
       }
-      setUnlocked(purchased);
+
+      // If returning from Stripe checkout, verify the session and write the
+      // purchase immediately — don't rely on webhook timing.
+      const sessionId = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("session_id")
+        : null;
+
+      if (sessionId) {
+        try {
+          const res = await fetch("/api/stripe/verify-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          const data = await res.json();
+          if (data.paid) {
+            setUnlocked(true);
+            toast.success("Resume Builder unlocked! Generate your first resume.");
+          } else {
+            // Payment not confirmed — fall back to a direct purchase check
+            setUnlocked(await checkPurchase("resume_builder"));
+          }
+        } catch {
+          setUnlocked(await checkPurchase("resume_builder"));
+        }
+        window.history.replaceState({}, "", window.location.pathname);
+      } else {
+        setUnlocked(await checkPurchase("resume_builder"));
+      }
+
       setLoading(false);
-    }).catch(() => setLoading(false));
+    };
+    init();
   }, []);
 
   const handlePurchase = async () => {
@@ -54,23 +83,18 @@ export default function ResumeBuilderPage() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.error === "Already purchased") {
+        setUnlocked(true);
+        setPurchasing(false);
       } else {
         toast.error(data.error || "Failed to start checkout");
+        setPurchasing(false);
       }
     } catch {
       toast.error("Something went wrong");
+      setPurchasing(false);
     }
-    setPurchasing(false);
   };
-
-  // Check URL param for post-purchase unlock
-  useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("unlocked") === "1") {
-      setUnlocked(true);
-      toast.success("Resume Builder unlocked! Generate your first resume.");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   const handleEnhance = async () => {
     if (!resumeText.trim()) { toast.error("Paste your resume text first"); return; }

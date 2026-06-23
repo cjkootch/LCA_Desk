@@ -45,7 +45,7 @@ export async function POST() {
         type: "resume_builder",
       },
       customer_email: session.user.email || undefined,
-      success_url: `${appUrl}/seeker/resume?unlocked=1`,
+      success_url: `${appUrl}/seeker/resume?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/seeker/resume`,
     });
 
