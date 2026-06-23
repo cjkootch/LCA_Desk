@@ -9,7 +9,7 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
-const RESUME_PRICE_ID = "price_1TlaC4FwVjbpJ19NL0IJ3ZpY";
+const RESUME_PRICE_ID = process.env.STRIPE_RESUME_PRICE_ID || "price_1TlaC4FwVjbpJ19NL0IJ3ZpY";
 
 export async function POST() {
   const session = await auth();
