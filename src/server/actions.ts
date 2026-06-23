@@ -212,6 +212,20 @@ export async function addEntity(data: Record<string, unknown>) {
       ...mapEntityData(data),
     })
     .returning();
+
+  // Analytics: entity_created — fire so the activation funnel can see
+  // manual entity creation (previously this was never tracked).
+  try {
+    const session = await auth();
+    if (session?.user?.id) {
+      trackEvent(session.user.id, tenantId, "entity_created", {
+        entityId: entity.id,
+        companyType: (data.companyType as string) || (data.company_type as string) || undefined,
+        source: "manual",
+      }).catch(() => {});
+    }
+  } catch {}
+
   return entity;
 }
 

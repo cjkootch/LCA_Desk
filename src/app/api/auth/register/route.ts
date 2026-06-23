@@ -222,14 +222,18 @@ export async function POST(req: NextRequest) {
       });
 
       if (accountType === "self" && guyana) {
-        await db.insert(entities).values({
+        const [autoEntity] = await db.insert(entities).values({
           tenantId: tenant.id,
           jurisdictionId: guyana.id,
           legalName: companyName || name,
           companyType: "contractor",
           contactName: name,
           contactEmail: email,
-        });
+        }).returning();
+        // Analytics: entity_created (auto-provisioned at signup)
+        if (autoEntity) {
+          trackEvent(user.id, tenant.id, "entity_created", { entityId: autoEntity.id, source: "auto_signup" }).catch(() => {});
+        }
       }
 
       // Sync filer to HubSpot
