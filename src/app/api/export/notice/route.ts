@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import jsPDF from "jspdf";
+import { hasReportExportAccess } from "@/lib/billing/export-access";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -11,8 +12,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     companyName, companyAddress, contactName, contactDesignation,
-    reportingPeriod, reportingYear, entityType,
+    reportingPeriod, reportingYear, entityType, periodId,
   } = body;
+
+  if (!periodId || !(await hasReportExportAccess(session.user.id, periodId))) {
+    return NextResponse.json({ error: "Export requires an active plan or a per-report purchase", requiresPurchase: true }, { status: 402 });
+  }
 
   const doc = new jsPDF();
   const margin = 25;

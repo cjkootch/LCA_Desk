@@ -105,6 +105,7 @@ export default function ExportPage() {
       const capacity = rawCap.map((c) => ({ id: c.id, reporting_period_id: c.reportingPeriodId, entity_id: c.entityId, activity: c.activity, category: c.category, participant_type: c.participantType, guyanese_participants_only: c.guyanaeseParticipantsOnly || 0, total_participants: c.totalParticipants || 0, start_date: c.startDate, duration_days: c.durationDays, cost_to_participants: c.costToParticipants ? Number(c.costToParticipants) : null, expenditure_on_capacity: c.expenditureOnCapacity ? Number(c.expenditureOnCapacity) : null, notes: c.notes, created_at: "" })) as CapacityDevelopmentRecord[];
 
       setExportData({
+        periodId,
         entity: mappedEntity,
         period: { ...rawPeriod, report_type: rawPeriod?.reportType, period_start: rawPeriod?.periodStart, period_end: rawPeriod?.periodEnd, due_date: rawPeriod?.dueDate, fiscal_year: rawPeriod?.fiscalYear },
         expenditures, employment, capacity, sectorCategories: [], jurisdictionCode: jurisdictionCode,
@@ -134,6 +135,7 @@ export default function ExportPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            periodId,
             companyName: entityName,
             companyAddress: entity?.registered_address || entity?.operational_address || "",
             contactName: entity?.contact_name || "",
