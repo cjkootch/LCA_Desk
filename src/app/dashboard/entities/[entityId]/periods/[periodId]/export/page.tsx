@@ -57,13 +57,14 @@ export default function ExportPage() {
       const plan = planData?.plan || "lite";
       setCurrentPlan(plan);
 
-      // Determine export access: active subscription OR active trial OR
+      // Determine export access: export is a PAID feature — trials do not
+      // grant it. Access requires an active/past-due paid subscription OR a
       // per-report purchase. If returning from Stripe, verify the session
       // first so the unlock doesn't race against the webhook.
-      const hasSubscription = planData?.stripeSubscriptionId && planData?.stripeSubscriptionStatus === "active";
-      const hasTrial = planData?.trialDaysRemaining && planData.trialDaysRemaining > 0;
+      const subStatus = planData?.stripeSubscriptionStatus;
+      const hasPaidSubscription = !!planData?.stripeSubscriptionId && (subStatus === "active" || subStatus === "past_due");
 
-      if (hasSubscription || hasTrial) {
+      if (hasPaidSubscription) {
         setHasExportAccess(true);
       } else {
         const sessionId = typeof window !== "undefined"

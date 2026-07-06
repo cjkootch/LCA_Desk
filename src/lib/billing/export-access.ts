@@ -42,8 +42,11 @@ export async function hasReportExportAccess(userId: string, periodId: string): P
   }).from(tenants).where(eq(tenants.id, period.tenantId)).limit(1);
 
   if (tenant) {
+    // Export is a paid feature — trials do NOT grant export access.
+    // Only an active paid subscription (or a past-due subscriber in grace)
+    // gets free export. Trial/expired users must buy the per-report unlock.
     const access = getBillingAccess(tenant.plan, tenant.trialEndsAt, tenant.stripeSubscriptionId, tenant.stripeSubscriptionStatus);
-    if (access.canAccess) return true;
+    if (access.state === "active" || access.state === "past_due") return true;
   }
 
   // Per-report one-time purchase for this specific period?
