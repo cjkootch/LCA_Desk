@@ -242,6 +242,29 @@ export async function updateEntity(entityId: string, data: Record<string, unknow
   return updated;
 }
 
+// ─── PUBLIC: LCS REGISTER LOOKUP (pre-fill claim landing) ─────────
+// No session required — powers the public /file/[slug] claim page so a
+// registered contractor lands on a report pre-filled from the public
+// register instead of a blank form. Returns null for unknown slugs.
+export async function fetchRegisterCompany(slug: string) {
+  if (!slug) return null;
+  const [row] = await db
+    .select({
+      slug: lcsRegister.profileSlug,
+      legalName: lcsRegister.legalName,
+      address: lcsRegister.address,
+      phone: lcsRegister.phone,
+      website: lcsRegister.website,
+      status: lcsRegister.status,
+    })
+    .from(lcsRegister)
+    .where(eq(lcsRegister.profileSlug, slug))
+    .limit(1);
+  if (!row) return null;
+  // A handful of scraped legal names carry a stray leading apostrophe.
+  return { ...row, legalName: (row.legalName || "").replace(/^'+/, "").trim() };
+}
+
 // ─── REPORTING PERIODS ────────────────────────────────────────────
 export async function fetchPeriodsForEntity(entityId: string) {
   const { tenantId } = await getSessionTenant();

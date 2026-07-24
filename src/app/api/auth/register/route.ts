@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites, referrals, notifications } from "@/server/db/schema";
+import { users, tenants, tenantMembers, jurisdictions, entities, jobSeekerProfiles, supplierProfiles, teamInvites, referrals, notifications, reportingPeriods, lcsRegister } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,6 +14,9 @@ const registerSchema = z.object({
   password: z.string().min(8),
   companyName: z.string().optional(),
   accountType: z.enum(["self", "others"]).optional(),
+  // Set when the signup came from a per-company claim link (/file/[slug]).
+  // Pre-fills the auto-created entity from the public LCS register.
+  registerSlug: z.string().optional(),
   // Role-based registration
   role: z.enum(["filer", "job_seeker", "supplier", "secretariat", "affiliate"]).default("filer"),
   ref: z.string().optional(), // referral code
@@ -72,6 +75,7 @@ export async function POST(req: NextRequest) {
       lcsExpirationDate: raw.lcsExpirationDate ?? raw.lcs_expiration_date,
       lcsLegalName: raw.lcsLegalName ?? raw.lcs_legal_name,
       serviceCategories: raw.serviceCategories ?? raw.service_categories,
+      registerSlug: raw.registerSlug ?? raw.register_slug,
     };
     const parsed = registerSchema.safeParse(body);
 
@@ -222,17 +226,57 @@ export async function POST(req: NextRequest) {
       });
 
       if (accountType === "self" && guyana) {
+        // When the signup arrived from a per-company claim link (/file/[slug]),
+        // pre-fill the entity from the public LCS register so the filer lands on
+        // a report that already knows who they are — not a blank form.
+        let reg: typeof lcsRegister.$inferSelect | null = null;
+        const slug = parsed.data.registerSlug;
+        if (slug) {
+          const [r] = await db.select().from(lcsRegister)
+            .where(eq(lcsRegister.profileSlug, slug)).limit(1);
+          if (r) reg = r;
+        }
+
         const [autoEntity] = await db.insert(entities).values({
           tenantId: tenant.id,
           jurisdictionId: guyana.id,
-          legalName: companyName || name,
+          legalName: (reg?.legalName || companyName || name).replace(/^'+/, "").trim(),
           companyType: "contractor",
           contactName: name,
           contactEmail: email,
+          registeredAddress: reg?.address || undefined,
+          contactPhone: reg?.phone || undefined,
+          website: reg?.website || undefined,
+          lcsCertificateId: reg?.certId || undefined,
         }).returning();
         // Analytics: entity_created (auto-provisioned at signup)
         if (autoEntity) {
-          trackEvent(user.id, tenant.id, "entity_created", { entityId: autoEntity.id, source: "auto_signup" }).catch(() => {});
+          trackEvent(user.id, tenant.id, "entity_created", {
+            entityId: autoEntity.id,
+            source: slug ? "register_claim" : "auto_signup",
+          }).catch(() => {});
+
+          // For claim-link signups, seed the current H1 reporting period so the
+          // filer opens onto a started report with a live deadline instead of an
+          // empty dashboard. Gated to the claim flow to avoid seeding a stale
+          // period on mainstream signups once the H1 window has passed.
+          if (slug && Date.now() < new Date("2026-07-31T00:00:00").getTime()) {
+            try {
+              await db.insert(reportingPeriods).values({
+                entityId: autoEntity.id,
+                tenantId: tenant.id,
+                jurisdictionId: guyana.id,
+                reportType: "half_yearly_h1",
+                periodStart: "2026-01-01",
+                periodEnd: "2026-06-30",
+                dueDate: "2026-07-30",
+                fiscalYear: 2026,
+                status: "not_started",
+              });
+            } catch (err) {
+              console.error("H1 period auto-create failed:", err);
+            }
+          }
         }
       }
 
