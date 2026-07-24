@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity, fetchTenantReports } from "@/server/actions";
+import { checkSuperAdmin, fetchPlgStats, fetchDemoAccessLog, fetchTenantUsers, toggleUserDemo, fetchTenantActivity, fetchTenantReports, fetchRealCompanies } from "@/server/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -487,6 +487,7 @@ export default function PlgPage() {
   const [demoRefreshing, setDemoRefreshing] = useState(false);
   const [showAllTenants, setShowAllTenants] = useState(false);
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
+  const [realCompanies, setRealCompanies] = useState<Awaited<ReturnType<typeof fetchRealCompanies>> | null>(null);
   const router = useRouter();
 
   const load = useCallback(async (isRefresh = false) => {
@@ -496,6 +497,7 @@ export default function PlgPage() {
       setData(d);
       setDemoLogs(logs);
       setLastUpdated(new Date());
+      fetchRealCompanies().then(setRealCompanies).catch(() => {});
     } catch {
       // silently fail on refresh
     } finally {
@@ -599,6 +601,75 @@ export default function PlgPage() {
         <p className="text-xs text-text-muted mb-6">
           Stats exclude demo accounts. Flag users as demo from the tenant drill-down to keep data clean.
         </p>
+
+        {/* ── Real Companies (from Neon, by actual filing activity) ───── */}
+        {realCompanies && (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-sm">Real Companies — by actual product activity</CardTitle>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-text-muted">{realCompanies.summary.total} total</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-border" /> {realCompanies.summary.createdEntity} created entity</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> <strong className="text-text-primary">{realCompanies.summary.enteredData}</strong> entered data</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> <strong className="text-text-primary">{realCompanies.summary.submitted}</strong> submitted</span>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted mt-1">
+                Source of truth from the app database. &quot;Entered data&quot; = added real expenditure or employment records — these are genuinely engaged companies, not tire-kickers.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {realCompanies.summary.enteredData === 0 ? (
+                <div className="p-6 text-center text-xs text-text-muted">
+                  No company has entered real filing data yet. The number that matters for activation (and for the pitch) is this one.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-bg-primary">
+                      <tr>
+                        <th className="text-left p-3 font-medium text-text-muted">Company</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Owner</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Stage</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Entities</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Expenditure</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Employment</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Submitted</th>
+                        <th className="text-left p-3 font-medium text-text-muted">Plan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {realCompanies.rows.filter(r => r.level === "entered_data" || r.level === "submitted").map(r => {
+                        const stage = r.level === "submitted"
+                          ? { label: "Submitted", cls: "bg-success/15 text-success" }
+                          : { label: "Entered data", cls: "bg-accent/15 text-accent" };
+                        return (
+                          <tr key={r.id} className="border-t border-border hover:bg-bg-primary/50">
+                            <td className="p-3 font-medium text-text-primary">{r.name}</td>
+                            <td className="p-3 text-text-muted">
+                              {r.ownerEmail ? <a href={`mailto:${r.ownerEmail}`} className="hover:text-accent">{r.ownerEmail}</a> : "—"}
+                            </td>
+                            <td className="p-3">
+                              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium", stage.cls)}>{stage.label}</span>
+                            </td>
+                            <td className="p-3 tabular-nums text-text-secondary">{r.entityCount}</td>
+                            <td className="p-3 tabular-nums text-text-secondary">{r.expCount}</td>
+                            <td className="p-3 tabular-nums text-text-secondary">{r.empCount}</td>
+                            <td className="p-3 tabular-nums text-text-secondary">{r.submitted}</td>
+                            <td className="p-3">
+                              <Badge variant={r.plan === "pro" ? "accent" : r.plan === "enterprise" ? "gold" : "default"} className="text-xs">{r.plan || "lite"}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
           {/* ── Activation Funnel ─────────────────────────────────────── */}

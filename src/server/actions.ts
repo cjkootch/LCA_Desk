@@ -7930,6 +7930,91 @@ export async function fetchPlgStats() {
   };
 }
 
+/**
+ * The true "real companies" report, straight from the app database (not
+ * the HubSpot contact soup). Every non-demo tenant with its actual filing
+ * activity, so we can separate real engaged companies (entered data /
+ * submitted) from tire-kickers who only signed up.
+ */
+export async function fetchRealCompanies() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const isSuperAdmin = await _checkIsSuperAdmin(session.user.id);
+  if (!isSuperAdmin) throw new Error("Not authorized");
+
+  const allTenants = await db.select({
+    id: tenants.id,
+    name: tenants.name,
+    plan: tenants.plan,
+    createdAt: tenants.createdAt,
+    trialEndsAt: tenants.trialEndsAt,
+    stripeSubscriptionId: tenants.stripeSubscriptionId,
+    stripeSubscriptionStatus: tenants.stripeSubscriptionStatus,
+  }).from(tenants).where(eq(tenants.isDemo, false)).orderBy(asc(tenants.createdAt)).limit(2000);
+
+  if (allTenants.length === 0) {
+    return { rows: [], summary: { total: 0, createdEntity: 0, enteredData: 0, submitted: 0 } };
+  }
+
+  const [entityCounts, expCounts, empCounts, submittedCounts, owners] = await Promise.all([
+    db.select({ tenantId: entities.tenantId, c: sql<number>`cast(count(*) as int)` }).from(entities).groupBy(entities.tenantId),
+    db.select({ tenantId: expenditureRecords.tenantId, c: sql<number>`cast(count(*) as int)` }).from(expenditureRecords).groupBy(expenditureRecords.tenantId),
+    db.select({ tenantId: employmentRecords.tenantId, c: sql<number>`cast(count(*) as int)` }).from(employmentRecords).groupBy(employmentRecords.tenantId),
+    db.select({ tenantId: reportingPeriods.tenantId, c: sql<number>`cast(count(*) as int)` }).from(reportingPeriods)
+      .where(or(eq(reportingPeriods.status, "submitted"), eq(reportingPeriods.status, "acknowledged"))).groupBy(reportingPeriods.tenantId),
+    db.select({ tenantId: tenantMembers.tenantId, email: users.email, name: users.name, role: tenantMembers.role })
+      .from(tenantMembers).innerJoin(users, eq(tenantMembers.userId, users.id)).orderBy(asc(tenantMembers.createdAt)),
+  ]);
+
+  const entityMap = new Map(entityCounts.map(r => [r.tenantId, r.c]));
+  const expMap = new Map(expCounts.map(r => [r.tenantId, r.c]));
+  const empMap = new Map(empCounts.map(r => [r.tenantId, r.c]));
+  const subMap = new Map(submittedCounts.map(r => [r.tenantId, r.c]));
+  const ownerMap = new Map<string, { email: string | null; name: string | null }>();
+  for (const o of owners) {
+    if (!ownerMap.has(o.tenantId) || o.role === "owner") ownerMap.set(o.tenantId, { email: o.email, name: o.name });
+  }
+
+  const levelOrder: Record<string, number> = { submitted: 0, entered_data: 1, created_entity: 2, signed_up: 3 };
+
+  const rows = allTenants.map(t => {
+    const entityCount = entityMap.get(t.id) ?? 0;
+    const expCount = expMap.get(t.id) ?? 0;
+    const empCount = empMap.get(t.id) ?? 0;
+    const submitted = subMap.get(t.id) ?? 0;
+    let level: "submitted" | "entered_data" | "created_entity" | "signed_up";
+    if (submitted > 0) level = "submitted";
+    else if (expCount > 0 || empCount > 0) level = "entered_data";
+    else if (entityCount > 0) level = "created_entity";
+    else level = "signed_up";
+    const access = getBillingAccess(t.plan, t.trialEndsAt, t.stripeSubscriptionId, t.stripeSubscriptionStatus);
+    const owner = ownerMap.get(t.id);
+    return {
+      id: t.id,
+      name: t.name,
+      plan: t.plan,
+      createdAt: t.createdAt,
+      ownerEmail: owner?.email ?? null,
+      ownerName: owner?.name ?? null,
+      entityCount, expCount, empCount, submitted,
+      level,
+      billingState: access.state,
+    };
+  });
+
+  rows.sort((a, b) => (levelOrder[a.level] - levelOrder[b.level])
+    || (new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()));
+
+  const summary = {
+    total: rows.length,
+    createdEntity: rows.filter(r => r.entityCount > 0).length,
+    enteredData: rows.filter(r => r.level === "entered_data" || r.level === "submitted").length,
+    submitted: rows.filter(r => r.level === "submitted").length,
+  };
+
+  return { rows, summary };
+}
+
 // ─── COURSE MANAGEMENT ────────────────────────────────────────────
 
 async function _checkSecretariatMember(userId: string) {
