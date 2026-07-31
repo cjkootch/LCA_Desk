@@ -296,7 +296,7 @@ export default function AdminPage() {
                       if (jurisdictionFilter !== "all" && t.jurisdictionCode !== jurisdictionFilter) return false;
                       return true;
                     })
-                    .map((t: { id: string; name: string; slug: string | null; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; createdAt: Date | null; isDemo: boolean | null; jurisdictionCode: string | null }) => {
+                    .map((t: { id: string; name: string; slug: string | null; plan: string | null; trialEndsAt: Date | null; stripeSubscriptionId: string | null; stripeSubscriptionStatus: string | null; createdAt: Date | null; isDemo: boolean | null; jurisdictionCode: string | null }) => {
                     const trialActive = t.trialEndsAt && new Date(t.trialEndsAt) > new Date();
                     const trialExpired = t.trialEndsAt && new Date(t.trialEndsAt) <= new Date();
                     return (
@@ -317,8 +317,12 @@ export default function AdminPage() {
                           </Badge>
                         </td>
                         <td className="py-2 px-3">
-                          {t.stripeSubscriptionId
+                          {t.stripeSubscriptionId && t.stripeSubscriptionStatus === "active"
                             ? <Badge variant="success" className="text-xs">Paying</Badge>
+                            : t.stripeSubscriptionId && t.stripeSubscriptionStatus === "trialing"
+                            ? <Badge variant="accent" className="text-xs">Trial</Badge>
+                            : t.stripeSubscriptionId && (t.stripeSubscriptionStatus === "past_due" || t.stripeSubscriptionStatus === "unpaid")
+                            ? <Badge variant="danger" className="text-xs">Past due</Badge>
                             : trialActive ? <Badge variant="accent" className="text-xs">Trial</Badge>
                             : trialExpired ? <Badge variant="danger" className="text-xs">Expired</Badge>
                             : <span className="text-text-muted text-xs">Free</span>
